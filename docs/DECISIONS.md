@@ -14,6 +14,7 @@
 | **Proposed** | A safe engineering default written by the architect, awaiting owner confirmation. Chosen to be reversible | Yes, from the phase where it is needed, if the owner has not objected |
 | **Open** | Needs an owner decision before the phase that depends on it | No. Ask |
 | **Open: counsel** | A legal reading. The product ships a **labelled, configurable default** and never presents it as settled law | Only as a labelled default |
+| **Provisional default** | An "Open: counsel" item whose default the owner has approved for simulation and development. It is **not** a validated legal rule, and every output that uses it stays labelled "pending legal review" | Yes, as a labelled default |
 | **Counsel-confirmed** | Reviewed and confirmed by an advocate (name and date recorded) | Yes, and the label can be removed |
 | **Superseded** | Replaced; kept for history | No |
 
@@ -35,7 +36,7 @@
 | ADR-008 | Append-only evidence, hash-chained timeline, DB triggers, content-addressed local storage | Proposed | — | Phase 1/4/5 |
 | ADR-009 | Hosting: one small VM in an Indian region | Proposed | D1 | Phase 12 |
 | ADR-010 | Email via an SMTP adapter + simulated mode; platform sender with supplier Reply-To; provider TBD | Proposed (provider Open) | D7 | Phase 9 |
-| ADR-011 | Toolchain and versions | Proposed | — | **Phase 0 (M1)** |
+| ADR-011 | Toolchain and versions (Python 3.12, Node 22 LTS) | Accepted (25 Oct 2026) | — | Phase 0 (done) |
 | ADR-012 | Time and money representation | Proposed | A5 | Phase 2 |
 | ADR-013 | Legal rules as a versioned TOML rule set with tiers and counsel flags | Proposed | — | **Phase 2 (M1)** |
 | ADR-014 | Upload limits: 15 MB per file, 200 MB per case | Proposed | D11 | Phase 5 |
@@ -44,7 +45,7 @@
 | ADR-017 | Light theme only in MVP | Proposed | D9 | Phase 7 |
 | ADR-018 | Data retention and deletion policy | **Open** (owner + DPDP advice) | D12 | Before real users / Phase 13 |
 | ADR-019 | No AI/LLM features in MVP | Proposed | — | — |
-| ADR-020 | Git workflow and commit conventions | Proposed | — | **Phase 0 (M1)** |
+| ADR-020 | Git workflow and commit conventions | Accepted (25 Oct 2026) | — | Phase 0 (done) |
 | ADR-021 | Case granularity: one invoice, one delivery date | Proposed | A8 | Phase 2 |
 | ADR-022 | Legal sign-off gate: no non-demo use until LR items are counsel-confirmed | **Open** (owner + counsel) | D10 | Before pilot |
 
@@ -63,15 +64,20 @@
 | LR-09 | Supplies before Udyam registration (*Silpi Industries*) | R10 | Warning only | Checklist |
 | LR-10 | Trading-only Udyam registrations | R11 | Warning only | Checklist |
 | LR-11 | Limitation: 3 years from interest start; warn at 180 days | R12, A7 | Indicative date | Checklist, UI |
-| LR-12 | Interest mechanics: rate/12 per full month, days/365 for the partial month, half-up rounding at each rest | A1, A2 (D3) | As stated | Interest |
-| LR-13 | Which bank rate applies (rate in force at the start of each monthly period) | A3 (D5) | As stated | Interest |
-| LR-14 | Part-payment allocation (principal first) | A4 (D4) | As stated | Interest |
+| LR-12 | Interest mechanics: rate/12 per full month, days/365 for partial or split periods, half-up rounding at each rest, accrual through the as-of date inclusive | A1, A2, A10 (D3) | **Provisional default** (owner-approved 25 Oct 2026) | Interest |
+| LR-13 | Which bank rate applies (rate in force at the start of each monthly period) | A3 (D5) | **Provisional default** (owner-approved 25 Oct 2026) | Interest |
+| LR-14 | Part-payment allocation (principal first) | A4 (D4) | **Provisional default** (owner-approved 25 Oct 2026) | Interest |
 | LR-15 | s.43B(h) statement and its Income-tax Act 2025 equivalent | R14 | Informational text | Buyer Cost Page |
 | LR-16 | BSA s.63 certificate form (Schedule Part A/B) | R15 | Watermarked DRAFT | Sealed Pack |
 | LR-17 | Demand notice not mandatory; wording of the intimation and demand templates | R16 | Templates marked "pending review" | Communications |
 | LR-18 | Advocate-link design vs Bar Council of India Rule 36 | — | No referral, ranking or fees | Sharing |
 | LR-19 | Official ODR portal document list | FR-PACK-05 | "Organised for ODR filing" wording only | Sealed Pack |
 | LR-20 | Currency of the tier S statute text (no amendments to ss.2(b), 15, 16, 19 since enactment) | R1–R9, R13 | Treated as current | All |
+| LR-21 | **MSMED (Amendment) Act 2026 (Act 16 of 2026):** confirm the enacted text and S.O. 5575(E) commencement. Bill text and the PIB summary show **no amendment** to ss.2(b), 15, 16 or 17 (see Section 3) | All R rules | No formula change; `msmed-v1` unchanged; every output still lists LR-21 as pending | All |
+| LR-22 | Agreed payment days (written deal) are counted from the day of acceptance | A9 | As stated | DeemedClock |
+| LR-23 | s.2(n) "supplier" after the substituted s.8 (voluntary registration on a national platform) | R9, R9a | Eligibility still requires a Udyam number | Eligibility |
+| LR-24 | Payment date for s.15/s.16 when invoices settle through TReDS under new s.15A | R5–R8 | Payment = date the supplier receives funds (as entered) | Interest |
+| LR-25 | Amended s.18, new s.18A and substituted s.19 (not commenced): future buyer-facing and forum text | R13 | Current s.19 wording only | Buyer Cost Page |
 
 ### 1.3 PRD decisions D1–D14: what actually blocks implementation
 
@@ -79,9 +85,9 @@
 | --- | --- | --- | --- | --- |
 | D1 Hosting | ADR-009 | No | 12 | Engineering |
 | D2 Sign-in | ADR-007 | No | 3 | Engineering |
-| D3 Interest method | LR-12 | **Partly.** T2.3 needs agreement to build on labelled defaults, not a legal ruling | 2 (T2.3) | Legal |
-| D4 Payment allocation | LR-14 | **Partly.** Same as D3 | 2 (T2.3) | Legal |
-| D5 Rate timing | LR-13 | **Partly.** Same as D3 | 2 (T2.3) | Legal |
+| D3 Interest method | LR-12 | No longer blocking. The owner approved the default as a **provisional simulation default** (25 Oct 2026); legal review remains open | — | Legal |
+| D4 Payment allocation | LR-14 | No longer blocking. Same as D3 | — | Legal |
+| D5 Rate timing | LR-13 | No longer blocking. Same as D3 | — | Legal |
 | D6 Bank details on the buyer page | ADR-015 | No | 10 | Product/risk |
 | D7 Email provider | ADR-010 | No | 9 (simulated mode works without it) | Engineering |
 | D8 Trademark | ADR-002 | No | Public launch | Business/legal |
@@ -197,7 +203,9 @@ Each entry gives: **Decision**, **Rationale**, **Alternatives considered**, **De
 - **Dependencies:** a sending domain with SPF/DKIM (depends on ADR-002 and a domain purchase).
 - **Review:** the owner chooses a provider before real sends.
 
-### ADR-011: Toolchain (Proposed; needed for M1)
+### ADR-011: Toolchain (Accepted, 25 Oct 2026)
+
+*Accepted on the basis of the approved Phase 0 workflow. Node.js 22 LTS (tested 22.23.4) is the supported version, pinned by `.nvmrc`. `package.json` `engines` also allows Node 20.9+. Python 3.12 (tested 3.12.13).*
 
 - **Decision:**
   - Python 3.12 with `pip` + `venv` and pinned `requirements*.txt`.
@@ -230,7 +238,7 @@ Each entry gives: **Decision**, **Rationale**, **Alternatives considered**, **De
   - Outputs record the rule-set version, and they show a "pending legal review" label while any rule used is unconfirmed.
 - **Rationale:** separates law from code, so counsel's answers change data, not architecture; it gives an audit trail of which rules produced which output; and it never silently settles an interpretation.
 - **Alternatives:** Python constants (harder to review, easy to scatter); database tables (an admin UI would be needed, which is too much for MVP).
-- **Dependencies:** PRD Section 4; LR-01 to LR-20.
+- **Dependencies:** PRD Section 4; LR-01 to LR-25.
 - **Review:** owner confirmation before T2.1.
 
 ### ADR-014: Upload limits (Proposed; PRD D11)
@@ -277,7 +285,9 @@ Each entry gives: **Decision**, **Rationale**, **Alternatives considered**, **De
 - **Rationale:** determinism and auditability of legal outputs; avoids misclassification that would change legal dates.
 - **Review:** a new PRD decision is required to add AI.
 
-### ADR-020: Git workflow (Proposed; needed for M1)
+### ADR-020: Git workflow (Accepted, 25 Oct 2026)
+
+*Accepted on the basis of the approved Phase 0 workflow (work on `dev`; the owner commits and pushes).*
 
 - **Decision:**
   - `main` plus feature branches named `phase-<n>/<task>`.
@@ -297,7 +307,7 @@ Each entry gives: **Decision**, **Rationale**, **Alternatives considered**, **De
 
 ### ADR-022: Legal sign-off gate (Open; PRD D10)
 
-- **Proposed default:** the app may be demoed with "pending legal review" labels. Any use with real suppliers requires every LR item that affects computed dates or amounts (LR-01 to LR-14, LR-20) to be Counsel-confirmed or explicitly accepted by the owner with a visible disclaimer.
+- **Proposed default:** the app may be demoed with "pending legal review" labels. Any use with real suppliers requires every LR item that affects computed dates or amounts (LR-01 to LR-14, LR-20 to LR-24) to be Counsel-confirmed or explicitly accepted by the owner with a visible disclaimer.
 - **Why it is Open:** the owner must decide the risk posture, and counsel must be engaged.
 - **Review:** owner + advocate.
 
@@ -334,6 +344,45 @@ Each LR item has the same handling rules:
 | LR-18 | Is a supplier-chosen, fee-free advocate share link consistent with Bar Council of India Rule 36? |
 | LR-19 | What documents and format does the official MSME ODR portal require? |
 | LR-20 | Have ss.2(b), 2(n), 15, 16 or 19 been amended since 2006? (Tier S wording was checked only against the PRS India copy of the Act as enacted) |
+| LR-21 | Confirm the text and status of the MSMED (Amendment) Act 2026: whether it is enacted, its Gazette citation and its commencement notification(s). Then confirm, provision by provision, what changes for ss.15–19 (including the reported new s.15A and s.18(3A)), and which version governs a supply delivered before, on or after commencement. Also confirm the reported Income-tax Act 2025 s.37(2)(g) equivalent of s.43B(h) (links to LR-15) |
+| LR-22 | For a written deal stated as "N days", are the days counted from the day of acceptance, the delivery date or the invoice date? |
+| LR-23 | After the substitution of s.8 (Amendment Act 2026 s.5: free, voluntary filing on a national digital platform), does an enterprise still need a filed memorandum to be a "supplier" under the unamended s.2(n)? Do existing Udyam registrations satisfy it (Amd s.17 savings)? What is the position of an unregistered micro or small enterprise? |
+| LR-24 | For buyers bound by new s.15A (CPSEs and notified entities settling through TReDS): which date counts as payment for s.15 and s.16 (invoice acceptance on TReDS, financier payout to the supplier, or buyer settlement)? Does TReDS discounting affect the supplier's claim to s.16 interest? |
+| LR-25 | When Amendment Act ss.8–10 commence (amended s.18, new s.18A, substituted s.19), what must change in buyer-facing and forum text: the 90-day mediation and award timelines, jurisdiction by the supplier's registered address, recovery as arrears of land revenue, and the 6-month / 50% payout rule? Which version applies to references and awards already pending? |
+
+**LR-21 verification record (updated 25 Oct 2026, M1 close).**
+
+What was checked, and how reliable each source is:
+
+| Item | Finding | Source | Reliability |
+| --- | --- | --- | --- |
+| Bill text | Read in full: 17 clauses (Bill No. LXXII of 2026, as introduced in Rajya Sabha on 28 Jul 2026) | PRS India copy of the Bill PDF | Official Bill text, **as introduced** |
+| Passage | Passed by Rajya Sabha 3 Aug 2026 and Lok Sabha 7 Aug 2026. Whether amendments were made during passage is not stated | PRS Bill Track; PIB factsheet of 11 Aug 2026 ("passed by the Parliament in August 2026") | Official / semi-official. The PIB factsheet's comparison table matches the introduced text on every point below |
+| Act No. 16 of 2026; assent and Gazette publication on 13 Aug 2026 | Reported | SCC Online, IMPRI | **Secondary. Not seen in the Gazette** |
+| Notification S.O. 5575(E) of 12 Oct 2026 (F. No. 2/1(1)/2022-P&G/Policy/E) | Reported to bring Amendment Act ss.2–7, 11 and 13–17 into force on 15 Oct 2026, and s.12 on 15 Dec 2026. Amendment Act ss.8–10 have **no** appointed date | TaxGuru; masllp.com | **Secondary. The Gazette copy could not be retrieved; egazette.gov.in results were not indexed** |
+| Enacted (as-passed) text | Not obtained | — | **Gap** |
+
+**Comparison with PaySetu rules.** Section numbers are MSMED Act sections. "Amd s.N" means a section of the Amendment Act.
+
+| MSMED provision | Amendment | Commenced? (secondary) | Effect on PaySetu |
+| --- | --- | --- | --- |
+| s.2(b) day of acceptance, deemed acceptance, appointed day (R1–R4) | **Not amended.** Amd s.2 only inserts cl.(da) "Development Commissioner" and edits cl.(g), (h), (j), (m) | — | None. DeemedClock unchanged |
+| s.15 payment, 45-day cap (R5, R6) | **Not amended**; a new s.15A is inserted after it | — | None. Formulas unchanged |
+| s.16 compound interest, monthly rests, 3× bank rate (R7, R8) | **Not amended** | — | None. Interest engine unchanged |
+| s.17 recovery | **Not amended** | — | None |
+| s.2(n) "supplier" (R9) | Text **not amended**, but it still refers to the authority in s.8(1), and **s.8 is substituted** (Amd s.5): free, *voluntary* filing on a national digital platform | Yes, 15 Oct 2026 | Eligibility still requires a Udyam number (conservative). New question **LR-23** |
+| s.7 classification | s.7(1) substituted: classification by notification, on investment **and** turnover | Yes | None in code (class comes from the Udyam record). The README's threshold table must be re-checked against current notifications |
+| **s.15A (new)**: CPSEs, and entities the Centre or States notify, must route invoice settlement through an RBI-authorised TReDS platform | Inserted (Amd s.7) | Yes | No formula change. New question **LR-24** on how TReDS settlement interacts with s.15/s.16 payment dates. Possible future product field ("buyer is a CPSE / notified entity") needs a PRD decision |
+| s.18 mediation and arbitration: 90-day mediation (3A), 30-day reference to arbitration (4), 90-day award (4A), jurisdiction by the supplier's registered address (5), online mechanism (6), (7) | Amended (Amd s.8) | **No** | None now. Affects forum and timeline copy later (Phase 9/10). **LR-25** |
+| s.18A (new): settlements and awards recoverable as arrears of land revenue; a debt under the IBC | Inserted (Amd s.9) | **No** | None now. **LR-25** |
+| s.19 setting aside (R13) | Substituted (Amd s.10): adds mediated settlements, a "mandatory" 75% deposit, at least 50% paid to the supplier after 6 months pending, and jurisdiction at the supplier's address | **No** | R13 (the current s.19) stays in force. Buyer Cost Page s.19 text must not use the new wording until commenced. **LR-25** |
+| ss.20, 21 Facilitation Councils | Substituted (Amd s.11, s.12) | s.20 yes; s.21 from 15 Dec 2026 | None |
+| s.22A (new): CPSE TReDS disclosure | Inserted (Amd s.13) | Yes | None |
+| s.27 penalties (incl. buyer's non-disclosure under s.22) | Substituted with graded penalties; s.27A adjudication (Amd s.14) | Yes | Informational only |
+| Amd s.17 savings | Prior actions and notifications continue | Yes | Supports treating existing Udyam registrations as continuing (still LR-23) |
+| s.43B(h) / Income-tax Act 2025 | Not part of this Act | — | LR-15 unchanged |
+
+**Conclusion.** There is no statutory basis to change any DeemedClock or interest rule; `msmed-v1` stays as it is. Because ss.2(b), 15 and 16 are not amended, the version question in LR-21 (old vs new text for supplies before or after commencement) does not change any computed date or amount. Counsel should still confirm this against the enacted text. LR-21 remains **Open: counsel** until the Gazette copies of Act 16 of 2026 and S.O. 5575(E) are checked.
 
 **Tier S verification record:** on 25 Oct 2026 the wording of ss.2(b) (including the Explanation), 2(n), 15, 16, 17 and 19 was compared against the PRS India copy of the MSMED Act 2006 as enacted. It matched what PRD Section 4.2 encodes. It was not compared with the India Code consolidation or any amendment acts (see LR-20).
 
@@ -368,3 +417,36 @@ Checks that passed with no change needed:
 - Every API endpoint maps to existing tables or computed values.
 - The stack in ARCHITECTURE matches the owner-proposed stack.
 - The rate-limit tables in ARCHITECTURE and API agree.
+
+---
+
+## 5. Milestone M1-B Log (25 Oct 2026)
+
+Decisions recorded at the start of M1-B (T2.1–T2.7):
+
+- ADR-011 and ADR-020 accepted, based on the approved Phase 0 workflow. Node.js 22 LTS stays the supported version.
+- D3–D5 (LR-12, LR-13, LR-14) recorded as **provisional simulation defaults**: owner-approved for development, not validated legal rules. Outputs stay labelled "pending legal review".
+- LR-21 (MSMED (Amendment) Act 2026) and LR-22 (base date for "N days" written terms) added. All earlier advocate-review items remain open.
+
+Conflicts and gaps found while implementing, and how each was resolved:
+
+| # | Finding | Resolution | Files |
+| --- | --- | --- | --- |
+| 1 | IMPLEMENTATION_PLAN T2.1 put the TOML loader in `app/domain/rules.py`, but AGENTS.md forbids I/O in `domain/` | Pure validation stays in `domain/rules.py`; file reading lives in `app/rules/loader.py` | ARCHITECTURE.md 3.2, IMPLEMENTATION_PLAN.md T2.1 |
+| 2 | The PRD did not say what "N days" in written terms counts from | Counted from acceptance (A9); question raised as LR-22 | PRD.md 4.4 |
+| 3 | The PRD did not say whether interest accrual includes the as-of day, or how a mid-month payment affects a monthly rest | A10: accrual through the as-of date inclusive; a payment splits the month into days/365 segments (part of D3 / LR-12) | PRD.md 4.4 |
+| 4 | The limitation date from 29 Feb was undefined | A11: falls back to 28 Feb (conservative) | PRD.md 4.4 |
+| 5 | The plan's reference figure was "Rs 93,407 ± Re 1" | Tested exactly: Rs 93,406.72 (arithmetic regression, not statutory proof) | IMPLEMENTATION_PLAN.md, AGENTS.md, PRD.md |
+| 6 | The plan requires 100% **branch** coverage on `domain/`, but no coverage tool was approved | **Resolved at M1 close:** the owner approved pytest-cov. Measured 100% line and 100% branch coverage on `app/domain` (1,023 statements, 264 branches), now enforced by `make test` | Makefile, `backend/pyproject.toml` |
+| 7 | MSMED Act commencement date (2 Oct 2006) used as the rule-set `effective_from` comes from secondary knowledge | Recorded in the rule-set `legal_basis` as "to be verified (LR-20)" | `msmed-v1.toml` |
+
+---
+
+## 6. Milestone M1 Close Log (25 Oct 2026)
+
+| Item | Result |
+| --- | --- |
+| Branch coverage (owner-approved `pytest-cov==7.1.0`, `coverage==7.17.0`) | `app/domain`: 1,023 statements, 0 missed; 264 branches, 0 partial; **100% line and branch**. The existing tests already covered every branch, so no new coverage-only tests were needed. No exclusions or `pragma` markers. Gate: `[tool.coverage.report] fail_under = 100`, run by `make test`; confirmed to fail on a partial run (8.94%) |
+| MSMED (Amendment) Act 2026 review (LR-21) | Bill text read in full. The PIB summary of the passed Bill matches it. **ss.2(b), 15, 16 and 17 are not amended**, so no DeemedClock or interest change (no statutory basis). Act No. 16 of 2026 and S.O. 5575(E) (12 Oct 2026) confirmed only from secondary sources; Gazette copies not retrieved. New questions LR-23 (s.2(n) vs substituted s.8), LR-24 (TReDS payment date under s.15A) and LR-25 (s.18/18A/19 once commenced) |
+| Rule-set metadata | `msmed-v1` `legal_basis`, `pending_reviews` (+LR-23, LR-24) and `decision_refs` for R8, R9 and R13 updated. **No parameter or formula changed** (a test asserts the 15/15/45/3× values) |
+| Tests | 208 passed (previously 207: one test strengthened for the amendment flags, one added to pin the statutory periods) |

@@ -1,0 +1,129 @@
+# Interest legal fixtures (T2.7). Written to be read by counsel.
+#
+# Method under test = provisional simulation defaults A1–A4 and A10 (owner-approved, NOT
+# validated legal rules; DECISIONS.md LR-12 to LR-14):
+#   complete month: balance × annual rate ÷ 12; partial or split period: balance × annual rate
+#   × days ÷ 365; round half-up to the paisa at each monthly rest; rate in force on each
+#   period's first day; payments reduce principal first; interest accrues through as_of
+#   inclusive.
+#
+# Bank rates below are fixture inputs, not live data. They are marked verified = false.
+# Expected values were worked out by hand (shown in `working`), not copied from engine output.
+
+[meta]
+module = "interest"
+rule_set = "msmed-v1"
+reviewed_by = "pending"
+notes = "A matching figure proves arithmetic consistency only, not statutory correctness."
+
+[[case]]
+id = "INT-01"
+title = "Reference: Rs 5,00,000 at 3 × 5.75% for 12 complete months"
+working = "500000 × (1 + 0.1725/12)^12 − 500000, rounded to the paisa at each month = 93406.72 (ideation document chart: about Rs 93,407)"
+[case.input]
+principal = "500000.00"
+interest_start = 2026-11-17
+as_of = 2027-11-16
+[[case.input.rates]]
+effective_from = 2026-10-07
+rate_percent = "5.75"
+source = "Figure stated in the LS-03 ideation document (attributed to rbi.org.in); not verified by PaySetu"
+[case.expected]
+interest_accrued = "93406.72"
+outstanding_principal = "500000.00"
+periods = 12
+
+[[case]]
+id = "INT-02"
+title = "One complete month"
+working = "100000 × 17.25% ÷ 12 = 1437.50"
+[case.input]
+principal = "100000.00"
+interest_start = 2026-11-17
+as_of = 2026-12-16
+[[case.input.rates]]
+effective_from = 2026-10-07
+rate_percent = "5.75"
+source = "Fixture value"
+[case.expected]
+interest_accrued = "1437.50"
+periods = 1
+
+[[case]]
+id = "INT-03"
+title = "Partial first period: 10 days counted inclusive of as_of"
+working = "100000 × 17.25% × 10 ÷ 365 = 472.6027… → 472.60"
+[case.input]
+principal = "100000.00"
+interest_start = 2026-11-17
+as_of = 2026-11-26
+[[case.input.rates]]
+effective_from = 2026-10-07
+rate_percent = "5.75"
+source = "Fixture value"
+[case.expected]
+interest_accrued = "472.60"
+periods = 1
+
+[[case]]
+id = "INT-04"
+title = "Bank rate changes between monthly periods"
+working = "period 1 at 3 × 5.50%: 100000 × 16.5% ÷ 12 = 1375.00; period 2 at 3 × 5.75%: 101375.00 × 17.25% ÷ 12 = 1457.265625 → 1457.27; total 2832.27"
+[case.input]
+principal = "100000.00"
+interest_start = 2026-11-17
+as_of = 2027-01-16
+[[case.input.rates]]
+effective_from = 2026-01-01
+rate_percent = "5.50"
+source = "Hypothetical fixture value"
+[[case.input.rates]]
+effective_from = 2026-12-01
+rate_percent = "5.75"
+source = "Hypothetical fixture value"
+[case.expected]
+interest_accrued = "2832.27"
+total_outstanding = "102832.27"
+periods = 2
+
+[[case]]
+id = "INT-05"
+title = "Part payment of Rs 40,000 on day 15 of the first period (principal first)"
+working = "period 1 split: 100000 × 17.25% × 15/365 = 708.9041 plus 60000 × 17.25% × 15/365 = 425.3425; total 1134.2466 → 1134.25. Period 2 full: 61134.25 × 17.25% ÷ 12 = 878.8048 → 878.80. Total 2013.05"
+[case.input]
+principal = "100000.00"
+interest_start = 2026-11-17
+as_of = 2027-01-16
+[[case.input.rates]]
+effective_from = 2026-10-07
+rate_percent = "5.75"
+source = "Fixture value"
+[[case.input.payments]]
+amount = "40000.00"
+received_on = 2026-12-02
+[case.expected]
+interest_accrued = "2013.05"
+outstanding_principal = "60000.00"
+interest_outstanding = "2013.05"
+total_outstanding = "62013.05"
+periods = 2
+
+[[case]]
+id = "INT-06"
+title = "Paid in full before the interest start date: no interest"
+working = "Principal is zero throughout accrual, so every period accrues 0.00"
+[case.input]
+principal = "100000.00"
+interest_start = 2026-11-17
+as_of = 2026-12-16
+[[case.input.rates]]
+effective_from = 2026-10-07
+rate_percent = "5.75"
+source = "Fixture value"
+[[case.input.payments]]
+amount = "100000.00"
+received_on = 2026-11-10
+[case.expected]
+interest_accrued = "0.00"
+outstanding_principal = "0.00"
+total_outstanding = "0.00"

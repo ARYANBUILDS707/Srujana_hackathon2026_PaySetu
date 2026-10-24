@@ -106,8 +106,8 @@ These rules drive DeemedClock, the interest calculator and the checklist. They m
 | R6 | **Written agreement:** the buyer must pay on or before the agreed date, and the agreed period may not exceed 45 days from the day of acceptance or deemed acceptance. | s.15 proviso |
 | R7 | **Interest start:** from the appointed day, or from the date immediately following the agreed date. | s.16 |
 | R8 | **Interest:** compound interest with monthly rests, at three times the bank rate notified by the Reserve Bank, notwithstanding any agreement. | s.16 |
-| R9 | **Supplier** = a micro or small enterprise that has filed a memorandum with the authority under s.8. (That Udyam registration now serves this role comes from later notifications. Tier I, not verified.) | s.2(n) |
-| R13 | **Pre-deposit:** a court will not entertain an application to set aside a Council award unless the appellant (not being a supplier) deposits 75% of the awarded amount. | s.19 |
+| R9 | **Supplier** = a micro or small enterprise that has filed a memorandum with the authority under s.8. (That Udyam registration now serves this role comes from later notifications. Tier I, not verified.) *Amendment Act 2026 s.5 substitutes s.8 (free, voluntary registration on a national digital platform; reported in force 15 Oct 2026) while s.2(n) is unchanged: see LR-23.* | s.2(n) |
+| R13 | **Pre-deposit:** a court will not entertain an application to set aside a Council award unless the appellant (not being a supplier) deposits 75% of the awarded amount. *Amendment Act 2026 s.10 substitutes s.19 (adds mediated settlements and a 50% payout after 6 months); not yet commenced, so the current text applies: see LR-25.* | s.19 |
 
 ### 4.3 Interpretations requiring counsel review (tier I)
 
@@ -140,6 +140,11 @@ These rules drive DeemedClock, the interest calculator and the checklist. They m
 | A6 | A response with channel `other` is treated as written (conservative: it can only stop the clock, never inflate a claim). | LR-04 | Yes |
 | A7 | Indicative limitation date = interest start + 3 years; the checklist warns 180 days before. | LR-11 | Yes |
 | A8 | One case = one invoice = one delivery date. | ADR-021 | No |
+| A9 | Written terms given as "N days" are counted from the day of acceptance. A stated agreed date is used as given. | LR-22 | Yes |
+| A10 | Interest accrues for each day from the interest start date **through** the as-of date (inclusive). A payment reduces the balance from its own date. A monthly period that is cut short by the as-of date, or split by a payment, accrues each segment at days ÷ 365 instead of rate ÷ 12. | D3 → LR-12 | Yes |
+| A11 | Indicative limitation date = interest start + 3 calendar years. If that date would be 29 Feb in a non-leap year, it becomes 28 Feb (the earlier date, which is conservative). | LR-11 | Yes |
+
+All rule metadata (tier, source, effective date, verification status, decision reference) lives in `backend/app/rules/msmed-v1.toml`. That rule set encodes the MSMED Act 2006 text. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed on 25 Oct 2026 from the Bill text and the PIB summary. It does **not** amend ss.2(b), 15, 16 or 17, so no calculation rule changes. Its other changes (s.8, new s.15A, ss.18–19) are tracked as LR-21 and LR-23 to LR-25 in [DECISIONS.md](DECISIONS.md), and every computed output lists them as pending reviews.
 
 Every tier I and C item is listed in `docs/DECISIONS.md`, with its review status.
 
@@ -635,7 +640,7 @@ Password reset; `.eml` upload with DKIM; Udyam/GSTIN sandbox verification; data 
 ### Hackathon / demo readiness (must all pass)
 
 1. The full Ravi journey (J2 → J8) runs end-to-end on a phone-sized screen in under 5 minutes, using a backdated delivery to show the deemed-acceptance state.
-2. The interest fixture (Rs 5,00,000 at 17.25% for 12 months = Rs 93,407 ± Re 1) and all rule fixtures pass.
+2. The interest fixture (Rs 5,00,000 at 17.25% for 12 months = Rs 93,406.72) and all rule fixtures pass.
 3. Changing one byte of a stored evidence file makes integrity verification fail and name that file.
 4. The Sealed Pack opens on Windows and macOS; the manifest hashes match the files.
 5. Every simulated item is visibly labelled in the UI, PDFs and the manifest.
@@ -685,3 +690,4 @@ The live status, rationale, alternatives and the D → ADR/LR mapping are kept i
 8. Whether the advocate-link design is consistent with Bar Council of India Rule 36.
 9. Are the Buyer Cost Page statements on s.19 and s.43B(h) accurate, and what is the 43B(h) equivalent under the Income-tax Act 2025?
 10. The official MSME ODR portal document list, needed to finalise the pack layout.
+11. MSMED (Amendment) Act 2026: confirm the enacted text and S.O. 5575(E) (LR-21). Confirm supplier status under s.2(n) after the substituted s.8 (LR-23), the payment date when invoices settle through TReDS under new s.15A (LR-24), and the effect of the amended s.18, new s.18A and substituted s.19 once commenced (LR-25).

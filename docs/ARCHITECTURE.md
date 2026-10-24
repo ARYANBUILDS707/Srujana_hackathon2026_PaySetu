@@ -73,7 +73,7 @@ flowchart LR
 | Reverse proxy | Caddy | Automatic HTTPS, simple config |
 | Backend quality | Ruff (lint + format), mypy (strict on `domain/`) | Fast and minimal |
 | Frontend quality | ESLint (Next config), Prettier, `tsc --noEmit` | Standard |
-| Tests | pytest (backend), Playwright (end-to-end) | Owner-specified |
+| Tests | pytest + pytest-cov (backend; 100% branch-coverage gate on `app/domain`), Playwright (end-to-end) | Owner-specified; pytest-cov approved 25 Oct 2026 |
 | Package managers | `pip` + `venv` with pinned `requirements*.txt`; `npm` with `package-lock.json` | Lowest tooling overhead |
 
 **Deliberately not used in MVP:** Redis, Celery or any queue, Docker orchestration beyond an optional single compose file, an auth SaaS, an ORM on the frontend, a state-management library (React state + fetch is enough), form libraries, CSS-in-JS, analytics SDKs and any AI/LLM service.
@@ -110,7 +110,8 @@ flowchart TB
 
 | Module | Inputs → Outputs |
 | --- | --- |
-| `domain/rules.py` | Loads rule set `msmed-v1` (TOML) → typed `RuleSet` (window days 15, max agreed days 45, multiplier 3, limitation years 3, version string) |
+| `domain/rules.py` | Validates a decoded rule-set document → typed `RuleSet` (periods, multiplier, named reading policies, per-rule tier/source/effective date/verification status). No I/O: the TOML file is read by `app/rules/loader.py` |
+| `domain/dates.py` | Month and year arithmetic on legal dates (month-end clamping; 29 Feb → 28 Feb per A11) |
 | `domain/deemed_clock.py` | `CaseFacts` (delivery date, deal type, agreed terms, responses, objection removal) + `today` + `RuleSet` → `ClockResult` (acceptance state and basis, window end, acceptance date, due date, interest start, limitation date, explanations with rule IDs) |
 | `domain/interest.py` | Principal (paise), interest start, payments, rate table, as-of date, `RuleSet` → `InterestResult` (period table, totals). Decimal only |
 | `domain/checklist.py` | Supplier profile + case facts + evidence summary + communications + clock result + integrity status → list of `ChecklistItem` (C01–C17) |

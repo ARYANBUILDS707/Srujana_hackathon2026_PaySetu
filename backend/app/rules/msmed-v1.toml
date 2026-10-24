@@ -1,0 +1,397 @@
+# PaySetu legal rule set msmed-v1 (PRD Section 4; ADR-013; DECISIONS.md LR-01 to LR-22).
+#
+# This file is reviewable legal configuration, not code. Do not edit values in place after
+# release: create msmed-v2.toml, bump the version and update the legal fixtures.
+#
+# verification_status:
+#   text_checked        statute wording compared with the Act as enacted (PRS India copy, 25 Oct 2026);
+#                       amendments NOT checked (LR-20) and the 2026 Amendment NOT applied (LR-21)
+#   pending_counsel     interpretation awaiting advocate review
+#   provisional_default owner-approved simulation default; NOT a validated legal rule
+#   counsel_confirmed   confirmed by an advocate (none yet)
+
+[rule_set]
+version = "msmed-v1"
+title = "MSMED Act 2006 delayed-payment rules (as enacted)"
+legal_basis = "Micro, Small and Medium Enterprises Development Act 2006, ss.2(b), 2(n), 15, 16, 19, as enacted. MSMED (Amendment) Act 2026 (Act 16 of 2026) reviewed from the Bill text and the PIB summary: ss.2(b), 15, 16 and 17 are not amended; substituted s.8 (commenced) raises LR-23; substituted s.19 is not commenced (LR-25). Enacted text and S.O. 5575(E) not yet seen in the Gazette (LR-21). Commencement date 2 Oct 2006 to be verified (LR-20)."
+effective_from = 2006-10-02
+pending_reviews = [
+  "LR-01", "LR-02", "LR-03", "LR-04", "LR-05", "LR-06", "LR-07", "LR-08", "LR-09", "LR-10",
+  "LR-11", "LR-12", "LR-13", "LR-14", "LR-20", "LR-21", "LR-22", "LR-23", "LR-24",
+]
+
+[parameters]
+objection_window_days = 15            # R2, R3, R4a
+appointed_day_period_days = 15        # R4, R5
+max_agreed_payment_days = 45          # R6
+interest_multiplier = "3"             # R8
+months_per_year = 12                  # A1
+day_count_basis_days = 365            # A1, A10
+limitation_years = 3                  # R12, A7
+limitation_warning_days = 180         # A7
+phone_note_counts_as_written = false  # R19
+other_channel_counts_as_written = true  # A6
+acknowledgement_ends_window = false   # R20
+holiday_adjustment = false            # R4b
+agreed_terms_over_max = "cap"         # R6a
+multiple_objections = "latest_removal"  # R21
+agreed_days_base = "acceptance"       # A9
+payment_allocation = "principal_first"  # A4
+rate_selection = "period_start"       # A3
+limitation_leap_day = "feb_28"        # A11
+
+# ---------------------------------------------------------------- Tier S: statute text
+
+[[rules]]
+id = "R1"
+tier = "S"
+title = "Day of acceptance"
+explanation = "The day of acceptance is the day the goods were actually delivered or the services rendered."
+source = "MSMED Act 2006 s.2(b), Explanation (i)(a)"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R2"
+tier = "S"
+title = "Written objection within fifteen days"
+explanation = "If the buyer objects in writing within fifteen days of delivery, the day of acceptance is the day the supplier removes the objection."
+source = "MSMED Act 2006 s.2(b), Explanation (i)(b)"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R3"
+tier = "S"
+title = "Deemed acceptance"
+explanation = "If no written objection is made within fifteen days of delivery, the day of actual delivery is the day of deemed acceptance."
+source = "MSMED Act 2006 s.2(b), Explanation (ii)"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R4"
+tier = "S"
+title = "Appointed day"
+explanation = "The appointed day is the day immediately after fifteen days from the day of acceptance or deemed acceptance."
+source = "MSMED Act 2006 s.2(b)"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R5"
+tier = "S"
+title = "Due date without a written agreement"
+explanation = "Without a written agreement, the buyer must pay before the appointed day."
+source = "MSMED Act 2006 s.15"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R6"
+tier = "S"
+title = "Written agreement and the 45-day limit"
+explanation = "With a written agreement the buyer must pay by the agreed date, and the agreed period may not exceed 45 days from the day of acceptance or deemed acceptance."
+source = "MSMED Act 2006 s.15 proviso"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R7"
+tier = "S"
+title = "Interest start date"
+explanation = "Interest runs from the appointed day, or from the day after the agreed date."
+source = "MSMED Act 2006 s.16"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21"]
+
+[[rules]]
+id = "R8"
+tier = "S"
+title = "Compound interest at three times the bank rate"
+explanation = "Late payment carries compound interest with monthly rests at three times the bank rate notified by the Reserve Bank."
+source = "MSMED Act 2006 s.16"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21", "LR-24"]
+
+[[rules]]
+id = "R9"
+tier = "S"
+title = "Supplier"
+explanation = "A supplier is a micro or small enterprise that has filed a memorandum with the authority under s.8."
+source = "MSMED Act 2006 s.2(n)"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-08", "LR-20", "LR-21", "LR-23"]
+
+[[rules]]
+id = "R13"
+tier = "S"
+title = "Pre-deposit to challenge an award"
+explanation = "A court will not hear a buyer's application to set aside a Council award unless 75% of the amount is deposited."
+source = "MSMED Act 2006 s.19"
+effective_from = 2006-10-02
+verification_status = "text_checked"
+decision_refs = ["LR-20", "LR-21", "LR-25"]
+
+# ------------------------------------------------------ Tier I: interpretations (counsel)
+
+[[rules]]
+id = "R3a"
+tier = "I"
+title = "Late objection"
+explanation = "A written objection received after Day 15 is recorded but does not move the acceptance date."
+source = "Reading of s.2(b) Explanation; Taxmann s.15 FAQ"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-03"]
+
+[[rules]]
+id = "R4a"
+tier = "I"
+title = "Day counting"
+explanation = "Fifteen days are counted excluding the delivery day: the window ends on Day 15 and the appointed day is Day 16."
+source = "General Clauses Act 1897 s.9 (reading)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-01"]
+
+[[rules]]
+id = "R4b"
+tier = "I"
+title = "No holiday adjustment"
+explanation = "Dates are not moved when they fall on a Sunday or public holiday."
+source = "Statute silent (reading)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-02"]
+
+[[rules]]
+id = "R6a"
+tier = "I"
+title = "Terms over 45 days are capped"
+explanation = "Written terms longer than 45 days are treated as capped at 45 days from acceptance."
+source = "Reading of s.15 proviso"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-07"]
+
+[[rules]]
+id = "R9a"
+tier = "I"
+title = "Udyam registration as the memorandum"
+explanation = "Udyam registration is treated as satisfying the s.2(n) memorandum requirement."
+source = "Ministry of MSME notification of 26 June 2020 (not verified here)"
+effective_from = 2020-07-01
+verification_status = "pending_counsel"
+decision_refs = ["LR-08"]
+
+[[rules]]
+id = "R10"
+tier = "I"
+title = "Registration after supply"
+explanation = "Supplies made before the Udyam registration date may not get the delayed-payment protections."
+source = "Silpi Industries v. KSRTC (2021) (reading)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-09"]
+
+[[rules]]
+id = "R11"
+tier = "I"
+title = "Trading registrations"
+explanation = "Retail and wholesale traders on Udyam may be limited to priority-sector lending and may not get the delayed-payment protections."
+source = "Ministry of MSME OM of 2 July 2021 (not verified here)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-10"]
+
+[[rules]]
+id = "R12"
+tier = "I"
+title = "Limitation"
+explanation = "Limitation is generally three years from when payment falls due; the date shown is indicative only."
+source = "Limitation Act 1963; Silpi Industries (reading)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-11"]
+
+[[rules]]
+id = "R14"
+tier = "I"
+title = "Buyer's tax deduction"
+explanation = "The buyer's deduction for dues paid beyond the s.15 limit is deferred to the year of payment."
+source = "Income-tax Act 1961 s.43B(h); 2025 Act equivalent not verified"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-15", "LR-21"]
+
+[[rules]]
+id = "R15"
+tier = "I"
+title = "Electronic evidence certificate"
+explanation = "Electronic evidence needs a certificate under BSA 2023 s.63; the generated certificate is a draft."
+source = "Bharatiya Sakshya Adhiniyam 2023 s.63 (Schedule not checked against the Gazette)"
+effective_from = 2024-07-01
+verification_status = "pending_counsel"
+decision_refs = ["LR-16"]
+
+[[rules]]
+id = "R16"
+tier = "I"
+title = "Demand notice not mandatory"
+explanation = "No statutory demand notice is required; a notice is evidence, not a precondition."
+source = "Ideation document v12 (reading)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-17"]
+
+[[rules]]
+id = "R19"
+tier = "I"
+title = "What counts as writing"
+explanation = "Email, letters, chat messages and written notes count as writing; a phone call does not."
+source = "Reading of s.2(b) Explanation"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-04"]
+
+[[rules]]
+id = "R20"
+tier = "I"
+title = "Acknowledgement keeps the window open"
+explanation = "A buyer's acknowledgement within fifteen days does not end the objection window early."
+source = "Conservative reading"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-05"]
+
+[[rules]]
+id = "R21"
+tier = "I"
+title = "Several objections"
+explanation = "With several written objections in the window, acceptance is the day the last one is removed."
+source = "Reading of s.2(b) Explanation (i)(b)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-06"]
+
+# ------------------------------------------------- Tier C: configurable assumptions
+
+[[rules]]
+id = "A1"
+tier = "C"
+title = "Monthly rest method"
+explanation = "A complete month accrues the balance times the annual rate divided by 12; a partial period accrues actual days over 365."
+source = "PaySetu assumption (D3)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["D3", "LR-12"]
+
+[[rules]]
+id = "A2"
+tier = "C"
+title = "Rounding"
+explanation = "Interest is rounded half-up to the paisa at each monthly rest."
+source = "PaySetu assumption (D3)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["D3", "LR-12"]
+
+[[rules]]
+id = "A3"
+tier = "C"
+title = "Rate selection"
+explanation = "Each monthly period uses three times the bank rate in force on that period's first day."
+source = "PaySetu assumption (D5)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["D5", "LR-13"]
+
+[[rules]]
+id = "A4"
+tier = "C"
+title = "Payment allocation"
+explanation = "Part payments reduce principal first, then interest."
+source = "PaySetu assumption (D4)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["D4", "LR-14"]
+
+[[rules]]
+id = "A5"
+tier = "C"
+title = "Legal calendar"
+explanation = "Legal dates are calendar dates in Asia/Kolkata."
+source = "PaySetu engineering default (ADR-012)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["ADR-012"]
+
+[[rules]]
+id = "A6"
+tier = "C"
+title = "Unspecified channel counts as written"
+explanation = "A response recorded with channel 'other' is treated as written."
+source = "PaySetu assumption (conservative)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-04"]
+
+[[rules]]
+id = "A7"
+tier = "C"
+title = "Indicative limitation date"
+explanation = "Indicative limitation date is the interest start date plus three years; a warning shows 180 days before it."
+source = "PaySetu assumption"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-11"]
+
+[[rules]]
+id = "A8"
+tier = "C"
+title = "One invoice, one delivery"
+explanation = "Each case covers one invoice delivered on one date."
+source = "PaySetu product scope (ADR-021)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["ADR-021"]
+
+[[rules]]
+id = "A9"
+tier = "C"
+title = "Agreed days counted from acceptance"
+explanation = "Written terms stated as a number of days are counted from the day of acceptance."
+source = "PaySetu assumption"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-22"]
+
+[[rules]]
+id = "A10"
+tier = "C"
+title = "Accrual window and payments"
+explanation = "Interest accrues through the as-of date inclusive; a payment reduces the balance from its own date and splits that month into day-count segments."
+source = "PaySetu assumption (D3)"
+effective_from = 2006-10-02
+verification_status = "provisional_default"
+decision_refs = ["D3", "LR-12"]
+
+[[rules]]
+id = "A11"
+tier = "C"
+title = "Limitation date on 29 February"
+explanation = "If the indicative limitation date falls on 29 February in a non-leap year, 28 February is used."
+source = "PaySetu assumption (conservative)"
+effective_from = 2006-10-02
+verification_status = "pending_counsel"
+decision_refs = ["LR-11"]

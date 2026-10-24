@@ -14,6 +14,17 @@ strict = true
 warn_unused_configs = true
 exclude = ["^\\.venv/"]
 
+# Branch coverage gate for the pure legal/integrity core (AGENTS.md Section 11). Enforced by
+# `make test`; no exclusions are configured, so every line and branch must be exercised.
+[tool.coverage.run]
+branch = true
+source = ["app/domain"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

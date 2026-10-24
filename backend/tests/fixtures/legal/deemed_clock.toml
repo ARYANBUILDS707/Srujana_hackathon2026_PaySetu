@@ -1,0 +1,291 @@
+# DeemedClock legal fixtures (T2.7). Written to be read by counsel.
+#
+# Each case gives facts and the dates PaySetu computes under rule set msmed-v1.
+# Day 0 = delivery date. Only the fields listed under [case.expected] are checked.
+# These fixtures test that the engine follows the encoded readings; they do NOT show that
+# the readings are legally correct. Review status is recorded in `reviewed_by`.
+# payment_state = "none" means no payment state yet (acceptance not fixed).
+
+[meta]
+module = "deemed_clock"
+rule_set = "msmed-v1"
+reviewed_by = "pending"
+notes = "Readings R3a, R4a, R6a, R19, R20, R21 and A9 are pending counsel review (DECISIONS.md LR-01 to LR-07, LR-22). The 2026 Amendment is not applied (LR-21)."
+
+[[case]]
+id = "CLK-01"
+title = "Verbal deal, buyer silent: PRD Section 4 worked example"
+rules = ["R3", "R4", "R4a", "R5", "R7", "R12", "A7"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-20
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "deemed"
+window_end = 2026-11-16
+acceptance_date = 2026-11-01
+due_date = 2026-11-16
+interest_start = 2026-11-17
+indicative_limitation_date = 2029-11-17
+payment_state = "overdue"
+days_overdue = 4
+
+[[case]]
+id = "CLK-02"
+title = "Day 15 is still inside the window"
+rules = ["R3", "R4a"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-16
+[case.expected]
+acceptance_state = "window_open"
+window_day = 15
+window_days_remaining = 0
+payment_state = "none"
+
+[[case]]
+id = "CLK-03"
+title = "Day 16 with no objection: deemed accepted, payment due yesterday"
+rules = ["R3", "R4a", "R5"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-17
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "deemed"
+payment_state = "overdue"
+days_overdue = 1
+
+[[case]]
+id = "CLK-04"
+title = "Written objection by email on Day 4, not yet removed"
+rules = ["R2", "R19"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-25
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-05
+channel = "email"
+[case.expected]
+acceptance_state = "objection_raised"
+payment_state = "none"
+
+[[case]]
+id = "CLK-05"
+title = "Written objection removed on 10 Dec: acceptance moves to the removal date"
+rules = ["R2", "R21", "R5"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-12-31
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-05
+channel = "letter"
+objection_removed_on = 2026-12-10
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "objection_removed"
+acceptance_date = 2026-12-10
+due_date = 2026-12-25
+interest_start = 2026-12-26
+
+[[case]]
+id = "CLK-06"
+title = "Objection received on Day 16 (after the window) does not move acceptance"
+rules = ["R3", "R3a"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-30
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-17
+channel = "email"
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "deemed"
+acceptance_date = 2026-11-01
+
+[[case]]
+id = "CLK-07"
+title = "Objection by phone only is not in writing"
+rules = ["R19", "R3"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-30
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-03
+channel = "phone_note"
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "deemed"
+
+[[case]]
+id = "CLK-08"
+title = "Objection with channel 'other' is treated as written"
+rules = ["A6", "R2"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-30
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-03
+channel = "other"
+[case.expected]
+acceptance_state = "objection_raised"
+
+[[case]]
+id = "CLK-09"
+title = "Two objections: acceptance is the day the last one is removed"
+rules = ["R21"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-12-31
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-03
+channel = "email"
+objection_removed_on = 2026-11-20
+[[case.input.responses]]
+kind = "objection"
+received_on = 2026-11-10
+channel = "whatsapp"
+objection_removed_on = 2026-11-28
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "objection_removed"
+acceptance_date = 2026-11-28
+
+[[case]]
+id = "CLK-10"
+title = "Acknowledgement on Day 2 does not end the window early"
+rules = ["R20"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-05
+[[case.input.responses]]
+kind = "acknowledgement"
+received_on = 2026-11-03
+channel = "whatsapp"
+[case.expected]
+acceptance_state = "window_open"
+
+[[case]]
+id = "CLK-11"
+title = "Acknowledged within the window, then the window closes"
+rules = ["R1", "R20"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "verbal"
+today = 2026-11-17
+[[case.input.responses]]
+kind = "acknowledgement"
+received_on = 2026-11-03
+channel = "email"
+[case.expected]
+acceptance_state = "accepted"
+acceptance_basis = "acknowledged"
+acceptance_date = 2026-11-01
+
+[[case]]
+id = "CLK-12"
+title = "Written deal, 30 days from acceptance"
+rules = ["R6", "R7", "A9"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "written"
+agreed_payment_days = 30
+today = 2026-12-15
+[case.expected]
+due_date = 2026-12-01
+interest_start = 2026-12-02
+terms_capped_at_max = false
+
+[[case]]
+id = "CLK-13"
+title = "Written deal of exactly 45 days is not capped"
+rules = ["R6"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "written"
+agreed_payment_days = 45
+today = 2027-01-31
+[case.expected]
+due_date = 2026-12-16
+terms_capped_at_max = false
+
+[[case]]
+id = "CLK-14"
+title = "Written deal of 60 days is capped at 45 days"
+rules = ["R6", "R6a"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "written"
+agreed_payment_days = 60
+today = 2027-01-31
+[case.expected]
+due_date = 2026-12-16
+interest_start = 2026-12-17
+terms_capped_at_max = true
+
+[[case]]
+id = "CLK-15"
+title = "Written deal with an agreed calendar date beyond 45 days is capped"
+rules = ["R6", "R6a"]
+[case.input]
+delivery_date = 2026-11-01
+deal_type = "written"
+agreed_due_date = 2027-01-31
+today = 2027-02-15
+[case.expected]
+due_date = 2026-12-16
+terms_capped_at_max = true
+
+[[case]]
+id = "CLK-16"
+title = "Leap year: delivery 14 Feb 2028, window ends 29 Feb 2028"
+rules = ["R4a", "R5"]
+[case.input]
+delivery_date = 2028-02-14
+deal_type = "verbal"
+today = 2028-03-31
+[case.expected]
+window_end = 2028-02-29
+due_date = 2028-02-29
+interest_start = 2028-03-01
+
+[[case]]
+id = "CLK-17"
+title = "Month and year boundary: delivery 20 Dec 2026"
+rules = ["R4a", "R5"]
+[case.input]
+delivery_date = 2026-12-20
+deal_type = "verbal"
+today = 2027-01-10
+[case.expected]
+window_end = 2027-01-04
+due_date = 2027-01-04
+interest_start = 2027-01-05
+
+[[case]]
+id = "CLK-18"
+title = "Indicative limitation from 29 Feb 2028 falls on 28 Feb 2031"
+rules = ["R12", "A7", "A11"]
+[case.input]
+delivery_date = 2028-02-13
+deal_type = "verbal"
+today = 2028-03-31
+[case.expected]
+interest_start = 2028-02-29
+indicative_limitation_date = 2031-02-28

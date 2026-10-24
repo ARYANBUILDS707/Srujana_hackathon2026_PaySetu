@@ -24,7 +24,7 @@
 | Approve the remaining engineering defaults before their phase: ADR-007 (D2) before Phase 3, ADR-014 (D11) before Phase 5, ADR-010 (D7) before Phase 9, ADR-015 (D6, D13) before Phase 10, ADR-009 (D1) before Phase 12 | Per phase | Proposed |
 | Install Python 3.12, Node.js 20 LTS (or 22 LTS), Git | Phase 0 | Unknown |
 | Initialise the Git repository (the folder is not a repo yet) | Phase 0 | Open |
-| Book an advocate review of the legal register (LR-01 … LR-20), templates and the s.63 draft | Before any non-demo use | Open |
+| Book an advocate review of the legal register (LR-01 … LR-25), templates and the s.63 draft | Before any non-demo use | Open |
 | SMTP account (or stay `simulated` for demo) | Phase 9 | Open |
 
 ### Phase overview
@@ -94,13 +94,13 @@ Legal readings are **not** decided here. Every tier I and C rule (PRD Section 4)
 
 | Task | Description | Files / modules | Completion criteria |
 | --- | --- | --- | --- |
-| T2.1 | Rule set `msmed-v1.toml` (window 15, max agreed 45, multiplier 3, limitation 3 years, assumptions A1–A8, every PRD Section 4 rule ID with tier, explanation text and `counsel_confirmed` flag) + typed loader | `app/rules/msmed-v1.toml`, `app/domain/rules.py` | The loader validates the file; unknown keys fail |
+| T2.1 | Rule set `msmed-v1.toml` (window 15, max agreed 45, multiplier 3, limitation 3 years, assumptions A1–A8, every PRD Section 4 rule ID with tier, explanation text and `counsel_confirmed` flag) + typed loader | `app/rules/msmed-v1.toml`, `app/rules/loader.py` (file I/O), `app/domain/rules.py` (pure validation) | The loader validates the file; unknown keys fail. **Done (M1-B)** |
 | T2.2 | DeemedClock: `CaseFacts` + `today` → `ClockResult` (states, basis, window end, acceptance, due, interest start, limitation, 45-day cap, written vs verbal, objection inside/outside the window, phone-note objection not written, `other` channel counted as written, acknowledgement keeps the window open, multiple objections → latest removal, no holiday adjustment) | `app/domain/deemed_clock.py` | Fixture tests for every rule; worked example from PRD Section 4 passes; 100% branch coverage |
-| T2.3 | Interest engine: monthly rests (rate/12), partial month days/365, half-up rounding to the paisa at each rest, rate in force at each period start, principal-first part payments, as-of date, period table | `app/domain/interest.py` | **Reference fixture: Rs 5,00,000 @ 17.25% × 12 months = Rs 93,407 ± Re 1**; rate-change and part-payment fixtures pass; property test: interest is non-decreasing in the as-of date |
+| T2.3 | Interest engine: monthly rests (rate/12), partial month days/365, half-up rounding to the paisa at each rest, rate in force at each period start, principal-first part payments, as-of date, period table | `app/domain/interest.py` | **Reference fixture: Rs 5,00,000 @ 17.25% × 12 months = Rs 93,406.72 (exact; about Rs 93,407)**; rate-change and part-payment fixtures pass; property test: interest is non-decreasing in the as-of date |
 | T2.4 | Eligibility (R9, R9a, R10, R11) | `app/domain/eligibility.py` | All verdicts covered |
 | T2.5 | Integrity: canonical JSON, event hash, chain verification, file-hash comparison result types | `app/domain/integrity.py` | Tamper tests (payload change, reorder, missing event) are detected |
 | T2.6 | Checklist C01–C17 and next-action rules (DESIGN.md 9.4) | `app/domain/checklist.py`, `app/domain/next_action.py` | Table-driven tests for every item and each priority rule |
-| T2.7 | Legal fixture format (`tests/fixtures/legal/*.toml` with a `reviewed_by` field) + a parametrised runner | `tests/fixtures/legal/`, `tests/unit/domain/` | Fixtures are human-readable for counsel review |
+| T2.7 | Legal fixture format (`tests/fixtures/legal/*.toml` with a `reviewed_by` field) + a parametrised runner | `tests/fixtures/legal/`, `tests/unit/domain/` | Fixtures are human-readable for counsel review. **Done (M1-B).** Phase 2 status: T2.1–T2.7 complete; 100% line and branch coverage on `app/domain` (pytest-cov) |
 
 - **Dependencies:** T0.2 only.
 - **DB/API changes:** none.

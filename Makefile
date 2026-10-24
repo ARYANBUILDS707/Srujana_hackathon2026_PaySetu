@@ -46,8 +46,8 @@ typecheck: ## Type-check backend (mypy strict) and frontend (tsc)
 	cd backend && .venv/bin/mypy app tests
 	cd frontend && npm run typecheck
 
-test: ## Run backend tests
-	cd backend && .venv/bin/pytest
+test: ## Run backend tests with the 100% branch-coverage gate on app/domain
+	cd backend && .venv/bin/pytest --cov --cov-report=term-missing
 
 e2e: ## Run Playwright end-to-end tests
 	cd frontend && npm run e2e

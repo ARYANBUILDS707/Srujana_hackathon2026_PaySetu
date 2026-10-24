@@ -175,7 +175,7 @@ Use the domain vocabulary from the PRD and DATABASE.md everywhere: `case`, `buye
 | Change type | Required tests |
 | --- | --- |
 | `domain/` logic | Unit tests for every branch and boundary (Day 15 vs 16, month ends, leap years, the 45-day cap, rate changes, part payments). 100% branch coverage on `domain/` |
-| Legal rules | Fixture-driven tests in `tests/fixtures/legal/`, including the interest reference fixture (Rs 5,00,000 at 17.25% for 12 months = Rs 93,407 ± Re 1) |
+| Legal rules | Fixture-driven tests in `tests/fixtures/legal/`, including the interest reference fixture (Rs 5,00,000 at 17.25% for 12 months = Rs 93,406.72 exactly; a mathematical regression test, not proof of statutory correctness) |
 | Endpoint | Integration tests: happy path, validation error, unauthenticated (401), cross-supplier (404), invalid state (409), rate limit where applicable |
 | Evidence/timeline | Tamper tests: modified file bytes and an edited event row are detected; trigger tests prove UPDATE/DELETE are blocked |
 | Communications | Tests that sending without approval is impossible and that double send is prevented |
@@ -188,7 +188,7 @@ Rules:
 - Never call real external services in tests. Use the simulated adapters or HTTP mocks.
 - Never use real personal or business data in fixtures.
 
-Before reporting a task done, run the relevant commands from the `Makefile`: `make lint`, `make typecheck`, `make test` (and `make e2e` for UI flows).
+Before reporting a task done, run the relevant commands from the `Makefile`: `make lint`, `make typecheck`, `make test` (and `make e2e` for UI flows). `make test` fails if line or branch coverage of `backend/app/domain/` drops below 100%. Fix this by adding tests, never by adding coverage exclusions.
 
 ---
 

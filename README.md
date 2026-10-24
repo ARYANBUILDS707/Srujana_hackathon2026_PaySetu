@@ -102,7 +102,7 @@ The figures below come from secondary sources cited in the ideation document. Ve
 | ODR resolution pace (one state) | About 10.6% of 800+ Telangana cases resolved, Oct 2025 to Aug 2026 | YourStory (Sept 2026), one state only |
 | Buyer power | Small suppliers accept long credit terms to keep customers | ICAI journal |
 
-**Who counts as micro or small (from 1 April 2025):**
+**Who counts as micro or small (from 1 April 2025, per the ideation document; thresholds are set by notification under s.7, which the 2026 Amendment re-enacted, so re-check them before quoting):**
 
 | Class | Investment up to | Turnover up to |
 | --- | --- | --- |
@@ -402,11 +402,11 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 | Documentation | Draft v1.1 complete and consistency-reviewed: README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
 | Phase 0 (foundation) | Done on branch `dev`: runnable backend and frontend skeletons, tooling, Makefile, smoke tests |
 | Frontend | Next.js 16.4.3 skeleton with design tokens and a landing page. No application screens yet |
-| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only) |
+| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
 | Database | Not started (Phase 1) |
-| Tests | Backend: 2 pytest tests (health, OpenAPI path). Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
+| Tests | Backend: 208 pytest tests (2 integration, 206 unit incl. 24 counsel-readable legal fixtures); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
 | External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
-| Legal review of rules and templates | Not done |
+| Legal review of rules and templates | Not done. Interest defaults D3–D5 are owner-approved provisional simulation defaults only. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25) |
 
 **About earlier work:** The ideation document says that earlier prototype modules were built and passed 68 tests against local simulations. Those modules covered calculation, notice PDFs, signing, evidence hashing, postal parsing and advocate links. **That code is not in this workspace.** Its test results cannot be verified here, so this repository does not claim them. If the code is brought in later, this section will be updated.
 
@@ -448,7 +448,7 @@ The two apps run independently. The frontend does not need the API to render the
 ```bash
 make lint           # ruff check + ruff format --check; eslint + prettier --check
 make typecheck      # mypy (strict) on backend/app and backend/tests; next typegen + tsc --noEmit
-make test           # pytest
+make test           # pytest + 100% branch-coverage gate on backend/app/domain
 make build          # next build (production)
 make e2e            # Playwright smoke tests at 360×800 and 1280×800
 make help           # list all targets
