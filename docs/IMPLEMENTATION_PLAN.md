@@ -189,7 +189,7 @@ Legal readings are **not** decided here. Every tier I and C rule (PRD Section 4)
 
 | Task | Description | Files / modules | Completion criteria |
 | --- | --- | --- | --- |
-| T7.1 | Tailwind theme from DESIGN.md tokens (colors, type scale, spacing, radius, shadow); IBM Plex fonts via the framework font loader; global base styles | `tailwind.config.ts`, `src/app/layout.tsx` | Token names match DESIGN.md exactly; no raw hex in components |
+| T7.1 | Tailwind theme from DESIGN.md tokens (colors, type scale, spacing, radius, shadow); IBM Plex fonts via the framework font loader; global base styles. *Baseline already landed in Phase 0 (landing page); T7.1 reviews and completes it* | `src/app/globals.css` (Tailwind v4 `@theme`), `src/app/layout.tsx` | Token names match DESIGN.md exactly; no raw hex in components |
 | T7.2 | Formatters: money (en-IN, Rs), dates (DD MMM YYYY, IST), hash shortening, relative dates | `src/lib/format/` | Unit-tested via Playwright component checks or a tiny test page (no new test framework) |
 | T7.3 | API client: generated types (`openapi-typescript`), fetch wrapper (credentials, CSRF header, problem+json → typed errors, 401 → login redirect), upload with progress, `useApi` hook | `src/lib/api/`, `src/lib/hooks/` | Typecheck passes; errors map to fields |
 | T7.4 | UI primitives: Button, inputs (Money, Date, Udyam, GSTIN, Select, RadioCards, Textarea), StatusBadge, HashChip, Toast, Skeleton, EmptyState, ErrorState, Banner, Dialog/Sheet, StepProgress, DataList | `src/components/ui/` | Each follows DESIGN.md Section 5 incl. focus, disabled, loading; a dev-only `/dev/components` page to review them |

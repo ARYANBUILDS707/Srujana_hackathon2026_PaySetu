@@ -320,20 +320,25 @@ flowchart LR
 
 ## 10. Project Folder Structure
 
-**Current state:** the workspace contains documentation only.
+**Current state (after Phase 0):**
 
 ```
 PaySetu/
-├── README.md
-├── AGENTS.md
-└── docs/
-    ├── PRD.md
-    ├── DECISIONS.md
-    ├── DESIGN.md
-    ├── ARCHITECTURE.md
-    ├── DATABASE.md
-    ├── API.md
-    └── IMPLEMENTATION_PLAN.md
+├── README.md, AGENTS.md, Makefile, .gitignore, .nvmrc
+├── docs/                  # PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN
+├── backend/
+│   ├── app/main.py        # app factory, /api/v1 prefix
+│   ├── app/api/v1/        # health router
+│   ├── app/schemas/       # HealthOut
+│   ├── tests/integration/ # test_health.py
+│   ├── pyproject.toml     # ruff, mypy, pytest config
+│   ├── requirements.txt, requirements-dev.txt, .env.example
+└── frontend/
+    ├── src/app/           # layout (IBM Plex fonts), landing page, globals.css (design tokens)
+    ├── src/content/       # UI copy catalogue
+    ├── tests/e2e/         # Playwright smoke test
+    ├── next.config.ts, playwright.config.ts, eslint.config.mjs, tsconfig.json
+    └── package.json, package-lock.json, .env.example, .prettierrc.json
 ```
 
 **Planned structure** (the files above exist; everything else is planned). The authoritative version is [docs/ARCHITECTURE.md Section 6](docs/ARCHITECTURE.md#6-folder-structure).
@@ -395,10 +400,11 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 | Area | Status in this repository |
 | --- | --- |
 | Documentation | Draft v1.1 complete and consistency-reviewed: README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
-| Frontend | Not started |
-| Backend | Not started |
-| Database | Not started |
-| Tests | None |
+| Phase 0 (foundation) | Done on branch `dev`: runnable backend and frontend skeletons, tooling, Makefile, smoke tests |
+| Frontend | Next.js 16.4.3 skeleton with design tokens and a landing page. No application screens yet |
+| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only) |
+| Database | Not started (Phase 1) |
+| Tests | Backend: 2 pytest tests (health, OpenAPI path). Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
 | External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
 | Legal review of rules and templates | Not done |
 
@@ -408,15 +414,45 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 
 ## 13. Installation and Local Development
 
-> **Pending.** This repository has no application code, dependency manifests or scripts yet, so there are no verified setup commands.
+Every command below was run successfully on macOS (Apple Silicon) on 25 Oct 2026.
 
-This section will be filled in once the frontend and backend are scaffolded. The expected prerequisites are:
+### Prerequisites
 
-- Node.js 20 LTS or 22 LTS with npm, for the Next.js frontend (proposed, ADR-011)
-- Python 3.12, for the FastAPI backend (proposed, ADR-011)
-- Git
+| Tool | Version | Notes |
+| --- | --- | --- |
+| Python | 3.12 (tested 3.12.13) | If `python3.12` is not on your PATH, pass its path: `make setup PYTHON=/path/to/python3.12` |
+| Node.js | 22 LTS (tested 22.23.4); 20.9+ also allowed | `.nvmrc` pins 22, so `fnm` and `nvm` select it automatically |
+| npm | Bundled with Node (tested 10.9.9) | |
+| GNU Make | Any | All commands go through the root `Makefile` |
 
-Exact versions and commands will be added here only after they have been tested in this repository.
+### First-time setup
+
+```bash
+make setup          # backend venv + pinned pip packages; frontend npm ci + Playwright Chromium
+```
+
+Optional local overrides: copy `backend/.env.example` to `backend/.env`, and `frontend/.env.example` to `frontend/.env.local`. Phase 0 reads neither file; the defaults work.
+
+### Run the apps
+
+```bash
+make dev-api        # FastAPI on http://localhost:8000  (health: /api/v1/health, docs: /api/v1/docs)
+make dev-web        # Next.js on http://localhost:3000  (proxies /api/* to port 8000)
+make dev            # both together
+```
+
+The two apps run independently. The frontend does not need the API to render the landing page.
+
+### Checks
+
+```bash
+make lint           # ruff check + ruff format --check; eslint + prettier --check
+make typecheck      # mypy (strict) on backend/app and backend/tests; next typegen + tsc --noEmit
+make test           # pytest
+make build          # next build (production)
+make e2e            # Playwright smoke tests at 360×800 and 1280×800
+make help           # list all targets
+```
 
 ---
 

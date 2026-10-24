@@ -233,8 +233,10 @@ PaySetu/
 │   └── IMPLEMENTATION_PLAN.md
 ├── frontend/
 │   ├── package.json
-│   ├── next.config.(ts|mjs)      # dev rewrite /api → backend
-│   ├── tailwind.config.ts        # DESIGN.md tokens
+│   ├── next.config.ts            # dev rewrite /api → backend
+│   ├── playwright.config.ts      # e2e viewports 360×800 and 1280×800
+│   │                             # Tailwind v4: DESIGN.md tokens live in src/app/globals.css (@theme); no tailwind.config file
+│   ├── AGENTS.md                 # generated and maintained by `next dev` (Next.js agent notes); root AGENTS.md governs
 │   ├── tsconfig.json             # strict
 │   ├── .env.example
 │   ├── public/

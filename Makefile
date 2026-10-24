@@ -1,0 +1,62 @@
+# PaySetu development commands (ADR-011). Run `make help` for the list.
+# Requires Python 3.12 and Node.js 20/22 LTS (see .nvmrc). Override the interpreter with
+# `make setup PYTHON=/path/to/python3.12` if python3.12 is not on PATH.
+
+PYTHON ?= python3.12
+VENV := backend/.venv
+VENV_BIN := $(VENV)/bin
+API_PORT ?= 8000
+WEB_PORT ?= 3000
+
+.DEFAULT_GOAL := help
+.PHONY: help setup setup-backend setup-frontend dev dev-api dev-web lint format typecheck \
+	test e2e build migrate seed
+
+help: ## List available targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
+
+setup: setup-backend setup-frontend ## Install backend and frontend dependencies
+
+setup-backend: ## Create the Python venv and install pinned dependencies
+	test -d $(VENV) || $(PYTHON) -m venv $(VENV)
+	$(VENV_BIN)/python -m pip install --upgrade pip
+	$(VENV_BIN)/python -m pip install -r backend/requirements-dev.txt
+
+setup-frontend: ## Install pinned npm dependencies and the Playwright browser
+	cd frontend && npm ci && npx playwright install chromium
+
+dev: ## Run API and web together (Ctrl+C stops both)
+	$(MAKE) -j2 dev-api dev-web
+
+dev-api: ## Run FastAPI with reload (default http://localhost:8000)
+	cd backend && .venv/bin/uvicorn app.main:app --reload --port $(API_PORT)
+
+dev-web: ## Run Next.js (default http://localhost:3000; proxies /api to the API)
+	cd frontend && npm run dev -- --port $(WEB_PORT)
+
+lint: ## Lint and format-check backend and frontend
+	cd backend && .venv/bin/ruff check . && .venv/bin/ruff format --check .
+	cd frontend && npm run lint && npm run format:check
+
+format: ## Apply formatters
+	cd backend && .venv/bin/ruff format . && .venv/bin/ruff check --fix .
+	cd frontend && npm run format
+
+typecheck: ## Type-check backend (mypy strict) and frontend (tsc)
+	cd backend && .venv/bin/mypy app tests
+	cd frontend && npm run typecheck
+
+test: ## Run backend tests
+	cd backend && .venv/bin/pytest
+
+e2e: ## Run Playwright end-to-end tests
+	cd frontend && npm run e2e
+
+build: ## Production build of the frontend
+	cd frontend && npm run build
+
+migrate: ## Apply database migrations (available from Phase 1, T1.2)
+	@echo "migrate: not yet available. Alembic is set up in Phase 1 (T1.2)."
+
+seed: ## Load demo data (available from Phase 11, T11.1)
+	@echo "seed: not yet available. Demo seed arrives in Phase 11 (T11.1)."
