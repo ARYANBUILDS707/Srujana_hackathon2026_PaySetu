@@ -72,7 +72,7 @@
 
 | Task | Description | Files / modules | Completion criteria |
 | --- | --- | --- | --- |
-| T1.1 | Typed settings via `pydantic-settings` (all variables in ARCHITECTURE.md Section 12); startup validation; production gate for simulated adapters | `app/config.py` | Missing required variables fail startup with a clear message; tests cover the gate |
+| T1.1 | Typed settings via `pydantic-settings` (all variables in ARCHITECTURE.md Section 12); startup validation; production gate for simulated adapters | `app/config.py` | Missing required variables fail startup with a clear message; tests cover the gate. **Done.** Also: production requires an https `PUBLIC_BASE_URL` and a non-example `TOKEN_HASH_KEY`; error messages never echo values; app started via `uvicorn app.main:create_app --factory` |
 | T1.2 | DB engine + session + SQLite pragmas (WAL, foreign_keys, busy_timeout); Alembic configured; test fixture that builds a temp DB with `alembic upgrade head` | `app/db.py`, `alembic/`, `tests/conftest.py` | Empty migration runs; pragma test passes |
 | T1.3 | Error framework: typed exceptions → `application/problem+json` handler; `request_id` middleware; structured JSON logging with redaction | `app/errors.py`, `app/main.py`, `app/logging.py` | Tests: each error type maps to the documented status and code; logs contain no bodies or tokens |
 | T1.4 | Injectable `Clock` provider (UTC now + Asia/Kolkata today) and a test-freezing fixture | `app/clock.py` | Domain and services can receive `today`; tests can freeze time |

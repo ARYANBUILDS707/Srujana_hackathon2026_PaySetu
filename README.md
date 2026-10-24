@@ -402,9 +402,9 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 | Documentation | Draft v1.1 complete and consistency-reviewed: README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
 | Phase 0 (foundation) | Done on branch `dev`: runnable backend and frontend skeletons, tooling, Makefile, smoke tests |
 | Frontend | Next.js 16.4.3 skeleton with design tokens and a landing page. No application screens yet |
-| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
+| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Phase 1: T1.1 typed settings (`app/config.py`) with startup validation and the production gate. Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
 | Database | Not started (Phase 1) |
-| Tests | Backend: 208 pytest tests (2 integration, 206 unit incl. 24 counsel-readable legal fixtures); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
+| Tests | Backend: 246 pytest tests (3 integration, 243 unit, incl. 24 counsel-readable legal fixtures and 37 settings tests); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
 | External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
 | Legal review of rules and templates | Not done. Interest defaults D3–D5 are owner-approved provisional simulation defaults only. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25) |
 
@@ -431,7 +431,7 @@ Every command below was run successfully on macOS (Apple Silicon) on 25 Oct 2026
 make setup          # backend venv + pinned pip packages; frontend npm ci + Playwright Chromium
 ```
 
-Optional local overrides: copy `backend/.env.example` to `backend/.env`, and `frontend/.env.example` to `frontend/.env.local`. Phase 0 reads neither file; the defaults work.
+**Required:** create the backend configuration with `cp backend/.env.example backend/.env`. The API validates it at startup and refuses to start with a message naming any missing or invalid variable. The example values work for local development only. Optional: copy `frontend/.env.example` to `frontend/.env.local` to override the API proxy target.
 
 ### Run the apps
 

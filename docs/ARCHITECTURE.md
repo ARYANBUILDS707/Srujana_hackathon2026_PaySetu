@@ -382,7 +382,7 @@ Rules:
 
 - Adapters return typed results with `mode` (`live`, `sandbox`, `simulated`). The mode is persisted with the outcome and shown in the UI and the pack.
 - Timeouts: 15 s for SMTP; 10 s for verification. No automatic retry for email sends (retrying is a user action, to avoid duplicates). Verification GETs can be retried once.
-- **Production gate:** when `APP_ENV=production`, startup fails if any adapter is `simulated`, unless `ALLOW_NONLIVE_VERIFIED=1` is set. If that override is used, the `SimulatedBanner` is shown to every user.
+- **Production gate** (implemented in `app/config.py`, T1.1): when `APP_ENV=production`, startup fails if any adapter is non-live (`simulated`, or `sandbox`, whose results are not real registry checks), unless `ALLOW_NONLIVE_VERIFIED=1` is set. If that override is used, the `SimulatedBanner` is shown to every user.
 
 ---
 
@@ -503,7 +503,7 @@ Continuous integration (GitHub Actions, once the repository exists) runs: lint �
 ## 17. Deployment Approach (MVP)
 
 - **Target [PRD D1]:** one small Linux VM in an Indian region (e.g. 2 vCPU / 4 GB RAM / 80 GB disk).
-- **Processes:** Caddy (ports 80/443) → `uvicorn app.main:app` (one worker, localhost:8000) and `next start` (localhost:3000), managed by systemd.
+- **Processes:** Caddy (ports 80/443) → `uvicorn app.main:create_app --factory` (one worker, localhost:8000) and `next start` (localhost:3000), managed by systemd.
 - **Release:** pull the tagged release → install pinned dependencies → `alembic upgrade head` → `next build` → restart services → health check `GET /api/v1/health`.
 - **Backups:** nightly SQLite online backup (`.backup`) + an rsync of `storage/evidence` and `storage/packs` to encrypted off-server storage; 30-day retention; a monthly restore test. Evidence files are immutable, so incremental copies are cheap.
 - **Health:** `/api/v1/health` (process up, DB reachable, storage writable, adapter modes) plus an external uptime check.

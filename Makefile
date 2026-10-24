@@ -29,7 +29,7 @@ dev: ## Run API and web together (Ctrl+C stops both)
 	$(MAKE) -j2 dev-api dev-web
 
 dev-api: ## Run FastAPI with reload (default http://localhost:8000)
-	cd backend && .venv/bin/uvicorn app.main:app --reload --port $(API_PORT)
+	cd backend && .venv/bin/uvicorn app.main:create_app --factory --reload --port $(API_PORT)
 
 dev-web: ## Run Next.js (default http://localhost:3000; proxies /api to the API)
 	cd frontend && npm run dev -- --port $(WEB_PORT)
