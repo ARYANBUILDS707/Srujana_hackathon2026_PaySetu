@@ -43,7 +43,7 @@ format: ## Apply formatters
 	cd frontend && npm run format
 
 typecheck: ## Type-check backend (mypy strict) and frontend (tsc)
-	cd backend && .venv/bin/mypy app tests alembic
+	cd backend && .venv/bin/mypy app tests alembic seed
 	cd frontend && npm run typecheck
 
 test: ## Run backend tests with the 100% branch-coverage gate on app/domain
@@ -61,5 +61,5 @@ migrate: ## Apply database migrations to DATABASE_URL (backend/.env)
 migrate-status: ## Show the current and head migration revisions
 	cd backend && .venv/bin/alembic current && .venv/bin/alembic heads
 
-seed: ## Load demo data (available from Phase 11, T11.1)
-	@echo "seed: not yet available. Demo seed arrives in Phase 11 (T11.1)."
+seed: ## Load SYNTHETIC demo data (refuses production; run after make migrate)
+	cd backend && .venv/bin/python -m seed.demo

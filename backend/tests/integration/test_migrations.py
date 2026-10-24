@@ -1,4 +1,4 @@
-"""T1.2: Alembic configuration, baseline migration, upgrade/downgrade repeatability."""
+"""Alembic configuration, migration history, schema/model parity and repeatability."""
 
 import re
 from io import StringIO
@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 from alembic import command
+from alembic.autogenerate import compare_metadata
+from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
@@ -13,6 +15,17 @@ from app.models import Base
 from tests.conftest import BACKEND_DIR, TEST_SETTINGS, alembic_config
 
 BASELINE = "bf48eb38df15"
+HEAD = "7f9909eb7e4c"  # demo case core (vertical slice)
+DEMO_TABLES = {
+    "alembic_version",
+    "suppliers",
+    "buyers",
+    "cases",
+    "evidence_items",
+    "timeline_events",
+    "buyer_responses",
+    "bank_rates",
+}
 
 
 def _tables(url: str) -> set[str]:
@@ -37,8 +50,9 @@ def _version(url: str) -> list[str]:
 
 def test_single_linear_history_starting_at_the_baseline() -> None:
     script = ScriptDirectory.from_config(alembic_config("sqlite://"))
-    assert script.get_heads() == [BASELINE]
+    assert script.get_heads() == [HEAD]
     assert script.get_base() == BASELINE
+    assert [r.revision for r in script.walk_revisions()] == [HEAD, BASELINE]
 
 
 def test_migration_files_follow_the_naming_convention() -> None:
@@ -47,11 +61,44 @@ def test_migration_files_follow_the_naming_convention() -> None:
     assert all(re.fullmatch(r"\d{8}_\d{4}_[a-z0-9_]+\.py", name) for name in files), files
 
 
-def test_upgrade_head_creates_only_version_tracking(migrated_database_url: str) -> None:
-    # The baseline is empty; business tables arrive with later migrations.
+def test_upgrade_head_creates_the_demo_tables(migrated_database_url: str) -> None:
+    assert _tables(migrated_database_url) == DEMO_TABLES
+    assert _version(migrated_database_url) == [HEAD]
+
+
+def test_models_match_the_migrated_schema(migrated_database_url: str) -> None:
+    # Autogenerate must find nothing to change: migrations and models agree exactly.
+    engine = create_engine(migrated_database_url)
+    try:
+        with engine.connect() as connection:
+            diff = compare_metadata(MigrationContext.configure(connection), Base.metadata)
+    finally:
+        engine.dispose()
+    assert diff == []
+
+
+def test_append_only_triggers_exist(migrated_database_url: str) -> None:
+    engine = create_engine(migrated_database_url)
+    try:
+        with engine.connect() as connection:
+            names = set(
+                connection.execute(text("SELECT name FROM sqlite_master WHERE type = 'trigger'"))
+                .scalars()
+                .all()
+            )
+    finally:
+        engine.dispose()
+    assert names == {
+        "timeline_events_no_update",
+        "timeline_events_no_delete",
+        "evidence_items_no_delete",
+        "evidence_items_exclusion_only",
+    }
+
+
+def test_baseline_alone_has_only_version_tracking(migrated_database_url: str) -> None:
+    command.downgrade(alembic_config(migrated_database_url), BASELINE)
     assert _tables(migrated_database_url) == {"alembic_version"}
-    assert _version(migrated_database_url) == [BASELINE]
-    assert Base.metadata.tables == {}
 
 
 def test_downgrade_and_upgrade_are_repeatable(migrated_database_url: str) -> None:
@@ -60,7 +107,8 @@ def test_downgrade_and_upgrade_are_repeatable(migrated_database_url: str) -> Non
     assert _version(migrated_database_url) == []
     command.upgrade(config, "head")
     command.upgrade(config, "head")  # idempotent at head
-    assert _version(migrated_database_url) == [BASELINE]
+    assert _version(migrated_database_url) == [HEAD]
+    assert _tables(migrated_database_url) == DEMO_TABLES
 
 
 def test_migrations_run_with_application_pragmas(migrated_database_url: str) -> None:
@@ -93,7 +141,7 @@ def test_url_comes_from_validated_settings_when_not_overridden(
     config = alembic_config("")
     config.attributes.pop("database_url")
     command.upgrade(config, "head")
-    assert _version(url) == [BASELINE]
+    assert _version(url) == [HEAD]
 
 
 def test_invalid_settings_stop_migrations(

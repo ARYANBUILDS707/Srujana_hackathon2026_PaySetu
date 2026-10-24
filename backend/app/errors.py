@@ -86,6 +86,14 @@ class IntegrityFailed(AppError):
     status, code, title = 409, "integrity_failed", "Integrity check failed"
 
 
+class PayloadTooLarge(AppError):
+    status, code, title = 413, "file_too_large", "The upload is too large"
+
+
+class UnsupportedFileType(AppError):
+    status, code, title = 415, "unsupported_file_type", "This file type is not supported"
+
+
 class ValidationFailed(AppError):
     status, code, title = 422, "validation_failed", "Some fields need attention"
 

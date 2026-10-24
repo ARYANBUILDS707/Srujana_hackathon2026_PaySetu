@@ -5,5 +5,23 @@ migrations listed in DATABASE.md Section 8, starting with Phase 3.
 """
 
 from app.models.base import Base
+from app.models.entities import (
+    BankRate,
+    Buyer,
+    BuyerResponse,
+    Case,
+    EvidenceItem,
+    Supplier,
+    TimelineEventRow,
+)
 
-__all__ = ["Base"]
+__all__ = [
+    "BankRate",
+    "Base",
+    "Buyer",
+    "BuyerResponse",
+    "Case",
+    "EvidenceItem",
+    "Supplier",
+    "TimelineEventRow",
+]

@@ -450,3 +450,18 @@ Conflicts and gaps found while implementing, and how each was resolved:
 | MSMED (Amendment) Act 2026 review (LR-21) | Bill text read in full. The PIB summary of the passed Bill matches it. **ss.2(b), 15, 16 and 17 are not amended**, so no DeemedClock or interest change (no statutory basis). Act No. 16 of 2026 and S.O. 5575(E) (12 Oct 2026) confirmed only from secondary sources; Gazette copies not retrieved. New questions LR-23 (s.2(n) vs substituted s.8), LR-24 (TReDS payment date under s.15A) and LR-25 (s.18/18A/19 once commenced) |
 | Rule-set metadata | `msmed-v1` `legal_basis`, `pending_reviews` (+LR-23, LR-24) and `decision_refs` for R8, R9 and R13 updated. **No parameter or formula changed** (a test asserts the 15/15/45/3× values) |
 | Tests | 208 passed (previously 207: one test strengthened for the amendment flags, one added to pin the statutory periods) |
+
+---
+
+## 7. Hackathon Demo Vertical Slice (25 Oct 2026, owner-directed)
+
+The owner prioritised an evaluation-ready backend slice over strict phase order. Deviations, all deliberate and to be resolved in the listed phase:
+
+| Deviation | Why | Resolve in |
+| --- | --- | --- |
+| **No authentication.** One synthetic demo supplier (`make seed`); demo routes are mounted only when `APP_ENV` is not `production` and responses carry `"demo_mode": true` | Auth (Phase 3) was out of time scope | Phase 3: replace demo-supplier resolution with `SupplierPrincipal`; remove `is_demo` routing |
+| **Schema subset** in one migration (`7f9909eb7e4c`): suppliers (no `owner_user_id`, plus `is_demo`), buyers, cases, buyer_responses, evidence_items, timeline_events (append-only triggers), bank_rates (`verified` flag, nullable `verified_by`) | Minimum tables for the demo | Phase 3 adds users/sessions and `owner_user_id`; later migrations add payments, communications, packs, share links |
+| **Evidence store pulled forward** from T1.6 (`app/storage/evidence_store.py`): write-once, content-addressed, magic-byte allow-list, 0600 files | Needed for uploads | T1.6 reviews it against its criteria |
+| **Bank rate is unverified.** The seed inserts only 5.75% from 2026-10-07 (LS-03 ideation document), `verified = false`; no earlier rate is invented. Interest periods it does not cover report `rate_data_unavailable` | No verified RBI series on record | Before real use: load verified RBI rates (operator migration, DATABASE.md 3.15) |
+| **Letters not built**: intimation and demand are reported as not done (checklist C11, C13) | Out of scope | Phase 9 |
+| Evidence uploads rate-limited under one demo key | No users yet | Phase 3/5 (per-user key) |

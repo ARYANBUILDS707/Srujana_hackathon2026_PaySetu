@@ -3,9 +3,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import api_router
+from app.api.v1 import api_router, demo_cases
 from app.clock import Clock, SystemClock
-from app.config import Settings, get_settings
+from app.config import AppEnv, Settings, get_settings
 from app.db import Database
 from app.errors import register_error_handlers
 from app.logging import RequestContextMiddleware, configure_logging
@@ -13,6 +13,7 @@ from app.security.body_limit import BodySizeLimitMiddleware, max_body_bytes
 from app.security.csrf import CsrfMiddleware
 from app.security.headers import SecurityHeadersMiddleware
 from app.security.rate_limit import PublicShareRateLimitMiddleware, RateLimiter
+from app.storage.evidence_store import EvidenceStore
 
 API_PREFIX = "/api/v1"
 
@@ -50,7 +51,11 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     # Injectable time source (T1.4): tests pass a FrozenClock.
     app.state.clock = clock if clock is not None else SystemClock()
     app.state.rate_limiter = RateLimiter(app.state.clock)
+    app.state.evidence_store = EvidenceStore(resolved.storage_dir)
     app.include_router(api_router, prefix=API_PREFIX)
+    # Demo vertical slice: single synthetic supplier, no auth. Never mounted in production.
+    if resolved.app_env is not AppEnv.PRODUCTION:
+        app.include_router(demo_cases.router, prefix=API_PREFIX)
     register_error_handlers(app)
     # Starlette runs the last-added middleware first. Request order (T1.3, T1.5):
     # request context -> security headers -> body size limit -> CSRF -> share rate limit -> app.

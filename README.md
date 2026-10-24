@@ -440,6 +440,15 @@ make migrate         # alembic upgrade head, using DATABASE_URL from backend/.en
 make migrate-status  # current revision and head revision
 ```
 
+**Hackathon demo (local only, synthetic data, no login):**
+
+```bash
+make migrate && make seed   # schema + one synthetic demo supplier, a sample buyer, one UNVERIFIED bank rate
+make dev-api                # demo endpoints under /api/v1 (not mounted when APP_ENV=production)
+```
+
+Demo endpoints: `GET /supplier`, `GET|POST /buyers`, `GET|POST /cases`, `GET /cases/{id}`, `/cases/{id}/checklist`, `/cases/{id}/interest`, `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection`, `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/timeline`. Writes need `Origin: http://localhost:3000` and `X-PaySetu-Client: web` (CSRF). Deviations are listed in [docs/DECISIONS.md Section 7](docs/DECISIONS.md#7-hackathon-demo-vertical-slice-25-oct-2026-owner-directed).
+
 Other migration commands, run from `backend/`:
 
 ```bash
