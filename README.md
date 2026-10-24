@@ -402,9 +402,9 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 | Documentation | Draft v1.1 complete and consistency-reviewed: README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
 | Phase 0 (foundation) | Done on branch `dev`: runnable backend and frontend skeletons, tooling, Makefile, smoke tests |
 | Frontend | Next.js 16.4.3 skeleton with design tokens and a landing page. No application screens yet |
-| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Phase 1: T1.1 typed settings (`app/config.py`) with startup validation and the production gate. Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
-| Database | Not started (Phase 1) |
-| Tests | Backend: 246 pytest tests (3 integration, 243 unit, incl. 24 counsel-readable legal fixtures and 37 settings tests); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
+| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Phase 1: T1.1 typed settings (`app/config.py`) with startup validation and the production gate. T1.2 database engine and sessions (`app/db.py`) with Alembic. Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
+| Database | T1.2 done: SQLAlchemy 2.1.6 engine and sessions; SQLite pragmas (WAL, foreign keys, busy timeout 5000 ms, synchronous NORMAL); Alembic 1.20.1 with an empty baseline migration (`bf48eb38df15`). **No business tables yet** (Phase 3 onwards) |
+| Tests | Backend: 264 pytest tests (21 integration incl. database and migration tests, 243 unit, incl. 24 counsel-readable legal fixtures and 37 settings tests); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
 | External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
 | Legal review of rules and templates | Not done. Interest defaults D3–D5 are owner-approved provisional simulation defaults only. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25) |
 
@@ -432,6 +432,21 @@ make setup          # backend venv + pinned pip packages; frontend npm ci + Play
 ```
 
 **Required:** create the backend configuration with `cp backend/.env.example backend/.env`. The API validates it at startup and refuses to start with a message naming any missing or invalid variable. The example values work for local development only. Optional: copy `frontend/.env.example` to `frontend/.env.local` to override the API proxy target.
+
+Create the local database schema (SQLite file at `DATABASE_URL`, default `backend/storage/paysetu.db`):
+
+```bash
+make migrate         # alembic upgrade head, using DATABASE_URL from backend/.env
+make migrate-status  # current revision and head revision
+```
+
+Other migration commands, run from `backend/`:
+
+```bash
+.venv/bin/alembic revision -m "short description"   # new empty migration (hand-write it; see DATABASE.md Section 8)
+.venv/bin/alembic downgrade -1                       # step back one revision (development only)
+.venv/bin/alembic upgrade head --sql                 # print the SQL without touching a database
+```
 
 ### Run the apps
 

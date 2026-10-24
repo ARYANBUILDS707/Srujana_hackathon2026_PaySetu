@@ -471,7 +471,8 @@ Account deletion (P1, D12) runs as an operator procedure that disables the trigg
     - one with an objection raised
 
     Demo evidence files are generated placeholder images and PDFs marked "SAMPLE".
-- **Tests:** create a fresh SQLite file per test session via `alembic upgrade head` (not `create_all`), so the triggers are tested too.
+- **Tests:** create a fresh SQLite file **per test** via `alembic upgrade head` (not `create_all`), so the triggers are tested too. Implemented in T1.2: fixtures `migrated_database_url` and `database` in `backend/tests/conftest.py`. Per-test isolation was chosen over per-session because migrations are fast; revisit if the suite slows down.
+- **Infrastructure (T1.2):** `backend/alembic.ini` holds no database URL. `alembic/env.py` takes it from validated settings (`DATABASE_URL`) or an explicit test override, and runs SQLite migrations through `app.db.create_db_engine` with the application pragmas and `render_as_batch`. Constraint names follow the naming convention in `app/models/base.py`. The baseline revision `bf48eb38df15` is empty; migration 1 (users, sessions) chains from it.
 
 ---
 

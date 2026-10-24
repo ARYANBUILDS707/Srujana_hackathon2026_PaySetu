@@ -60,7 +60,7 @@ flowchart LR
 | Frontend API types | `openapi-typescript` (dev dependency) generating types from the FastAPI OpenAPI schema | One source of truth for request and response shapes; no hand-written duplicate types |
 | Backend framework | **Python 3.12 + FastAPI** | Owner-specified; matches the ideation prototype stack; Pydantic validation; automatic OpenAPI |
 | Validation | Pydantic v2 + pydantic-settings | Request/response schemas and typed configuration |
-| ORM / migrations | **SQLAlchemy 2.0 + Alembic** | Mature; the same code runs on SQLite (MVP) and PostgreSQL (future) |
+| ORM / migrations | **SQLAlchemy 2.x (pinned 2.1.6; 2.0-style typed API) + Alembic (1.20.1)** | Mature; the same code runs on SQLite (MVP) and PostgreSQL (future) |
 | Database | **SQLite 3 (WAL mode)** in MVP; PostgreSQL later | Zero-ops for a single-server MVP; the upgrade path is documented |
 | Password hashing | `argon2-cffi` (Argon2id) | Current recommended algorithm |
 | PDF generation | **ReportLab** | Owner-specified; already used in the prototype; deterministic text PDFs |

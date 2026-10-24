@@ -10,7 +10,7 @@ WEB_PORT ?= 3000
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-backend setup-frontend dev dev-api dev-web lint format typecheck \
-	test e2e build migrate seed
+	test e2e build migrate migrate-status seed
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -43,7 +43,7 @@ format: ## Apply formatters
 	cd frontend && npm run format
 
 typecheck: ## Type-check backend (mypy strict) and frontend (tsc)
-	cd backend && .venv/bin/mypy app tests
+	cd backend && .venv/bin/mypy app tests alembic
 	cd frontend && npm run typecheck
 
 test: ## Run backend tests with the 100% branch-coverage gate on app/domain
@@ -55,8 +55,11 @@ e2e: ## Run Playwright end-to-end tests
 build: ## Production build of the frontend
 	cd frontend && npm run build
 
-migrate: ## Apply database migrations (available from Phase 1, T1.2)
-	@echo "migrate: not yet available. Alembic is set up in Phase 1 (T1.2)."
+migrate: ## Apply database migrations to DATABASE_URL (backend/.env)
+	cd backend && .venv/bin/alembic upgrade head
+
+migrate-status: ## Show the current and head migration revisions
+	cd backend && .venv/bin/alembic current && .venv/bin/alembic heads
 
 seed: ## Load demo data (available from Phase 11, T11.1)
 	@echo "seed: not yet available. Demo seed arrives in Phase 11 (T11.1)."

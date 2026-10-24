@@ -243,10 +243,13 @@ def test_app_startup_fails_clearly_without_configuration(
         get_settings.cache_clear()
 
 
-def test_get_settings_loads_once(isolated_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_settings_loads_once(
+    isolated_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     for name, value in TEST_SETTINGS.items():
         monkeypatch.setenv(name.upper(), str(value))
-    monkeypatch.chdir(Path(__file__).parent)  # avoid any developer .env
+    # Empty working directory: no developer .env, and the relative SQLite path stays in tmp.
+    monkeypatch.chdir(tmp_path)
     get_settings.cache_clear()
     try:
         assert get_settings() is get_settings()

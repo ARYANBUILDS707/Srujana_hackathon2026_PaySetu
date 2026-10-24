@@ -8,6 +8,10 @@ extend-exclude = [".venv", "alembic/versions"]
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "N"]
 
+[tool.ruff.lint.isort]
+# The local alembic/ directory holds migrations; `alembic` imports are the installed package.
+known-third-party = ["alembic"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
