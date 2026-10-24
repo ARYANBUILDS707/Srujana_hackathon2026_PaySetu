@@ -154,7 +154,9 @@ def test_malformed_json_is_a_bad_request(client: TestClient) -> None:
 
 def test_unknown_route_and_wrong_method_are_problems(client: TestClient) -> None:
     _assert_problem(client.get("/api/v1/does-not-exist"), 404, "not_found")
-    _assert_problem(client.post("/api/v1/health"), 405, "method_not_allowed")
+    # Valid CSRF headers (T1.5) so the request reaches routing and the 405 mapping is tested.
+    csrf = {"Origin": "http://localhost:3000", "X-PaySetu-Client": "web"}
+    _assert_problem(client.post("/api/v1/health", headers=csrf), 405, "method_not_allowed")
 
 
 def test_unexpected_exception_is_generic_and_leaks_nothing(client: TestClient) -> None:
