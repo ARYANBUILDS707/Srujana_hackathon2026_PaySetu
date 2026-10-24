@@ -1,10 +1,12 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from alembic import command
 from alembic.config import Config
 
+from app.clock import FrozenClock
 from app.config import Settings, load_settings
 from app.db import Database
 from app.domain.rules import RuleSet
@@ -71,3 +73,13 @@ def database(migrated_database_url: str) -> Iterator[Database]:
         yield db
     finally:
         db.dispose()
+
+
+# 10:30 UTC on 1 Nov 2026 = 16:00 IST: the same calendar date in both zones.
+FROZEN_INSTANT = datetime(2026, 11, 1, 10, 30, tzinfo=UTC)
+
+
+@pytest.fixture
+def frozen_clock() -> FrozenClock:
+    """A deterministic clock (T1.4); advance it with `.advance()` or `.set()`."""
+    return FrozenClock(FROZEN_INSTANT)
