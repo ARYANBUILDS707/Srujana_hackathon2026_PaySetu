@@ -10,14 +10,18 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import DatabaseError
 
 from app.models import Base
 from tests.conftest import BACKEND_DIR, TEST_SETTINGS, alembic_config
 
 BASELINE = "bf48eb38df15"
-HEAD = "7f9909eb7e4c"  # demo case core (vertical slice)
+DEMO_CORE = "7f9909eb7e4c"  # demo case core (vertical slice)
+HEAD = "099b88746350"  # accounts and ownership (Phase 6)
 DEMO_TABLES = {
     "alembic_version",
+    "users",
+    "sessions",
     "suppliers",
     "buyers",
     "cases",
@@ -52,7 +56,7 @@ def test_single_linear_history_starting_at_the_baseline() -> None:
     script = ScriptDirectory.from_config(alembic_config("sqlite://"))
     assert script.get_heads() == [HEAD]
     assert script.get_base() == BASELINE
-    assert [r.revision for r in script.walk_revisions()] == [HEAD, BASELINE]
+    assert [r.revision for r in script.walk_revisions()] == [HEAD, DEMO_CORE, BASELINE]
 
 
 def test_migration_files_follow_the_naming_convention() -> None:
@@ -93,6 +97,8 @@ def test_append_only_triggers_exist(migrated_database_url: str) -> None:
         "timeline_events_no_delete",
         "evidence_items_no_delete",
         "evidence_items_exclusion_only",
+        "trg_suppliers_owned_unless_demo_insert",
+        "trg_suppliers_owned_unless_demo_update",
     }
 
 
@@ -154,3 +160,59 @@ def test_invalid_settings_stop_migrations(
     config.attributes.pop("database_url")
     with pytest.raises(ConfigError, match="DATABASE_URL"):
         command.upgrade(config, "head")
+
+
+# ------------------------------------------------------------ Phase 6: accounts and ownership
+
+_SUPPLIER_INSERT = text(
+    "INSERT INTO suppliers (id, legal_name, udyam_verification_status, contact_email, is_demo, "
+    "created_at, updated_at) VALUES (:id, 'Sample Supplier (TEST)', 'self_declared', "
+    "'s@example.invalid', :is_demo, 't', 't')"
+)
+
+
+def test_existing_demo_data_survives_and_is_not_assigned_to_anyone(
+    migrated_database_url: str,
+) -> None:
+    config = alembic_config(migrated_database_url)
+    command.downgrade(config, DEMO_CORE)
+    engine = create_engine(migrated_database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(_SUPPLIER_INSERT, {"id": "s-demo", "is_demo": True})
+            connection.execute(
+                text(
+                    "INSERT INTO buyers (id, supplier_id, legal_name, created_at, updated_at) "
+                    "VALUES ('b-1', 's-demo', 'Sample Buyer (TEST)', 't', 't')"
+                )
+            )
+        command.upgrade(config, HEAD)
+        with engine.connect() as connection:
+            supplier = connection.execute(
+                text("SELECT legal_name, is_demo, owner_user_id FROM suppliers")
+            ).one()
+            buyers = connection.execute(text("SELECT count(*) FROM buyers")).scalar_one()
+            users = connection.execute(text("SELECT count(*) FROM users")).scalar_one()
+    finally:
+        engine.dispose()
+    assert tuple(supplier) == ("Sample Supplier (TEST)", 1, None)
+    assert buyers == 1 and users == 0
+
+
+def test_only_a_demo_supplier_may_be_unowned(migrated_database_url: str) -> None:
+    engine = create_engine(migrated_database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(_SUPPLIER_INSERT, {"id": "s-demo", "is_demo": True})
+        with (
+            pytest.raises(DatabaseError, match="only a demo supplier may be unowned"),
+            engine.begin() as connection,
+        ):
+            connection.execute(_SUPPLIER_INSERT, {"id": "s-real", "is_demo": False})
+        with (
+            pytest.raises(DatabaseError, match="only a demo supplier may be unowned"),
+            engine.begin() as connection,
+        ):
+            connection.execute(text("UPDATE suppliers SET is_demo = 0 WHERE id = 's-demo'"))
+    finally:
+        engine.dispose()

@@ -32,6 +32,17 @@ interface RequestOptions {
   form?: FormData;
 }
 
+/** Fired when a signed-in request gets 401: the session expired, was revoked or is missing. */
+export const SESSION_ENDED_EVENT = "paysetu:session-ended";
+
+function reportSessionEnded(path: string, error: ApiError) {
+  // Auth endpoints report 401 themselves (e.g. a wrong password); everything else means the
+  // session is gone. The session provider listens and sends the user to the login page.
+  if (error.status === 401 && !path.startsWith("/auth/") && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT, { detail: error.code }));
+  }
+}
+
 export function asApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   return new ApiError(0, "unknown", "Something went wrong. Please try again.");
@@ -61,7 +72,12 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     );
   }
 
-  if (!response.ok) throw await problemFrom(response);
+  if (!response.ok) {
+    const error = await problemFrom(response);
+    reportSessionEnded(path, error);
+    throw error;
+  }
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -104,7 +120,11 @@ export async function apiDownload(path: string): Promise<Download> {
       "Could not reach the PaySetu server. Check that the API is running and try again.",
     );
   }
-  if (!response.ok) throw await problemFrom(response);
+  if (!response.ok) {
+    const error = await problemFrom(response);
+    reportSessionEnded(path, error);
+    throw error;
+  }
 
   const disposition = response.headers.get("content-disposition") ?? "";
   const named = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "paysetu-download.zip";

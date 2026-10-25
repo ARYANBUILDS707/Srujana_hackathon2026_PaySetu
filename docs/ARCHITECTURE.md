@@ -150,7 +150,7 @@ The five PRD modules map onto the layers as follows. Module names in code commen
 
 - **Next.js App Router.** Route groups: `(public)` for the landing and auth pages, `(app)` for authenticated supplier pages, and `share` for the `/b/[token]` and `/a/[token]` pages.
 - **Rendering:** authenticated app pages are client components that fetch from `/api/v1` with `credentials: "include"`. Public pages are simple server-rendered pages without user data. The share pages fetch on the client from the public API, so no token data is cached on the Next.js server.
-- **Route protection:** Next.js middleware redirects to `/login` when no session cookie is present. This is **UX only**. Real authorisation is enforced by the API on every request.
+- **Route protection:** Next.js middleware redirects to `/login` when no session cookie is present. This is **UX only**. Real authorisation is enforced by the API on every request. *As built (Phase 6):* there is no middleware; `src/lib/session/SessionContext.tsx` wraps `/app/*`, calls `GET /auth/me` and sends the user to `/login?next=…` when it fails. The API client emits a "session ended" event on any 401 from a non-auth route, and the provider redirects with `reason=expired`. `next` accepts only `/app` paths (no open redirect). Login and signup pages live in the `(auth)` route group.
 - **Data access:** one typed API client (`src/lib/api/`) built on `fetch`, using generated OpenAPI types. It handles JSON, multipart uploads (with `XMLHttpRequest` for progress), the standard error format and 401 redirects. Components never call `fetch` directly.
 - **State:** server state is fetched per page with a small `useApi` hook (loading/error/data/refetch). There is no global store. Form state is local React state.
 - **Design system:** `src/components/ui/` implements DESIGN.md components (Button, inputs, StatusBadge, HashChip, DayStrip, …). Domain components (`src/components/cases/…`) compose them. Tailwind tokens are defined once in the Tailwind config from DESIGN.md Section 2–4.
@@ -324,6 +324,8 @@ PaySetu/
   - Absolute expiry 30 days
 - Logout revokes the session row. Changing the password revokes all other sessions.
 - Login and signup errors are generic. There is no user enumeration.
+
+**Implementation status (Phase 6, 25 Oct 2026).** Built: signup (creates user, supplier and session together), login, logout, me, idle and absolute expiry, hourly sliding, revocation, session-fixation protection, and the rate limits in 8.5. Code: `app/security/passwords.py`, `app/security/sessions.py`, `app/services/auth.py`, `app/api/v1/auth.py`, and the `current_principal` dependency in `app/api/deps.py`. Every supplier route takes `SupplierPrincipal` from that dependency and passes `supplier_id` to the services, which scope every query (8.4). Not built yet: password change and password reset (P1). The common-password list is small and bundled. Deviations are in DECISIONS.md Section 8.
 
 ### 8.2 CSRF
 

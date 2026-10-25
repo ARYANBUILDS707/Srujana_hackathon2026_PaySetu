@@ -256,3 +256,14 @@ def test_get_settings_loads_once(
         assert create_app().state.settings is get_settings()
     finally:
         get_settings.cache_clear()
+
+
+def test_signup_limit_defaults_to_the_api_contract(isolated_env: None) -> None:
+    assert _load().auth_signup_limit_per_hour == 5
+    assert _load(auth_signup_limit_per_hour=50).auth_signup_limit_per_hour == 50  # test runs
+
+
+def test_production_refuses_a_relaxed_signup_limit(isolated_env: None) -> None:
+    assert _load(**PRODUCTION_LIVE, auth_signup_limit_per_hour=5).app_env is AppEnv.PRODUCTION
+    message = _error(**PRODUCTION_LIVE, auth_signup_limit_per_hour=6)
+    assert "AUTH_SIGNUP_LIMIT_PER_HOUR" in message

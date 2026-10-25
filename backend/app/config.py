@@ -20,6 +20,7 @@ from pydantic import Field, SecretStr, ValidationError, field_validator, model_v
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MIN_TOKEN_HASH_KEY_BYTES = 32
+DEFAULT_SIGNUP_LIMIT_PER_HOUR = 5
 _EXAMPLE_TOKEN_HASH_KEY = "replace-with-32-plus-random-bytes"
 _DATABASE_SCHEMES = ("sqlite://", "postgresql://", "postgresql+")
 
@@ -58,6 +59,9 @@ class Settings(BaseSettings):
 
     session_idle_hours: int = Field(default=168, ge=1, le=24 * 90)
     session_absolute_days: int = Field(default=30, ge=1, le=365)
+    # Signups per hour per IP (API.md Section 5: 5). Raised only for automated test runs that
+    # create many accounts from one address; production refuses anything above the default.
+    auth_signup_limit_per_hour: int = Field(default=DEFAULT_SIGNUP_LIMIT_PER_HOUR, ge=1, le=1000)
     max_upload_mb: int = Field(default=15, ge=1, le=100)
     max_case_storage_mb: int = Field(default=200, ge=1, le=10_000)
 
@@ -148,6 +152,11 @@ class Settings(BaseSettings):
             problems.append("PUBLIC_BASE_URL must use https in production")
         if self.token_hash_key.get_secret_value() == _EXAMPLE_TOKEN_HASH_KEY:
             problems.append("TOKEN_HASH_KEY must not be the example value in production")
+        if self.auth_signup_limit_per_hour > DEFAULT_SIGNUP_LIMIT_PER_HOUR:
+            problems.append(
+                f"AUTH_SIGNUP_LIMIT_PER_HOUR must not exceed {DEFAULT_SIGNUP_LIMIT_PER_HOUR} "
+                "in production"
+            )
         if self.nonlive_adapters and not self.allow_nonlive_verified:
             problems.append(
                 f"non-live adapters in production ({', '.join(self.nonlive_adapters)}); "

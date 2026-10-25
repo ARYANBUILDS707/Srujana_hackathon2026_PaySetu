@@ -162,7 +162,7 @@ export default function EvidencePage() {
                 className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center transition-colors duration-150 ${
                   dragging
                     ? "border-primary bg-surface-hover"
-                    : "border-rule-strong bg-surface-subtle hover:bg-surface-hover"
+                    : "border-control bg-surface-subtle hover:bg-surface-hover"
                 }`}
               >
                 <Icon name="upload" className="size-6 text-ink-muted" />
@@ -179,7 +179,7 @@ export default function EvidencePage() {
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.heic,.eml,.txt,application/pdf,image/*,message/rfc822,text/plain"
                   onChange={(e) => chooseFile(e.target.files)}
-                  className="w-full max-w-xs text-small text-ink-muted file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-rule-strong file:bg-surface file:px-3 file:py-1.5 file:font-medium file:text-ink"
+                  className="w-full max-w-xs text-small text-ink-muted file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-control file:bg-surface file:px-3 file:py-1.5 file:font-medium file:text-ink"
                 />
               </label>
             )}

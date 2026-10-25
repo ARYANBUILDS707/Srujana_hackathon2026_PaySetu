@@ -19,9 +19,11 @@
   --color-surface-hover: #e9ebe8;
   --color-surface-sunken: #e9ebe8;
 
-  /* Borders */
+  /* Borders. rule/rule-strong are decorative (cards, dividers, timelines). Input, select and
+     upload-zone boundaries use control: at least 3:1 on every surface (WCAG 1.4.11). */
   --color-rule: #d7d8d4;
   --color-rule-strong: #aeb8bc;
+  --color-control: #7a858b;
 
   /* Text. ink-faint is for placeholders and metadata on white only (4.8:1 on white). */
   --color-ink: #172b40;

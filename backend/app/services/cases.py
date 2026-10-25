@@ -2,7 +2,9 @@
 
 All legal results come from `app.domain` (DeemedClock, interest, eligibility, checklist,
 next action, integrity). This module only gathers stored facts, calls the domain and records
-timeline events. Demo mode: one synthetic supplier, no authentication (local use only).
+timeline events. Every public function takes the caller's `supplier_id`, which routes take from
+the authenticated session (never from request data); every query is scoped by it, so another
+supplier's case looks exactly like a missing one (404).
 """
 
 import functools
@@ -77,13 +79,10 @@ def _dec(value: Decimal) -> str:
     return f"{value:.2f}"
 
 
-def _supplier(session: Session) -> Supplier:
-    supplier = repo.demo_supplier(session)
-    if supplier is None:
-        raise Conflict(
-            "No demo supplier exists yet. Run `make seed` to create the synthetic demo supplier.",
-            code="profile_incomplete",
-        )
+def _supplier(session: Session, supplier_id: str) -> Supplier:
+    supplier = session.get(Supplier, supplier_id)
+    if supplier is None:  # the session resolved it moments ago; only a deleted row lands here
+        raise NotFound("Supplier profile not found.")
     return supplier
 
 
@@ -365,9 +364,9 @@ def _retry_allocation_conflict[**P, R](func: Callable[P, R]) -> Callable[P, R]:
 # ------------------------------------------------------------------------ supplier
 
 
-def get_supplier(session: Session) -> out.SupplierOut:
+def get_supplier(session: Session, supplier_id: str) -> out.SupplierOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         rule_set = load_rule_set(CURRENT_RULE_SET_VERSION)
         eligibility = assess_eligibility(_profile(supplier), rule_set)
         return out.SupplierOut(
@@ -389,14 +388,18 @@ def get_supplier(session: Session) -> out.SupplierOut:
 # -------------------------------------------------------------------------- buyers
 
 
-def list_buyers(session: Session) -> list[out.BuyerOut]:
+def list_buyers(session: Session, supplier_id: str) -> list[out.BuyerOut]:
     with session.begin():
-        return [_buyer_out(b) for b in repo.list_buyers(session, _supplier(session).id)]
+        return [
+            _buyer_out(b) for b in repo.list_buyers(session, _supplier(session, supplier_id).id)
+        ]
 
 
-def create_buyer(session: Session, clock: Clock, data: out.BuyerCreate) -> out.BuyerOut:
+def create_buyer(
+    session: Session, supplier_id: str, clock: Clock, data: out.BuyerCreate
+) -> out.BuyerOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         now = format_utc_timestamp(clock.now_utc())
         buyer = Buyer(
             id=_uuid(),
@@ -416,9 +419,11 @@ def create_buyer(session: Session, clock: Clock, data: out.BuyerCreate) -> out.B
 
 
 @_retry_allocation_conflict
-def create_case(session: Session, clock: Clock, data: out.CaseCreate) -> out.CaseOut:
+def create_case(
+    session: Session, supplier_id: str, clock: Clock, data: out.CaseCreate
+) -> out.CaseOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         buyer = repo.get_buyer(session, supplier.id, data.buyer_id)
         if buyer is None:
             raise NotFound("Buyer not found.")
@@ -469,9 +474,11 @@ def create_case(session: Session, clock: Clock, data: out.CaseCreate) -> out.Cas
         return _case_out(session, clock, supplier, case, buyer)
 
 
-def list_cases(session: Session, clock: Clock, limit: int) -> list[out.CaseSummaryOut]:
+def list_cases(
+    session: Session, supplier_id: str, clock: Clock, limit: int
+) -> list[out.CaseSummaryOut]:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         today = clock.today()
         summaries = []
         for case in repo.list_cases(session, supplier.id, limit):
@@ -485,9 +492,9 @@ def list_cases(session: Session, clock: Clock, limit: int) -> list[out.CaseSumma
         return summaries
 
 
-def get_case(session: Session, clock: Clock, case_id: str) -> out.CaseOut:
+def get_case(session: Session, supplier_id: str, clock: Clock, case_id: str) -> out.CaseOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         case = _case(session, supplier, case_id)
         buyer = repo.get_buyer(session, supplier.id, case.buyer_id)
         assert buyer is not None
@@ -551,9 +558,11 @@ def _case_out(
     )
 
 
-def get_checklist(session: Session, clock: Clock, case_id: str) -> out.ChecklistOut:
+def get_checklist(
+    session: Session, supplier_id: str, clock: Clock, case_id: str
+) -> out.ChecklistOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         case = _case(session, supplier, case_id)
         buyer = repo.get_buyer(session, supplier.id, case.buyer_id)
         assert buyer is not None
@@ -589,10 +598,10 @@ def get_checklist(session: Session, clock: Clock, case_id: str) -> out.Checklist
 
 
 def get_interest(
-    session: Session, clock: Clock, case_id: str, as_of: date | None
+    session: Session, supplier_id: str, clock: Clock, case_id: str, as_of: date | None
 ) -> out.InterestOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         case = _case(session, supplier, case_id)
         rule_set = load_rule_set(case.rule_set_version)
         today = clock.today()
@@ -662,18 +671,20 @@ def _response_outs(case: Case, rows: list[BuyerResponse], today: date) -> list[o
     return outputs
 
 
-def list_responses(session: Session, clock: Clock, case_id: str) -> list[out.ResponseOut]:
+def list_responses(
+    session: Session, supplier_id: str, clock: Clock, case_id: str
+) -> list[out.ResponseOut]:
     with session.begin():
-        case = _case(session, _supplier(session), case_id)
+        case = _case(session, _supplier(session, supplier_id), case_id)
         return _response_outs(case, repo.list_responses(session, case.id), clock.today())
 
 
 @_retry_allocation_conflict
 def record_response(
-    session: Session, clock: Clock, case_id: str, data: out.ResponseCreate
+    session: Session, supplier_id: str, clock: Clock, case_id: str, data: out.ResponseCreate
 ) -> list[out.ResponseOut]:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         case = _case(session, supplier, case_id)
         if data.evidence_item_id is not None:
             item = repo.get_evidence(session, supplier.id, data.evidence_item_id)
@@ -709,10 +720,15 @@ def record_response(
 
 @_retry_allocation_conflict
 def remove_objection(
-    session: Session, clock: Clock, case_id: str, response_id: str, removed_on: date
+    session: Session,
+    supplier_id: str,
+    clock: Clock,
+    case_id: str,
+    response_id: str,
+    removed_on: date,
 ) -> list[out.ResponseOut]:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         case = _case(session, supplier, case_id)
         row = repo.get_response(session, case.id, response_id)
         if row is None:
@@ -753,6 +769,7 @@ def _evidence_out(item: EvidenceItem) -> out.EvidenceOut:
 
 def upload_evidence(
     session: Session,
+    supplier_id: str,
     clock: Clock,
     settings: Settings,
     store: EvidenceStore,
@@ -766,16 +783,17 @@ def upload_evidence(
     # The upload stream can only be read once, so the file is stored before the (retryable)
     # database step. A stored file without a row is harmless: content-addressed, never exposed.
     with session.begin():
-        supplier = _supplier(session)
-        _case(session, supplier, case_id)  # access check before accepting any bytes
-        supplier_id = supplier.id
+        _case(session, _supplier(session, supplier_id), case_id)  # access check before any bytes
     stored = store.save(supplier_id, chunks, max_bytes=settings.max_upload_mb * MIB)
-    return _record_evidence(session, clock, settings, case_id, stored, kind, filename, note)
+    return _record_evidence(
+        session, supplier_id, clock, settings, case_id, stored, kind, filename, note
+    )
 
 
 @_retry_allocation_conflict
 def _record_evidence(
     session: Session,
+    supplier_id: str,
     clock: Clock,
     settings: Settings,
     case_id: str,
@@ -785,7 +803,7 @@ def _record_evidence(
     note: str | None,
 ) -> out.EvidenceOut:
     with session.begin():
-        supplier = _supplier(session)
+        supplier = _supplier(session, supplier_id)
         case = _case(session, supplier, case_id)
         if (
             repo.case_storage_bytes(session, case.id) + stored.size_bytes
@@ -842,17 +860,17 @@ def _display_filename(filename: str) -> str:
     return (cleaned or "upload")[:255]
 
 
-def list_evidence(session: Session, case_id: str) -> list[out.EvidenceOut]:
+def list_evidence(session: Session, supplier_id: str, case_id: str) -> list[out.EvidenceOut]:
     with session.begin():
-        case = _case(session, _supplier(session), case_id)
+        case = _case(session, _supplier(session, supplier_id), case_id)
         return [_evidence_out(e) for e in repo.list_evidence(session, case.id)]
 
 
 def evidence_file(
-    session: Session, store: EvidenceStore, evidence_id: str
+    session: Session, supplier_id: str, store: EvidenceStore, evidence_id: str
 ) -> tuple[EvidenceItem, str]:
     with session.begin():
-        item = repo.get_evidence(session, _supplier(session).id, evidence_id)
+        item = repo.get_evidence(session, _supplier(session, supplier_id).id, evidence_id)
         if item is None:
             raise NotFound("Evidence not found or you don't have access.")
         return item, str(store.path_for(item.storage_key))
@@ -896,18 +914,22 @@ def _verify_case(session: Session, store: EvidenceStore, case: Case) -> Verifica
     )
 
 
-def verify_case(session: Session, store: EvidenceStore, case_id: str) -> Verification:
+def verify_case(
+    session: Session, supplier_id: str, store: EvidenceStore, case_id: str
+) -> Verification:
     """Verify a case without recording anything (used by the evidence-pack export)."""
     with session.begin():
-        return _verify_case(session, store, _case(session, _supplier(session), case_id))
+        return _verify_case(
+            session, store, _case(session, _supplier(session, supplier_id), case_id)
+        )
 
 
 @_retry_allocation_conflict
 def check_integrity(
-    session: Session, clock: Clock, store: EvidenceStore, case_id: str
+    session: Session, supplier_id: str, clock: Clock, store: EvidenceStore, case_id: str
 ) -> out.IntegrityOut:
     with session.begin():
-        case = _case(session, _supplier(session), case_id)
+        case = _case(session, _supplier(session, supplier_id), case_id)
         result = _verify_case(session, store, case)
         row = _append(
             session,
@@ -932,9 +954,9 @@ def check_integrity(
         )
 
 
-def list_timeline(session: Session, case_id: str) -> list[out.TimelineEventOut]:
+def list_timeline(session: Session, supplier_id: str, case_id: str) -> list[out.TimelineEventOut]:
     with session.begin():
-        case = _case(session, _supplier(session), case_id)
+        case = _case(session, _supplier(session, supplier_id), case_id)
         return [
             out.TimelineEventOut(
                 seq=r.seq,

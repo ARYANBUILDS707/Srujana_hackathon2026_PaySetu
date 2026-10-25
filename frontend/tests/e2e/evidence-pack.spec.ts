@@ -2,8 +2,13 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, appendFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { logDelivery, uploadEvidence } from "./helpers";
+import { logDelivery, signUpWithSampleBuyer, uploadEvidence } from "./helpers";
 import { readZip } from "./zip";
+
+// Every test works as its own freshly signed-up supplier (Phase 6).
+test.beforeEach(async ({ page }, testInfo) => {
+  await signUpWithSampleBuyer(page, testInfo);
+});
 
 const sha256 = (data: Buffer) => createHash("sha256").update(data).digest("hex");
 

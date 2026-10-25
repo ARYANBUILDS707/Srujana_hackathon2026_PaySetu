@@ -12,7 +12,13 @@ from app.logging import RequestContextMiddleware, configure_logging
 from app.security.body_limit import BodySizeLimitMiddleware, max_body_bytes
 from app.security.csrf import CsrfMiddleware
 from app.security.headers import SecurityHeadersMiddleware
-from app.security.rate_limit import PublicShareRateLimitMiddleware, RateLimiter
+from app.security.rate_limit import (
+    RATE_LIMITS,
+    PublicShareRateLimitMiddleware,
+    RateLimitCategory,
+    RateLimiter,
+    RateLimitRule,
+)
 from app.storage.evidence_store import EvidenceStore
 
 API_PREFIX = "/api/v1"
@@ -50,10 +56,17 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     app.state.database = database
     # Injectable time source (T1.4): tests pass a FrozenClock.
     app.state.clock = clock if clock is not None else SystemClock()
-    app.state.rate_limiter = RateLimiter(app.state.clock)
+    app.state.rate_limiter = RateLimiter(
+        app.state.clock,
+        {
+            **RATE_LIMITS,
+            RateLimitCategory.SIGNUP: RateLimitRule(resolved.auth_signup_limit_per_hour, 3600),
+        },
+    )
     app.state.evidence_store = EvidenceStore(resolved.storage_dir)
     app.include_router(api_router, prefix=API_PREFIX)
-    # Demo vertical slice: single synthetic supplier, no auth. Never mounted in production.
+    # Case routes of the evaluation build: authenticated and supplier-scoped (Phase 6), but
+    # still never mounted in production while the legal rules await review.
     if resolved.app_env is not AppEnv.PRODUCTION:
         app.include_router(demo_cases.router, prefix=API_PREFIX)
     register_error_handlers(app)

@@ -8,7 +8,7 @@ export const appCopy = {
   productName: "PaySetu",
   demoBanner: {
     title: "Demo mode.",
-    body: "Synthetic supplier data, running locally with no login. Do not enter real business or personal data.",
+    body: "Evaluation build running locally. Do not enter real business or personal data.",
   },
   disclaimer:
     "PaySetu prepares evidence. It is not legal advice. Dates and amounts are illustrative until reviewed by an advocate.",

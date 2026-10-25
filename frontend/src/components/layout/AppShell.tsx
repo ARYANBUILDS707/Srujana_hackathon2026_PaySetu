@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { appCopy } from "@/content/app";
+import { useSession } from "@/lib/session/SessionContext";
 
 type NavItem = (typeof appCopy.nav)[number];
 
@@ -74,6 +75,32 @@ function Wordmark() {
   );
 }
 
+function Account() {
+  const { me, signOut } = useSession();
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="border-t border-rule pt-4">
+      <p className="truncate text-small font-medium text-ink" title={me.user.email}>
+        {me.user.full_name}
+      </p>
+      <p className="truncate text-caption text-ink-muted" title={me.supplier.legal_name}>
+        {me.supplier.legal_name}
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void signOut();
+        }}
+        className="mt-3 flex h-10 w-full items-center justify-center rounded-md border border-control text-small font-medium text-ink transition-colors duration-150 hover:bg-surface-subtle disabled:opacity-60"
+      >
+        {busy ? "Signing out…" : "Sign out"}
+      </button>
+    </div>
+  );
+}
+
 function SidebarBody({ pathname }: { pathname: string }) {
   return (
     <>
@@ -90,6 +117,15 @@ function SidebarBody({ pathname }: { pathname: string }) {
         ))}
       </nav>
     </>
+  );
+}
+
+function AccountName() {
+  const { me } = useSession();
+  return (
+    <span className="max-w-xs truncate text-small text-ink-muted" title={me.user.email}>
+      {me.supplier.legal_name}
+    </span>
   );
 }
 
@@ -119,9 +155,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-6">
           <SidebarBody pathname={pathname} />
         </div>
-        <p className="mt-auto text-caption text-ink-faint">
-          Evidence preparation only. Not legal advice.
-        </p>
+        <div className="mt-auto flex flex-col gap-4">
+          <Account />
+          <p className="text-caption text-ink-muted">
+            Evidence preparation only. Not legal advice.
+          </p>
+        </div>
       </aside>
 
       {/* Mobile top bar */}
@@ -142,6 +181,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {open ? (
           <div id="mobile-menu" className="border-t border-rule bg-surface p-4">
             <SidebarBody pathname={pathname} />
+            <div className="mt-6">
+              <Account />
+            </div>
           </div>
         ) : null}
       </header>
@@ -166,7 +208,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </ol>
         </nav>
-        <span className="text-small text-ink-faint">Demo workspace</span>
+        <AccountName />
       </header>
 
       <div className="border-b border-warning/20 bg-warning-tint px-4 py-2 text-small text-warning lg:px-8">

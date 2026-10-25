@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft v1.1: colour system and visual direction replaced on 25 Oct 2026 (owner-approved blue-and-white palette). All non-colour requirements are unchanged |
+| Status | Draft v1.2: "Oxford Blue + Stone" theme and Geist typeface adopted on 25 Oct 2026 (frontend redesign, commit `3175836`), replacing the v1.1 blue-and-white palette of the same day. Contrast re-verified for the current tokens (Section 2.1); `control` token added for input boundaries. All non-colour requirements are unchanged |
 | Scope | Supplier web app (mobile-first), Buyer Cost Page, Advocate view, generated PDFs |
 | Rule | When this document and an individual screen disagree, this document wins. Change the document first, then the screen |
 
@@ -12,14 +12,14 @@
 
 ### 1.1 The idea: a calm, professional LegalTech workspace
 
-*Replaces the earlier "well-kept register" paper-and-ink direction (colours only; the principles in 1.2 stand).*
+*Theme "Oxford Blue + Stone" (25 Oct 2026). It replaced the v1.1 blue-and-white palette, which had replaced the earlier "well-kept register" paper-and-ink direction; the principles in 1.2 stand.*
 
-PaySetu should feel like a **modern professional SaaS workspace** for legal-adjacent records: a clean left sidebar and a top header, white cards on a subtle grey canvas, one blue primary colour, and clear typography. It uses a familiar professional-network style of blue and white, but must not copy any other brand's logo, icons or exact layouts.
+PaySetu should feel like a **trustworthy, institutional but modern B2B workspace** for legal-adjacent records: a 240px left sidebar and a 64px top bar, white cards on a warm stone canvas, one deep Oxford-blue primary colour, a restrained brass accent, and clear typography. Stripe, Linear and Notion are references for principles (financial clarity, disciplined navigation, readable structure), never templates to copy; no other brand's logo, icons or layouts are reused.
 
 | Do | Don't |
 | --- | --- |
-| White cards (8–12px radius) on a light grey canvas; sidebar and top header | Gradients, glassmorphism, glowing cards, hero illustrations of people with laptops |
-| One blue primary for buttons, links, progress, selected navigation and focus | A rainbow of status colours |
+| White cards (8–12px radius) on a stone canvas; sidebar and top header | Gradients, glassmorphism, glowing cards, hero illustrations of people with laptops |
+| One Oxford-blue primary for buttons, links, progress and focus; brass only as a small decorative accent | A rainbow of status colours; brass as a status colour or as small text |
 | Green for verified or successful states, amber for warnings and pending legal review, red only for genuine errors and integrity failures | Red for ordinary emphasis, or for "overdue" headlines |
 | Numbers and dates as the hero content, set in tabular figures | Big vanity metrics, charts for their own sake |
 | Plain language with the legal reference available on demand | Legal jargon up front, or "AI-powered" language |
@@ -50,26 +50,43 @@ All colors are referenced by token name, never by raw hex in components. The MVP
 | `surface-subtle` | `#F8F7F4` | Upload zones, quiet panels |
 | `surface-hover` / `surface-sunken` | `#E9EBE8` | Hover, selected navigation, hash wells, skeletons |
 | `rule` | `#D7D8D4` | Card borders, dividers |
-| `rule-strong` | `#AEB8BC` | Input and control borders |
+| `rule-strong` | `#AEB8BC` | Decorative stronger lines (timelines, dashed empty states); not for control boundaries |
+| `control` | `#7A858B` | Boundaries of inputs, selects, upload zones and secondary buttons (3:1 or more on every surface, WCAG 1.4.11) |
 | `ink` | `#172B40` | Primary text |
 | `ink-muted` | `#52606A` | Secondary text, labels |
-| `ink-faint` | `#69747B` | Placeholders and metadata on white only (4.8:1 on white; below 4.5:1 on `canvas`) |
+| `ink-faint` | `#69747B` | Placeholders inside white inputs and decorative icons only (4.8:1 on white; below 4.5:1 on every other surface) |
 | `primary` / `primary-hover` | `#223A53` / `#172B40` | Buttons, links, focus ring |
-| `brass` | `#B17B46` | Decorative accent only (active-nav marker, rules); never a status colour |
+| `brass` | `#B17B46` | Decorative accent only (active-nav marker, active-tab underline, next-step rule); never a status colour and never small text (3.6:1 on white) |
 | `success` / `success-tint` | `#287456` / `#EAF4EE` | Verified, met, settled |
 | `warning` / `warning-tint` | `#95651B` / `#FBF3E4` | Warnings, pending legal review, demo labels |
 | `danger` / `danger-tint` | `#A43F39` / `#FBEDEC` | Genuine errors, integrity failure |
 | `info` / `info-tint` (= `primary-tint`) | `#315D86` / `#EAF1F7` | Notices, calculated-by-PaySetu labels |
 
-Theme "Oxford Blue + Stone" (26 Oct 2026) replaces the blue-and-white palette; font is Geist Sans (Geist Mono for hashes) instead of IBM Plex. The contrast ratios below were computed for the previous palette and must be re-verified for these pairs.
+Theme "Oxford Blue + Stone" was adopted on 25 Oct 2026 and replaces the blue-and-white palette; the typeface is Geist Sans, with Geist Mono for hashes (Section 3.1).
 
-Retired tokens: `paper`, `seal`, `seal-tint`, `info`, `info-tint`, `simulated`, `simulated-tint`. Notices and legal explanations use `primary-tint`; demo and simulated labels use `warning` (they are, in effect, a pending-review state).
+Retired tokens: `paper`, `seal`, `seal-tint`, `simulated`, `simulated-tint`. Notices and legal explanations use `info-tint`; demo and simulated labels use `warning` (they are, in effect, a pending-review state).
 
-Verified contrast (WCAG 2.2): `ink` on `surface`/`canvas` 16.0/14.8:1; `ink-muted` on `surface`/`canvas`/`surface-sunken` 5.7/5.3/4.9:1; `ink-faint` on `surface`/`canvas` 5.3/4.9:1; `primary` on `surface`/`canvas`/`primary-tint` 5.7/5.2/5.0:1; white on `primary` 5.7:1 and on `primary-hover` 10.1:1; `success`, `warning` and `danger` on their tints 5.0/5.3/5.6:1 and on `surface` 5.7/5.9/6.6:1; `rule-strong` on `surface`/`canvas` 3.7/3.4:1.
+**Verified contrast (WCAG 2.2, relative-luminance formula; recomputed 25 Oct 2026 from the hex values in `frontend/src/app/globals.css`):**
+
+| Foreground | `surface` | `canvas` | `surface-subtle` | `surface-hover` | Own tint |
+| --- | --- | --- | --- | --- | --- |
+| `ink` | 14.4 | 12.9 | 13.5 | 12.0 | 12.7–13.1 on every tint |
+| `ink-muted` | 6.5 | 5.8 | 6.1 | 5.4 | 5.7–5.9 on every tint |
+| `ink-faint` | 4.8 | 4.3 ✗ | 4.5 ✗ (4.47) | 4.0 ✗ | – |
+| `primary` | 11.7 | 10.4 | 10.9 | 9.7 | 10.3 on `info-tint` |
+| `info` | 6.9 | 6.2 | 6.5 | 5.8 | 6.1 |
+| `success` | 5.6 | 5.0 | 5.3 | 4.7 | 5.0 |
+| `warning` | 5.1 | 4.5 | 4.7 | 4.2 ✗ | 4.6 |
+| `danger` | 6.3 | 5.6 | 5.9 | 5.2 | 5.5 |
+| `brass` (decorative only) | 3.6 | 3.2 | 3.4 | 3.0 | – |
+| `control` (boundary) | 3.8 | 3.4 | 3.5 | 3.2 | – |
+| `rule-strong` (decorative) | 2.0 | 1.8 | – | – | – |
+
+White on `primary` 11.7:1 and on `primary-hover` 14.4:1. ✗ = below 4.5:1 for normal text, so that pair is not used for text: `ink-faint` appears only as placeholder text inside white inputs and as a decorative breadcrumb chevron; `warning` text never sits on `surface-hover`. Fixes made in this review: input, select, upload-zone and secondary-button borders moved from `rule-strong` (2.0:1, below the 3:1 needed for control boundaries) to `control`; the landing page's step numbers moved from `brass` (3.6:1 as small text) to `ink-muted`.
 
 ### 2.2 Rules
 
-- Text contrast is at least 4.5:1 against its background, and at least 3:1 for large text and UI boundaries. All token pairs above meet this on `surface` and `canvas` (see the verified ratios in 2.1). Verify any new pair before use.
+- Text contrast is at least 4.5:1 against its background, and at least 3:1 for large text and UI boundaries (inputs and other controls use `control`). Use only pairs marked as passing in 2.1; verify any new pair before use.
 - Status is never shown by color alone. Every status color comes with an icon and/or a text label.
 - **Red (`danger`) is only for genuine errors and evidence-integrity failures.** Verified and sealed states are green (`success`); pending legal review, demo and simulated labels are amber (`warning`).
 - Tints are for backgrounds only. Text on a tint uses the matching strong token (e.g. `warning` text on `warning-tint`).
@@ -83,25 +100,27 @@ Verified contrast (WCAG 2.2): `ink` on `surface`/`canvas` 16.0/14.8:1; `ink-mute
 
 | Role | Family | Why |
 | --- | --- | --- |
-| UI and body | **IBM Plex Sans** (400, 500, 600) | Clear at small sizes, neutral without feeling generic, has a Devanagari sibling for future Hindi |
-| Hashes, references, code | **IBM Plex Mono** (400, 500) | Distinguishes 0/O and 1/l; makes hashes readable |
-| Future Hindi | IBM Plex Sans Devanagari | Same metrics family |
+| UI and body | **Geist Sans** (variable weight; 400, 500, 600 used) | Clear at small sizes, precise and neutral; loaded with `next/font/google` |
+| Hashes, references, code | **Geist Mono** | Distinguishes 0/O and 1/l; makes hashes readable |
+| Future Hindi | To be chosen (Geist has no Devanagari); a Devanagari face with matching metrics must be selected before Hindi ships | – |
 
 Fonts are self-hosted through the framework's font optimisation; there are no runtime calls to font CDNs. Fallback: `system-ui, sans-serif`.
 
 ### 3.2 Scale (rem, base 16px)
 
+Values are the `--text-*` tokens in `frontend/src/app/globals.css`.
+
 | Token | Size / line height | Weight | Use |
 | --- | --- | --- | --- |
-| `display` | 1.875 / 2.25 | 600 | The key figure on a case (due date or amount); max one per screen |
-| `h1` | 1.5 / 2 | 600 | Page title |
-| `h2` | 1.25 / 1.75 | 600 | Section title |
-| `h3` | 1.125 / 1.5 | 600 | Card title |
-| `body` | 1 / 1.5 | 400 | Default text |
-| `body-strong` | 1 / 1.5 | 500 | Emphasis, labels in key-value lists |
-| `small` | 0.875 / 1.25 | 400 | Secondary text, helper text, table cells on mobile |
-| `caption` | 0.75 / 1 | 500 | Badges, timestamps, legal footnotes (minimum size for any text) |
-| `mono` | 0.875 / 1.25 | 400 | Hashes, case references |
+| `display` | 1.75 / 2.25 | 600 | Financial figures (28px); max one per card |
+| `h1` | 1.75 / 2.25 | 600 | Page title (28px) |
+| `h2` | 1.25 / 1.75 | 600 | Section title (20px) |
+| `h3` | 1 / 1.5 | 600 | Card title (16px) |
+| `body` | 0.9375 / 1.5 | 400 | Default text (15px) |
+| `body-strong` | 0.9375 / 1.5 | 500 | Emphasis, labels in key-value lists |
+| `small` | 0.8125 / 1.25 | 400 | Secondary text, helper text, table cells (13px) |
+| `caption` | 0.75 / 1 | 500 | Badges, timestamps, legal footnotes (12px; minimum size for any text) |
+| `mono` | 0.8125 / 1.25 | 400 | Hashes, case references (Geist Mono) |
 
 ### 3.3 Number and date formatting
 
@@ -505,7 +524,7 @@ A consent statement: "Shared by [supplier] with [advocate name] on [date]."
 
 ### 12.12 Generated documents (PDF)
 
-- A4, 20 mm margins. IBM Plex Sans 10.5 pt body; IBM Plex Mono for hashes.
+- A4, 20 mm margins. Geist Sans 10.5 pt body; Geist Mono for hashes. (No PDF is generated yet: the evaluation build exports Markdown and JSON inside the evidence-pack ZIP.)
 - Header: supplier legal name, Udyam number and case reference. Footer: page X of Y, generation time, manifest or content hash, and "Generated by PaySetu. Not legal advice."
 - Drafts (the s.63 certificate, any template not yet counsel-approved) carry a diagonal light-grey "DRAFT" watermark and a top notice.
 - Simulated items carry a "SIMULATED" label wherever they appear.

@@ -114,9 +114,9 @@ Legal readings are **not** decided here. Every tier I and C rule (PRD Section 4)
 
 | Task | Description | Files / modules | Completion criteria |
 | --- | --- | --- | --- |
-| T3.1 | Migration: `users`, `sessions` | `alembic/versions/…`, `app/models/` | Matches DATABASE.md 3.1–3.2 |
-| T3.2 | Password hashing (Argon2id) + common-password check; session create/resolve/slide/revoke; `SupplierPrincipal` dependency | `app/security/passwords.py`, `app/security/sessions.py` | Unit tests incl. expiry (idle and absolute) and revocation |
-| T3.3 | Endpoints: signup, login, logout, me, password change | `app/api/v1/auth.py`, `app/services/auth.py` | API.md 2.2 behaviour; generic errors; rate limits; cookie flags; tests for 401, CSRF, enumeration-safe messages |
+| T3.1 | Migration: `users`, `sessions` | `alembic/versions/…`, `app/models/` | Matches DATABASE.md 3.1–3.2. **Done (Phase 6, 25 Oct 2026):** migration `099b88746350`, also adding `suppliers.owner_user_id` (nullable for unowned demo data; DECISIONS.md Section 8) |
+| T3.2 | Password hashing (Argon2id) + common-password check; session create/resolve/slide/revoke; `SupplierPrincipal` dependency | `app/security/passwords.py`, `app/security/sessions.py` | Unit tests incl. expiry (idle and absolute) and revocation. **Done (Phase 6):** session logic in `app/services/auth.py`, dependency in `app/api/deps.py`; tests in `tests/integration/test_auth.py` |
+| T3.3 | Endpoints: signup, login, logout, me, password change | `app/api/v1/auth.py`, `app/services/auth.py` | API.md 2.2 behaviour; generic errors; rate limits; cookie flags; tests for 401, CSRF, enumeration-safe messages. **Done except password change (Phase 6).** Every existing supplier route now requires a session and is supplier-scoped (`tests/integration/test_authorisation.py`) |
 | T3.4 | Migration: `suppliers`, `buyers` (buyers created here, used in Phase 4) | migrations, models | Matches DATABASE.md 3.4–3.5 incl. the composite unique |
 | T3.5 | Supplier profile endpoints (`GET/PUT /supplier`) with computed eligibility; supplier-scoped repository base class | `app/api/v1/supplier.py`, `app/repositories/base.py` | Validation tests (Udyam, GSTIN, PIN); eligibility in the response |
 
@@ -189,12 +189,12 @@ Legal readings are **not** decided here. Every tier I and C rule (PRD Section 4)
 
 | Task | Description | Files / modules | Completion criteria |
 | --- | --- | --- | --- |
-| T7.1 | Tailwind theme from DESIGN.md tokens (colors, type scale, spacing, radius, shadow); IBM Plex fonts via the framework font loader; global base styles. *Baseline already landed in Phase 0 (landing page); T7.1 reviews and completes it* | `src/app/globals.css` (Tailwind v4 `@theme`), `src/app/layout.tsx` | Token names match DESIGN.md exactly; no raw hex in components |
+| T7.1 | Tailwind theme from DESIGN.md tokens (colors, type scale, spacing, radius, shadow); Geist fonts via the framework font loader (IBM Plex until the 25 Oct 2026 redesign); global base styles. *Baseline already landed in Phase 0 (landing page); T7.1 reviews and completes it* | `src/app/globals.css` (Tailwind v4 `@theme`), `src/app/layout.tsx` | Token names match DESIGN.md exactly; no raw hex in components |
 | T7.2 | Formatters: money (en-IN, Rs), dates (DD MMM YYYY, IST), hash shortening, relative dates | `src/lib/format/` | Unit-tested via Playwright component checks or a tiny test page (no new test framework) |
 | T7.3 | API client: generated types (`openapi-typescript`), fetch wrapper (credentials, CSRF header, problem+json → typed errors, 401 → login redirect), upload with progress, `useApi` hook | `src/lib/api/`, `src/lib/hooks/` | Typecheck passes; errors map to fields |
 | T7.4 | UI primitives: Button, inputs (Money, Date, Udyam, GSTIN, Select, RadioCards, Textarea), StatusBadge, HashChip, Toast, Skeleton, EmptyState, ErrorState, Banner, Dialog/Sheet, StepProgress, DataList | `src/components/ui/` | Each follows DESIGN.md Section 5 incl. focus, disabled, loading; a dev-only `/dev/components` page to review them |
 | T7.5 | App shell: mobile bottom tabs + desktop sidebar, top bar, SimulatedBanner, OfflineBanner, DisclaimerFooter; middleware redirect | `src/components/layout/`, `src/middleware.ts` | Responsive at 360 and 1280; keyboard navigable |
-| T7.6 | Public pages: landing, login, signup, legal placeholders (content marked "pending counsel review") | `src/app/(public)/` | Playwright: sign up → land on onboarding |
+| T7.6 | Public pages: landing, login, signup, legal placeholders (content marked "pending counsel review") | `src/app/(public)/` | Playwright: sign up → land on onboarding. **Login and signup done (Phase 6)** in `src/app/(auth)/`; sign-up lands on the dashboard (no onboarding yet); no legal placeholder pages |
 | T7.7 | Onboarding (3 steps) + settings (profile, signatory, password change) | `src/app/(app)/onboarding`, `/app/settings` | Eligibility summary renders all verdicts |
 | T7.8 | Copy catalogue in `src/content/` used by all of the above | `src/content/` | No hard-coded user-facing strings in components |
 

@@ -8,7 +8,7 @@ export const landingCopy = {
   openDemo: "Open demo workspace",
   seeHow: "See how it works",
   demoNote:
-    "Evaluation build: synthetic supplier data, no login, running locally. Sign-up arrives in a later release.",
+    "Evaluation build running locally. Opening the workspace asks you to sign in or create an account. Do not enter real business or personal data.",
   previewLabel: "Sample content",
   previewNote: "An illustration of a case workspace. Dates and names here are not real.",
   stepsHeading: "How PaySetu works",

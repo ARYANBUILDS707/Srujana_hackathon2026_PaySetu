@@ -37,8 +37,12 @@ class PackExport:
     pack_sha256: str
 
 
-def export_pack(session: Session, clock: Clock, store: EvidenceStore, case_id: str) -> PackExport:
-    verification = cases_service.verify_case(session, store, case_id)  # 404 if not found
+def export_pack(
+    session: Session, supplier_id: str, clock: Clock, store: EvidenceStore, case_id: str
+) -> PackExport:
+    verification = cases_service.verify_case(
+        session, supplier_id, store, case_id
+    )  # 404 if not found
     if not verification.passed:
         raise IntegrityFailed(
             "Evidence integrity verification failed, so no pack was created. A stored file or "
@@ -50,19 +54,21 @@ def export_pack(session: Session, clock: Clock, store: EvidenceStore, case_id: s
         )
 
     now = clock.now_utc()
-    case = cases_service.get_case(session, clock, case_id)
-    timeline = cases_service.list_timeline(session, case_id)
-    interest = cases_service.get_interest(session, clock, case_id, None)
+    case = cases_service.get_case(session, supplier_id, clock, case_id)
+    timeline = cases_service.list_timeline(session, supplier_id, case_id)
+    interest = cases_service.get_interest(session, supplier_id, clock, case_id, None)
     rule_set = load_rule_set(case.rule_set_version)
     relied_on = list(dict.fromkeys([*case.clock.unconfirmed_rules, *interest.unconfirmed_rules]))
     data = PackData(
         generated_at=now,
-        supplier=cases_service.get_supplier(session),
+        supplier=cases_service.get_supplier(session, supplier_id),
         case=case,
-        evidence=[e for e in cases_service.list_evidence(session, case_id) if not e.excluded],
-        responses=cases_service.list_responses(session, clock, case_id),
+        evidence=[
+            e for e in cases_service.list_evidence(session, supplier_id, case_id) if not e.excluded
+        ],
+        responses=cases_service.list_responses(session, supplier_id, clock, case_id),
         timeline=timeline,
-        checklist=cases_service.get_checklist(session, clock, case_id),
+        checklist=cases_service.get_checklist(session, supplier_id, clock, case_id),
         interest=interest,
         rules_relied_on=[rule_set.rule(rule_id) for rule_id in relied_on],
         verification=PackVerification(
@@ -76,7 +82,7 @@ def export_pack(session: Session, clock: Clock, store: EvidenceStore, case_id: s
     )
 
     def read_evidence(item: out.EvidenceOut) -> bytes:
-        _, path = cases_service.evidence_file(session, store, item.id)
+        _, path = cases_service.evidence_file(session, supplier_id, store, item.id)
         content = Path(path).read_bytes()
         if _sha256(content) != item.sha256:
             raise IntegrityFailed(
@@ -91,7 +97,7 @@ def export_pack(session: Session, clock: Clock, store: EvidenceStore, case_id: s
     try:
         result = build_pack(target, data, read_evidence)
         # A new event during the build would make the pack disagree with the case.
-        after = cases_service.list_timeline(session, case_id)
+        after = cases_service.list_timeline(session, supplier_id, case_id)
         if [e.event_hash for e in after] != [e.event_hash for e in timeline]:
             raise Conflict("The case changed while the pack was being built. Please try again.")
         size = target.tell()

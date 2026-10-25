@@ -1,4 +1,11 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
+
+// Test-only placeholders, matching the e2e backend in playwright.config.ts. Never real.
+export const DEMO_EMAIL = "demo@paysetu.example";
+export const DEMO_PASSWORD = "e2e-only-demo-passphrase";
+export const TEST_PASSWORD = "e2e-only-test-passphrase";
+export const SAMPLE_BUYER = "Apex Auto Components Pvt Ltd (SAMPLE)";
+export const TERMS_VERSION = "evaluation-2026-10";
 
 /** `YYYY-MM-DD` for `days` ago, in India time (the date the backend treats as "today"). */
 export function isoDaysAgo(days: number): string {
@@ -6,6 +13,47 @@ export function isoDaysAgo(days: number): string {
   now.setDate(now.getDate() - days);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** A unique email for this test run. */
+export function uniqueEmail(testInfo: TestInfo, label = "user"): string {
+  const random = Math.random().toString(36).slice(2, 8);
+  return `e2e-${label}-${testInfo.project.name}-${Date.now()}-${random}@example.com`;
+}
+
+/** The CSRF headers the browser app sends (API.md 1.2), for direct API calls in tests. */
+export function csrfHeaders(testInfo: TestInfo): Record<string, string> {
+  return {
+    Origin: new URL(String(testInfo.project.use.baseURL)).origin,
+    "X-PaySetu-Client": "web",
+  };
+}
+
+/**
+ * Sign up a fresh supplier through the real API (the browser context keeps the session
+ * cookie) and give it the sample buyer the delivery form expects. Each test gets its own
+ * account, so tests never see each other's cases.
+ */
+export async function signUpWithSampleBuyer(page: Page, testInfo: TestInfo): Promise<string> {
+  const email = uniqueEmail(testInfo);
+  const headers = csrfHeaders(testInfo);
+  const signup = await page.request.post("/api/v1/auth/signup", {
+    headers,
+    data: {
+      full_name: "E2E Sample User",
+      business_name: "E2E Sample Traders (TEST)",
+      email,
+      password: TEST_PASSWORD,
+      accept_terms_version: TERMS_VERSION,
+    },
+  });
+  expect(signup.status(), await signup.text()).toBe(201);
+  const buyer = await page.request.post("/api/v1/buyers", {
+    headers,
+    data: { legal_name: SAMPLE_BUYER },
+  });
+  expect(buyer.status()).toBe(201);
+  return email;
 }
 
 /** Log a delivery through the real form; ends on the new case's overview page. */
@@ -29,4 +77,12 @@ export async function uploadEvidence(
   await page.getByLabel("File (required)").setInputFiles(file);
   await page.getByRole("button", { name: "Add evidence" }).click();
   await expect(page.getByText("Evidence added and sealed")).toBeVisible();
+}
+
+/** Click "Sign out", opening the mobile menu first when the sidebar is hidden. */
+export async function signOut(page: Page) {
+  const menu = page.getByRole("button", { name: "Open menu" });
+  if (await menu.isVisible()) await menu.click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login\?reason=signed-out$/);
 }

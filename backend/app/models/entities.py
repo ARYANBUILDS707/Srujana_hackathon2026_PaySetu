@@ -1,7 +1,10 @@
 """Tables for the demo vertical slice (DATABASE.md Sections 3.4–3.15, subset).
 
-Deviations from DATABASE.md, pending Phase 3 (auth) and later phases:
-- `suppliers` has no `owner_user_id` yet (no users in demo mode) and an `is_demo` flag.
+Deviations from DATABASE.md:
+- `suppliers.owner_user_id` is nullable (Phase 6). Only a demo supplier may be unowned (CHECK
+  `owned_unless_demo`): rows created before accounts existed stay unowned, and so unreachable
+  through the API, until an operator assigns them explicitly (`make demo-account`).
+- `suppliers` has an `is_demo` flag.
 - `bank_rates` has a `verified` flag and nullable `verified_by`, so unverified illustrative
   rates can be stored honestly labelled.
 - payments, communications, packs and share links are not created yet.
@@ -16,6 +19,7 @@ from sqlalchemy import (
     Date,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
@@ -32,8 +36,15 @@ HASH = String(64)
 
 class Supplier(Base):
     __tablename__ = "suppliers"
+    __table_args__ = (
+        # SQLite enforces this rule with triggers (migration 099b88746350).
+        CheckConstraint("is_demo = 1 OR owner_user_id IS NOT NULL", name="owned_unless_demo"),
+        Index("uq_suppliers_owner_user_id", "owner_user_id", unique=True),
+    )
 
     id: Mapped[str] = mapped_column(ID, primary_key=True)
+    # One supplier per user (PRD D14). Set from the session, never from request data.
+    owner_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     legal_name: Mapped[str] = mapped_column(String(200))
     trade_name: Mapped[str | None] = mapped_column(String(200))
     udyam_number: Mapped[str | None] = mapped_column(String(32))

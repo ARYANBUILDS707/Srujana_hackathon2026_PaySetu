@@ -27,7 +27,7 @@
 | Route group | Mechanism |
 | --- | --- |
 | `/auth/*` (signup, login) | None (rate-limited) |
-| Supplier routes | `ps_session` cookie (HttpOnly, Secure, SameSite=Lax) |
+| Supplier routes | `ps_session` cookie (HttpOnly, SameSite=Lax, Path=/; Secure whenever `PUBLIC_BASE_URL` is https, so always in production) |
 | `/public/share/{token}/*` | Share token in the path; no cookie needed |
 | `/health` | None |
 
@@ -36,11 +36,13 @@
 - the `Origin` header to equal `PUBLIC_BASE_URL` (or the `Referer` to start with it)
 - the header `X-PaySetu-Client: web`
 
-Failing either returns **403 `csrf_rejected`**.
+Failing either returns **403 `csrf_rejected`**. This includes `POST /auth/signup`, `/auth/login` and `/auth/logout`.
+
+**Implemented (Phase 6, 25 Oct 2026):** signup, login, logout and me (Section 2.2). The session token is 256 random bits; only its SHA-256 is stored. Sessions end after `SESSION_IDLE_HOURS` without use (default 168, sliding) or `SESSION_ABSOLUTE_DAYS` after login (default 30), or on logout. Any 401 caused by a bad, expired or revoked cookie also clears the cookie (`Set-Cookie: ps_session=; Max-Age=0`).
 
 ### 1.3 Authorisation
 
-- Every supplier route resolves `supplier_id` from the session. A resource belonging to another supplier returns **404 `not_found`** (never 403), so its existence is not revealed.
+- Every supplier route resolves `supplier_id` from the session. A resource belonging to another supplier returns **404 `not_found`** (never 403), so its existence is not revealed. **Implemented** for every case, buyer, response, evidence, download, integrity, timeline, checklist, interest and evidence-pack route (`backend/tests/integration/test_authorisation.py` walks every documented operation).
 - Routes requiring a completed profile (case creation, sending) return **409 `profile_incomplete`** with the missing fields listed.
 - Share-token routes return only the purpose-specific projection (Section 4).
 
@@ -63,7 +65,7 @@ Failing either returns **403 `csrf_rejected`**.
 | HTTP | `code` values | When |
 | --- | --- | --- |
 | 400 | `bad_request` | Malformed JSON or multipart |
-| 401 | `unauthenticated`, `session_expired` | No or expired session |
+| 401 | `unauthenticated`, `session_expired`, `invalid_credentials` | No, revoked or unknown session; expired session; wrong email or password at login |
 | 403 | `csrf_rejected`, `forbidden` | CSRF failure; action not allowed for this principal |
 | 404 | `not_found` | Missing or not owned |
 | 409 | `conflict`, `invalid_state`, `profile_incomplete`, `duplicate_evidence`, `already_sent`, `integrity_failed` | State conflicts |
@@ -105,30 +107,38 @@ Messages are safe to show to users. Internal details never appear in responses.
 
 | Method | Path | Auth | Purpose | P |
 | --- | --- | --- | --- | --- |
-| POST | `/auth/signup` | – | Create a user + session | P0 |
-| POST | `/auth/login` | – | Create a session | P0 |
-| POST | `/auth/logout` | S | Revoke the current session | P0 |
-| GET | `/auth/me` | S | Current user, supplier summary, profile completeness, adapter modes | P0 |
-| POST | `/auth/password/change` | S | Change password; revokes other sessions | P0 |
+| POST | `/auth/signup` | – | Create a user, the user's supplier and a session. **Built** | P0 |
+| POST | `/auth/login` | – | Create a session (revokes any session the browser already had). **Built** | P0 |
+| POST | `/auth/logout` | – (cookie if present) | Revoke the current session and clear the cookie; idempotent, always 204. **Built** | P0 |
+| GET | `/auth/me` | S | Current user and supplier summary (`Cache-Control: no-store`). **Built**; profile completeness and adapter modes not yet included | P0 |
+| POST | `/auth/password/change` | S | Change password; revokes other sessions. **Not built yet** | P0 |
 | POST | `/auth/password/forgot` | – | Always 202; sends a reset email if the account exists | P1 |
 | POST | `/auth/password/reset` | – | Token + new password | P1 |
 
 `POST /auth/signup`:
 
+As built (Phase 6). `business_name` is an addition: signup creates the supplier too (DECISIONS.md Section 8).
+
 ```json
 // request
-{ "email": "ravi@example.in", "password": "••••••••••", "full_name": "Ravi Kumar", "accept_terms_version": "2026-11-v1" }
-// 201 response (sets ps_session cookie)
-{ "user": { "id": "…", "email": "ravi@example.in", "full_name": "Ravi Kumar" }, "supplier": null, "profile_complete": false }
+{ "email": "ravi@example.in", "password": "••••••••••", "full_name": "Ravi Kumar",
+  "business_name": "Ravi Fasteners", "accept_terms_version": "evaluation-2026-10" }
+// 201 response (sets the ps_session cookie; the token never appears in a body)
+{ "user": { "id": "…", "email": "ravi@example.in", "full_name": "Ravi Kumar" },
+  "supplier": { "id": "…", "legal_name": "Ravi Fasteners", "demo_mode": false } }
 ```
+
+`POST /auth/login` takes `{ "email": "…", "password": "…" }` and returns the same body as signup. `GET /auth/me` returns it for the current session.
 
 Validation:
 
 - `email` is a valid address.
 - `password` is 10–128 characters and not on the common-password list.
-- `accept_terms_version` must equal the current version.
+- `email` is stored lower-cased and trimmed; `full_name` 1–120 and `business_name` 1–200 characters.
+- `accept_terms_version` must equal the current version (`evaluation-2026-10`: the evaluation notice on the signup page, not counsel-reviewed Terms; DECISIONS.md Section 8).
+- Submitted values (including passwords) never appear in error responses.
 
-A duplicate email returns **409 `conflict`** with the generic message "Could not create an account with these details." The same message is used for any signup conflict, which limits account enumeration while keeping the UX simple. Login errors are always **401** "Email or password is incorrect."
+A duplicate email returns **409 `conflict`** with the generic message "Could not create an account with these details." The same message is used for any signup conflict, which limits account enumeration while keeping the UX simple. Login errors are always **401** `invalid_credentials` "Email or password is incorrect.", whether the email is unknown, the password is wrong or the account is inactive; an unknown email still costs one Argon2 verification.
 
 ### 2.3 Supplier profile
 
@@ -363,10 +373,10 @@ Pack response:
 
 #### Demo build: on-demand evidence pack export
 
-`GET /cases/{case_id}/evidence-pack` (supplier session in the full design; **demo build: no authentication, mounted only when `APP_ENV` is not `production`**). Read-only: it writes no database row and no timeline event.
+`GET /cases/{case_id}/evidence-pack` (**supplier session required** since Phase 6; still mounted only when `APP_ENV` is not `production`). Read-only: it writes no database row and no timeline event.
 
 - **200:** `application/zip`, `Content-Disposition: attachment; filename="PaySetu-evidence-pack-PS-YYYY-NNNN.zip"`, `Cache-Control: private, no-store`, `X-PaySetu-Pack-SHA256: <SHA-256 of manifest.json>`.
-- **404 `not_found`:** unknown case. **409 `integrity_failed`:** a stored file or the timeline chain fails verification (also if a file changes while the pack is built); `errors[]` lists `file:<evidence id>` or `timeline:seq N` with the reason, and no pack is created. **409 `conflict`:** the case changed while the pack was being built. **429 `rate_limited`:** 5 per hour per case.
+- **401:** no valid session. **404 `not_found`:** unknown case, or a case owned by another supplier. **409 `integrity_failed`:** a stored file or the timeline chain fails verification (also if a file changes while the pack is built); `errors[]` lists `file:<evidence id>` or `timeline:seq N` with the reason, and no pack is created. **409 `conflict`:** the case changed while the pack was being built. **429 `rate_limited`:** 5 per hour per case (keyed by supplier and case).
 - **Contents:** `README_FIRST.md`, `01_case_summary.md`, `02_deemed_clock_and_interest.md`, `03_timeline.md`, `timeline.json`, `04_case_strength_checklist.md`, `05_verification_report.md`, `evidence/NN_<kind>_<hash8>.<ext>` (original bytes), `manifest.json` (path, size and SHA-256 of every other file; its own SHA-256 is the pack ID). Entry names are generated by PaySetu, never from user filenames. No Section 63 certificate (no counsel-reviewed template; LR-16).
 - **Differences from the planned `POST /cases/{id}/packs` + `GET /packs/{id}/download`:** packs are not stored or versioned and there is no `sealed_packs` table; the pack ID is not recorded in the timeline.
 
@@ -493,7 +503,7 @@ Future inbound webhooks (inbound email parsing, eSign callbacks) must:
 | Scope | Limit | Key |
 | --- | --- | --- |
 | `POST /auth/login` | 5/min and 20/hour | IP + email; IP |
-| `POST /auth/signup` | 5/hour | IP |
+| `POST /auth/signup` | 5/hour (`AUTH_SIGNUP_LIMIT_PER_HOUR`; production refuses a higher value) | IP |
 | `POST /auth/password/forgot` (P1) | 3/hour | IP + email |
 | `/public/share/*` | 60/min; 10 invalid tokens/min | IP |
 | `POST /cases/{id}/evidence` | 30/min | user |

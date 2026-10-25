@@ -278,7 +278,7 @@ export default function NewDeliveryPage() {
               <label
                 key={value}
                 className={`flex cursor-pointer gap-3 rounded-md border p-3 ${
-                  form.dealType === value ? "border-primary bg-primary-tint" : "border-rule-strong"
+                  form.dealType === value ? "border-primary bg-primary-tint" : "border-control"
                 }`}
               >
                 <input

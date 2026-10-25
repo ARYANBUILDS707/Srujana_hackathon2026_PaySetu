@@ -110,7 +110,7 @@ erDiagram
 | Column | Type | Null | Constraints / notes |
 | --- | --- | --- | --- |
 | `id` | id | no | PK |
-| `owner_user_id` | id | no | FK → `users.id`; `UNIQUE` (one supplier per user in MVP, PRD D14) |
+| `owner_user_id` | id | no (as designed) | FK → `users.id`; `UNIQUE` (one supplier per user in MVP, PRD D14). **As built (migration `099b88746350`): nullable**, with a unique index and the rule "only a supplier with `is_demo = 1` may be unowned" (CHECK on PostgreSQL, triggers on SQLite), so pre-Phase-6 demo data is kept without inventing an owner (DECISIONS.md Section 8) |
 | `legal_name` | TEXT | no | 1–200 |
 | `trade_name` | TEXT | yes | |
 | `udyam_number` | TEXT | yes | Uppercase; `CHECK` pattern `UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}` (validated in the app as well) |
@@ -472,7 +472,7 @@ Account deletion (P1, D12) runs as an operator procedure that disables the trigg
 
     Demo evidence files are generated placeholder images and PDFs marked "SAMPLE".
 - **Tests:** create a fresh SQLite file **per test** via `alembic upgrade head` (not `create_all`), so the triggers are tested too. Implemented in T1.2: fixtures `migrated_database_url` and `database` in `backend/tests/conftest.py`. Per-test isolation was chosen over per-session because migrations are fast; revisit if the suite slows down.
-- **Infrastructure (T1.2):** `backend/alembic.ini` holds no database URL. `alembic/env.py` takes it from validated settings (`DATABASE_URL`) or an explicit test override, and runs SQLite migrations through `app.db.create_db_engine` with the application pragmas and `render_as_batch`. Constraint names follow the naming convention in `app/models/base.py`. The baseline revision `bf48eb38df15` is empty; migration 1 (users, sessions) chains from it.
+- **Infrastructure (T1.2):** `backend/alembic.ini` holds no database URL. `alembic/env.py` takes it from validated settings (`DATABASE_URL`) or an explicit test override, and runs SQLite migrations through `app.db.create_db_engine` with the application pragmas and `render_as_batch`. Constraint names follow the naming convention in `app/models/base.py`. The baseline revision `bf48eb38df15` is empty. **As built**, the order differs from the planned list above: `7f9909eb7e4c` (demo case core: suppliers, buyers, cases, evidence_items, timeline_events, buyer_responses, bank_rates and the append-only triggers), then `099b88746350` (Phase 6: users, sessions, `suppliers.owner_user_id`). The Phase 6 migration adds the column with `ALTER TABLE ... ADD COLUMN ... REFERENCES` instead of a batch table rebuild, because rebuilding `suppliers` would drop a table that `buyers` and `cases` reference while foreign keys are on. It assigns no existing row to any user; `make demo-account` gives the seeded demo supplier a login explicitly.
 
 ---
 

@@ -320,25 +320,31 @@ flowchart LR
 
 ## 10. Project Folder Structure
 
-**Current state (after Phase 0):**
+**Current state (25 Oct 2026, after Phase 6):**
 
 ```
 PaySetu/
-├── README.md, AGENTS.md, Makefile, .gitignore, .nvmrc
-├── docs/                  # PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN
+├── README.md, AGENTS.md, CLAUDE.md, Makefile, .gitignore, .nvmrc
+├── docs/                  # PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN, HANDOVER, AUDIT_REPORT
 ├── backend/
-│   ├── app/main.py        # app factory, /api/v1 prefix
-│   ├── app/api/v1/        # health router
-│   ├── app/schemas/       # HealthOut
-│   ├── tests/integration/ # test_health.py
-│   ├── pyproject.toml     # ruff, mypy, pytest config
-│   ├── requirements.txt, requirements-dev.txt, .env.example
+│   ├── app/main.py        # app factory, /api/v1 prefix, middleware order
+│   ├── app/api/deps.py    # session, clock and the supplier principal (auth dependency)
+│   ├── app/api/v1/        # health, auth, supplier case routes (demo_cases.py)
+│   ├── app/domain/        # pure legal and evidence engine (100% branch coverage)
+│   ├── app/services/      # auth, cases, evidence pack
+│   ├── app/security/      # CSRF, headers, body limit, rate limits, passwords, sessions
+│   ├── app/models/, app/schemas/, app/repositories/, app/documents/, app/storage/, app/rules/
+│   ├── alembic/versions/  # baseline, demo case core, accounts and ownership
+│   ├── seed/              # demo.py (synthetic data), demo_account.py (demo login)
+│   ├── tests/             # unit/ and integration/
+│   └── requirements.txt, requirements-dev.txt, .env.example, pyproject.toml
 └── frontend/
-    ├── src/app/           # layout (IBM Plex fonts), landing page, globals.css (design tokens)
+    ├── src/app/           # landing, (auth)/login and signup, app/ workspace, globals.css (tokens)
+    ├── src/components/    # ui/, layout/, cases/
     ├── src/content/       # UI copy catalogue
-    ├── tests/e2e/         # Playwright smoke test
-    ├── next.config.ts, playwright.config.ts, eslint.config.mjs, tsconfig.json
-    └── package.json, package-lock.json, .env.example, .prettierrc.json
+    ├── src/lib/           # api/ (typed client), session/ (session guard), format/, hooks/
+    ├── tests/e2e/         # Playwright specs against the real backend
+    └── next.config.ts, playwright.config.ts, package.json
 ```
 
 **Planned structure** (the files above exist; everything else is planned). The authoritative version is [docs/ARCHITECTURE.md Section 6](docs/ARCHITECTURE.md#6-folder-structure).
@@ -399,12 +405,11 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 
 | Area | Status in this repository |
 | --- | --- |
-| Documentation | Draft v1.1 complete and consistency-reviewed: README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
-| Phase 0 (foundation) | Done on branch `dev`: runnable backend and frontend skeletons, tooling, Makefile, smoke tests |
-| Frontend | Next.js 16.4.3 demo workspace on the real demo APIs: landing page, dashboard, case list, New delivery, and per-case Overview (DeemedClock strip, key dates with "why this date", amounts, next step, **Download Evidence Pack**), Evidence (upload, SHA-256, integrity check), Buyer responses, Case Strength, Interest and Timeline. Blue-and-white design system (docs/DESIGN.md). No login (demo mode); no letters, packs or sharing yet |
-| Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Phase 1: T1.1 typed settings (`app/config.py`) with startup validation and the production gate. T1.2 database engine and sessions (`app/db.py`) with Alembic. Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
-| Database | T1.2 done: SQLAlchemy 2.1.6 engine and sessions; SQLite pragmas (WAL, foreign keys, busy timeout 5000 ms, synchronous NORMAL); Alembic 1.20.1 with an empty baseline migration (`bf48eb38df15`). **No business tables yet** (Phase 3 onwards) |
-| Tests | Backend: 264 pytest tests (21 integration incl. database and migration tests, 243 unit, incl. 24 counsel-readable legal fixtures and 37 settings tests); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 5 Playwright tests × 2 viewports (360×800, 1280×800) against the real backend (nothing mocked) |
+| Documentation | Complete set (README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN) plus `docs/HANDOVER.md` (current state) and `docs/AUDIT_REPORT.md`. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
+| Frontend | Next.js 16.4.3 workspace in the "Oxford Blue + Stone" design system (Geist typeface; docs/DESIGN.md): landing page, sign-up and sign-in, dashboard, cases, Record delivery, and the case workspace (Overview with the DeemedClock timeline and **Download Evidence Pack**, Evidence Vault, Buyer responses, Case Strength, Interest, Timeline). The workspace requires a session; sign-out is in the sidebar and the mobile menu |
+| Backend | FastAPI 0.162.0. Settings with a production gate, database and migrations, problem+json errors, JSON logs, injectable clock, CSRF, security headers, body limits and rate limits. Supplier routes for buyers, cases, buyer responses, evidence upload and download, integrity check, timeline, checklist, interest and the evidence-pack ZIP. **Phase 6:** signup, login, logout and me with Argon2id passwords and revocable server-side sessions; every supplier route requires a session and is scoped to the caller's supplier (another supplier's records answer 404). Supplier routes are still mounted only outside production (legal review pending) |
+| Database | SQLite via SQLAlchemy 2.1.6 and Alembic 1.20.1: baseline `bf48eb38df15`, demo case core `7f9909eb7e4c`, accounts and ownership `099b88746350` (users, sessions, `suppliers.owner_user_id`). Append-only triggers on timeline events and evidence |
+| Tests | Backend: 477 pytest tests (203 integration, 274 unit, including 24 counsel-readable legal fixtures); **100% line and branch coverage** of `backend/app/domain/` enforced by `make test`. Frontend: 15 Playwright tests × 2 viewports (360×800, 1280×800) = 30, against the real backend (nothing mocked). Results and caveats: [docs/HANDOVER.md](docs/HANDOVER.md) |
 | External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
 | Legal review of rules and templates | Not done. Interest defaults D3–D5 are owner-approved provisional simulation defaults only. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25) |
 
@@ -440,15 +445,18 @@ make migrate         # alembic upgrade head, using DATABASE_URL from backend/.en
 make migrate-status  # current revision and head revision
 ```
 
-**Hackathon demo (local only, synthetic data, no login):**
+**Evaluation build (local only; do not enter real business or personal data):**
 
 ```bash
 make migrate && make seed   # schema + one synthetic demo supplier, a sample buyer, one UNVERIFIED bank rate
+DEMO_ACCOUNT_PASSWORD='choose-a-local-passphrase' make demo-account   # optional: a login for the demo supplier
 make dev                    # API on :8000 and the web app on :3000 together
-# open http://localhost:3000, then "Open the demo workspace"
+# open http://localhost:3000, then "Open demo workspace": sign in, or create an account
 ```
 
-Demo endpoints: `GET /supplier`, `GET|POST /buyers`, `GET|POST /cases`, `GET /cases/{id}`, `/cases/{id}/checklist`, `/cases/{id}/interest`, `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection`, `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/timeline`. `GET /cases/{id}/evidence-pack` downloads a ZIP (summary, DeemedClock and interest, timeline, checklist, verification report, original evidence, SHA-256 manifest); it is refused if integrity verification fails and carries no Section 63 certificate. Writes need `Origin: http://localhost:3000` and `X-PaySetu-Client: web` (CSRF). Deviations are listed in [docs/DECISIONS.md Section 7](docs/DECISIONS.md#7-hackathon-demo-vertical-slice-25-oct-2026-owner-directed).
+The demo account's email is `demo@paysetu.example` unless `DEMO_ACCOUNT_EMAIL` is set; the password is the one you passed and is never printed. A new account starts empty: add a buyer in the Record delivery form. Seeded demo data stays unreachable until `make demo-account` gives it a login.
+
+Auth endpoints: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` (session cookie `ps_session`, HttpOnly). Supplier endpoints (session required, scoped to the signed-in supplier): `GET /supplier`, `GET|POST /buyers`, `GET|POST /cases`, `GET /cases/{id}`, `/cases/{id}/checklist`, `/cases/{id}/interest`, `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection`, `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/timeline`. `GET /cases/{id}/evidence-pack` downloads a ZIP (summary, DeemedClock and interest, timeline, checklist, verification report, original evidence, SHA-256 manifest); it is refused if integrity verification fails and carries no Section 63 certificate. Writes need `Origin: http://localhost:3000` and `X-PaySetu-Client: web` (CSRF). Deviations are listed in [docs/DECISIONS.md Section 7](docs/DECISIONS.md#7-hackathon-demo-vertical-slice-25-oct-2026-owner-directed).
 
 Other migration commands, run from `backend/`:
 

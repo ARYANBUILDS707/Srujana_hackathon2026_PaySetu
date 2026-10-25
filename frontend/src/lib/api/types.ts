@@ -22,3 +22,6 @@ export type EvidenceKind = S["EvidenceKind"];
 export type ResponseKind = S["ResponseKind"];
 export type ResponseChannel = S["ResponseChannel"];
 export type DealType = S["DealType"];
+export type Me = S["MeOut"];
+export type SignupBody = S["SignupIn"];
+export type LoginBody = S["LoginIn"];

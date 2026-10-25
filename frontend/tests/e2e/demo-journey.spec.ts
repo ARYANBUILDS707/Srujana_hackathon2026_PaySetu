@@ -3,7 +3,12 @@
 
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { isoDaysAgo, logDelivery } from "./helpers";
+import { isoDaysAgo, logDelivery, signUpWithSampleBuyer } from "./helpers";
+
+// Every test works as its own freshly signed-up supplier (Phase 6).
+test.beforeEach(async ({ page }, testInfo) => {
+  await signUpWithSampleBuyer(page, testInfo);
+});
 
 test("supplier logs a delivery, adds evidence, verifies integrity and reviews the case", async ({
   page,

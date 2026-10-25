@@ -10,7 +10,7 @@ WEB_PORT ?= 3000
 
 .DEFAULT_GOAL := help
 .PHONY: help api-types setup setup-backend setup-frontend dev dev-api dev-web lint format typecheck \
-	test e2e build migrate migrate-status seed
+	test e2e build migrate migrate-status seed demo-account
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -63,6 +63,9 @@ migrate-status: ## Show the current and head migration revisions
 
 seed: ## Load SYNTHETIC demo data (refuses production; run after make migrate)
 	cd backend && .venv/bin/python -m seed.demo
+
+demo-account: ## Give the demo supplier a login (needs DEMO_ACCOUNT_PASSWORD; refuses production)
+	cd backend && .venv/bin/python -m seed.demo_account
 
 api-types: ## Regenerate frontend API types from the backend OpenAPI schema
 	cd backend && .venv/bin/python -m tools.export_openapi > ../frontend/openapi.json

@@ -15,6 +15,7 @@ from app.config import Settings, load_settings
 from app.db import Database
 from app.main import create_app
 from seed.demo import seed
+from tests.auth_helpers import sign_in_as_demo
 from tests.conftest import TEST_SETTINGS
 
 CSRF = {"Origin": "http://localhost:3000", "X-PaySetu-Client": "web"}
@@ -40,6 +41,7 @@ def _seed(settings: Settings, clock: FrozenClock) -> None:
 def client(demo_settings: Settings, frozen_clock: FrozenClock) -> Iterator[TestClient]:
     _seed(demo_settings, frozen_clock)
     with TestClient(create_app(demo_settings, clock=frozen_clock)) as test_client:
+        sign_in_as_demo(test_client, demo_settings, frozen_clock)
         yield test_client
 
 
@@ -81,12 +83,15 @@ def _upload(
 # ------------------------------------------------------------------ supplier, buyers
 
 
-def test_endpoints_need_the_seeded_demo_supplier(
+def test_seeded_demo_supplier_is_unreachable_until_given_a_login(
     demo_settings: Settings, frozen_clock: FrozenClock
 ) -> None:
+    # Phase 6: seeded data is never reachable without a session, and seeding alone creates
+    # no login (the operator runs `make demo-account`).
+    _seed(demo_settings, frozen_clock)
     with TestClient(create_app(demo_settings, clock=frozen_clock)) as client:
         response = client.get("/api/v1/supplier")
-    assert response.status_code == 409 and response.json()["code"] == "profile_incomplete"
+    assert response.status_code == 401 and response.json()["code"] == "unauthenticated"
 
 
 def test_supplier_is_synthetic_and_eligibility_is_reported(client: TestClient) -> None:
@@ -476,6 +481,7 @@ def test_case_storage_cap(demo_settings: Settings, frozen_clock: FrozenClock) ->
     capped = demo_settings.model_copy(update={"max_upload_mb": 1, "max_case_storage_mb": 1})
     _seed(capped, frozen_clock)
     with TestClient(create_app(capped, clock=frozen_clock)) as client:
+        sign_in_as_demo(client, capped, frozen_clock)
         buyer = client.get("/api/v1/buyers").json()[0]["id"]
         case_id = _case(client, buyer).json()["id"]
         assert _upload(client, case_id, b"%PDF-" + b"a" * 700_000).status_code == 201

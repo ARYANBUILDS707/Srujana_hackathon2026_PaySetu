@@ -6,6 +6,9 @@ const API_PORT = 8100;
 // Viewports from DESIGN.md Section 10: 360×800 (primary mobile) and 1280×800 (desktop).
 // The tests run against the REAL backend (fresh migrated + seeded SQLite database in
 // backend/storage/e2e, git-ignored) behind the Next.js dev proxy. Nothing is mocked.
+// Each test signs up its own account (tests/e2e/helpers.ts), so the signup rate limit is
+// raised for this throwaway backend only; production refuses a raised value (app/config.py).
+// The seeded demo supplier gets a login (`seed.demo_account`), used by the auth spec.
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -30,6 +33,7 @@ export default defineConfig({
     {
       command:
         "rm -rf storage/e2e && .venv/bin/alembic upgrade head && .venv/bin/python -m seed.demo && " +
+        ".venv/bin/python -m seed.demo_account && " +
         `.venv/bin/uvicorn app.main:create_app --factory --port ${API_PORT} --log-level warning`,
       cwd: "../backend",
       url: `http://localhost:${API_PORT}/api/v1/health`,
@@ -43,6 +47,9 @@ export default defineConfig({
         TOKEN_HASH_KEY: "e2e-only-token-hash-key-0123456789abcdef",
         EMAIL_MODE: "simulated",
         LOG_LEVEL: "WARNING",
+        AUTH_SIGNUP_LIMIT_PER_HOUR: "200",
+        DEMO_ACCOUNT_EMAIL: "demo@paysetu.example",
+        DEMO_ACCOUNT_PASSWORD: "e2e-only-demo-passphrase",
       },
     },
     {

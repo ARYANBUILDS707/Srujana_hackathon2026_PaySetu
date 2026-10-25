@@ -23,6 +23,7 @@ from app.domain.types import EvidenceKind
 from app.main import create_app
 from app.schemas.cases import EvidenceOut
 from seed.demo import seed
+from tests.auth_helpers import sign_in_as_demo
 
 CSRF = {"Origin": "http://localhost:3000", "X-PaySetu-Client": "web"}
 PDF = b"%PDF-1.4\n% SAMPLE invoice for the pack test, not real evidence\n"
@@ -55,6 +56,7 @@ def client(pack_settings: Settings, frozen_clock: FrozenClock) -> Iterator[TestC
     finally:
         db.dispose()
     with TestClient(create_app(pack_settings, clock=frozen_clock)) as test_client:
+        sign_in_as_demo(test_client, pack_settings, frozen_clock)
         yield test_client
 
 

@@ -464,7 +464,7 @@ The owner prioritised an evaluation-ready backend slice over strict phase order.
 | **Evidence store pulled forward** from T1.6 (`app/storage/evidence_store.py`): write-once, content-addressed, magic-byte allow-list, 0600 files | Needed for uploads | T1.6 reviews it against its criteria |
 | **Bank rate is unverified.** The seed inserts only 5.75% from 2026-10-07 (LS-03 ideation document), `verified = false`; no earlier rate is invented. Interest periods it does not cover report `rate_data_unavailable` | No verified RBI series on record | Before real use: load verified RBI rates (operator migration, DATABASE.md 3.15) |
 | **Letters not built**: intimation and demand are reported as not done (checklist C11, C13) | Out of scope | Phase 9 |
-| Evidence uploads rate-limited under one demo key | No users yet | Phase 3/5 (per-user key) |
+| Evidence uploads rate-limited under one demo key | No users yet | **Resolved in Phase 6** (keyed by user; Section 8) |
 
 ### 7.1 Frontend demo workspace (25 Oct 2026, owner-directed)
 
@@ -488,7 +488,29 @@ Implemented as `GET /api/v1/cases/{id}/evidence-pack` (`app/services/pack.py`, `
 | **Markdown and JSON, not PDF.** README, summary, DeemedClock and interest, timeline, checklist and verification report are `.md`; `timeline.json` and `manifest.json` carry hashes | No PDF library installed or approved; owner preferred no new dependency | Phase 10 (ReportLab) |
 | **No Section 63 certificate draft.** FR-PACK-06 wants a watermarked draft | None may be generated without a counsel-reviewed template (LR-16). The pack says so explicitly | After LR-16 |
 | **Integrity gate as FR-PACK-04.** Export is refused (409 `integrity_failed`) if any file or the chain fails; files are re-hashed again as they are read, and the case's timeline head is compared before and after | Prevents packing altered evidence, including a change during the build | Done |
-| **No auth; demo routes only.** Same demo-mode limits as DECISIONS 7 | Phase 3 not built | Phase 3 |
+| **No auth; demo routes only.** Same demo-mode limits as DECISIONS 7 | Phase 3 not built | **Resolved in Phase 6**: the export needs a session and is scoped to the owner (Section 8); still unmounted in production |
 | **No advocate link, no `07_supplier_documents/`, no counsel-questions file** | Out of scope for the MVP | Phase 10 |
 | **Verification logic shared, not copied.** `check_integrity` now calls `_verify_case`, also used read-only by the export | Single source of truth; behaviour of `check_integrity` unchanged (existing tests pass) | Done |
 | **E2E isolation.** Playwright builds the dev server into `.next-e2e` (`NEXT_DIST_DIR`) so tests can run while a developer's `next dev` is running | Next.js locks the build directory per server | Done |
+
+## 8. Phase 6: Authentication and Case-Level Authorisation (25 Oct 2026, owner-directed)
+
+Implements IMPLEMENTATION_PLAN T3.1 to T3.3 (signup, login, logout, me) under the owner's "Phase 6" brief, following ARCHITECTURE.md Section 8 and DATABASE.md 3.1 to 3.2. Decisions and deviations:
+
+| Item | Decision / deviation | Resolve in |
+| --- | --- | --- |
+| **Password hashing** | `argon2-cffi` 25.1.0 (Argon2id, library defaults: t=3, m=64 MiB, p=4), the library ARCHITECTURE.md Section 2 already names; owner brief required Argon2. Pinned in `backend/requirements.txt`. Policy: 10 to 128 characters, not on a small bundled common-password list (`app/security/passwords.py`). An unknown email still costs one Argon2 verification (dummy hash), so timing does not reveal accounts | Done |
+| **Sessions** | 256-bit random token in the `ps_session` cookie (HttpOnly, SameSite=Lax, Path=/, Secure when `PUBLIC_BASE_URL` is https); only its SHA-256 is stored; the client IP only as HMAC under `TOKEN_HASH_KEY`. Idle expiry `SESSION_IDLE_HOURS` (default 168, sliding, refreshed at most hourly), absolute `SESSION_ABSOLUTE_DAYS` (default 30). Logout revokes the row; login revokes any session the browser already had (no fixation). A 401 for a bad, expired or revoked cookie also clears it | Done |
+| **Signup creates the supplier** | `POST /auth/signup` takes `business_name` in addition to API.md's fields and creates user, supplier (owner = that user) and session in one transaction. API.md 2.2 updated. Onboarding (T7.7) and supplier-profile editing (Udyam etc.) are not built; a new supplier's eligibility is "cannot assess" until then | Phase 7 (Udyam), T7.7 |
+| **Terms version** | No counsel-reviewed Terms or Privacy Notice exist. Signup records acceptance of an **evaluation notice** shown on the signup page ("evaluation build; not legal advice; do not enter real business or personal data"), version `evaluation-2026-10`. This is not a DPDP-grade consent record | Before any real-user launch (ADR-018, PRD D12) |
+| **Ownership column is nullable** | `suppliers.owner_user_id` is nullable and unique, with a rule that only a supplier marked `is_demo` may be unowned (CHECK on PostgreSQL, triggers on SQLite). DATABASE.md 3.4 makes it NOT NULL; the deviation preserves pre-Phase-6 data without inventing an owner | Make NOT NULL once demo data is retired |
+| **Existing data is not reassigned** | Migration `099b88746350` assigns nothing. The seeded demo supplier stays unowned and unreachable until an operator runs `make demo-account` (needs `DEMO_ACCOUNT_PASSWORD`; refuses production; claims only an unowned `is_demo` supplier) | Done |
+| **SQLite migration without a table rebuild** | `owner_user_id` is added with `ALTER TABLE ... ADD COLUMN ... REFERENCES users(id)`; uniqueness is a unique index. A batch rebuild would drop `suppliers`, which `buyers` and `cases` reference, with foreign keys on | Done |
+| **Authorisation** | One dependency (`app/api/deps.py: current_principal`) resolves the cookie to `SupplierPrincipal(user_id, supplier_id)` on every supplier route; services take `supplier_id` from it and scope every query, so another supplier's case, buyer, response, evidence file, timeline, interest, integrity check or pack answers 404. Request bodies cannot carry owner IDs (extra fields are rejected) | Done |
+| **Case routes still unmounted in production** | The supplier routes (formerly "demo routes") now require a session but stay mounted only when `APP_ENV` is not `production`: the legal readings await advocate review (LR-01 to LR-25) and the evidence pack is labelled an evaluation export. The auth routes are mounted everywhere | ADR-022 (legal sign-off gate) |
+| **Signup rate limit is configurable for test runs** | `AUTH_SIGNUP_LIMIT_PER_HOUR` (default 5, API.md Section 5). Playwright's throwaway backend sets 200 because every e2e test signs up its own account from one IP; production refuses any value above 5 at startup. The 5/hour behaviour is tested at the default | Done |
+| **Login rate limits** | 5 per minute per IP + email and 20 per hour per IP, as API.md Section 5; every other supplier route counts toward 300 per minute per user. Keys are in memory (single process, ARCHITECTURE.md 8.5) | Multi-instance: shared store |
+| **Timeline actor** | Timeline events still record `actor_id = null` for supplier actions (unchanged hash-chain inputs). Recording the user ID would be a deliberate change to new events only | Phase 5 hardening |
+| **Not built in this phase** | Password change (`/auth/password/change`, P0 in API.md), password reset (P1), account deletion request, Next.js middleware redirect (the guard is a client-side provider; the API is authoritative), onboarding pages | Next auth tasks |
+| **Accessibility fixes from the audit** | Control boundaries moved to a new `control` token (3:1 or more on every surface) and brass removed from small text; contrast table recomputed for the current palette (DESIGN.md 2.1) | Done |
+

@@ -1,8 +1,13 @@
-"""Demo vertical slice endpoints (API.md Sections 2.3–2.10, subset).
+"""Supplier case endpoints of the evaluation build (API.md Sections 2.3–2.10, subset).
 
-DEMO MODE: single synthetic supplier, no authentication. This router is mounted only when
-APP_ENV is not `production` (see app.main) and must never be exposed publicly. CSRF, body
-limits, security headers and error formats apply as for every API route.
+Every route requires a signed-in supplier (`PrincipalDep`, Phase 6) and passes the session's
+supplier ID to the services, which scope every query by it: another supplier's case, buyer,
+response or evidence answers 404. IDs in paths and bodies are never trusted for ownership.
+
+This router is still mounted only when APP_ENV is not `production` (see app.main): the legal
+rules behind these results await advocate review (DECISIONS.md LR-01 to LR-25) and the evidence
+pack is labelled as an evaluation export. CSRF, body limits, security headers and error
+formats apply as for every API route.
 """
 
 from collections.abc import Iterator
@@ -11,27 +16,16 @@ from typing import IO, Annotated, BinaryIO
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
-from sqlalchemy.orm import Session
 
-from app.clock import Clock, get_clock
-from app.config import Settings
-from app.db import get_session
+from app.api.deps import ClockDep, LimiterDep, PrincipalDep, SessionDep, SettingsDep
 from app.domain.types import EvidenceKind
 from app.schemas import cases as schemas
-from app.security.rate_limit import RateLimitCategory, RateLimiter
+from app.security.rate_limit import RateLimitCategory
 from app.services import cases as service
 from app.services import pack as pack_service
 from app.storage.evidence_store import EvidenceStore
 
 router = APIRouter(tags=["demo"])
-
-SessionDep = Annotated[Session, Depends(get_session)]
-ClockDep = Annotated[Clock, Depends(get_clock)]
-
-
-def _settings(request: Request) -> Settings:
-    settings: Settings = request.app.state.settings
-    return settings
 
 
 def _store(request: Request) -> EvidenceStore:
@@ -39,68 +33,86 @@ def _store(request: Request) -> EvidenceStore:
     return store
 
 
-SettingsDep = Annotated[Settings, Depends(_settings)]
 StoreDep = Annotated[EvidenceStore, Depends(_store)]
 
 
 @router.get("/supplier", response_model=schemas.SupplierOut)
-def get_supplier(session: SessionDep) -> schemas.SupplierOut:
-    return service.get_supplier(session)
+def get_supplier(principal: PrincipalDep, session: SessionDep) -> schemas.SupplierOut:
+    return service.get_supplier(session, principal.supplier_id)
 
 
 @router.get("/buyers", response_model=list[schemas.BuyerOut])
-def list_buyers(session: SessionDep) -> list[schemas.BuyerOut]:
-    return service.list_buyers(session)
+def list_buyers(principal: PrincipalDep, session: SessionDep) -> list[schemas.BuyerOut]:
+    return service.list_buyers(session, principal.supplier_id)
 
 
 @router.post("/buyers", response_model=schemas.BuyerOut, status_code=201)
 def create_buyer(
-    data: schemas.BuyerCreate, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep, data: schemas.BuyerCreate, session: SessionDep, clock: ClockDep
 ) -> schemas.BuyerOut:
-    return service.create_buyer(session, clock, data)
+    return service.create_buyer(session, principal.supplier_id, clock, data)
 
 
 @router.get("/cases", response_model=list[schemas.CaseSummaryOut])
 def list_cases(
-    session: SessionDep, clock: ClockDep, limit: Annotated[int, Query(ge=1, le=100)] = 50
+    principal: PrincipalDep,
+    session: SessionDep,
+    clock: ClockDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> list[schemas.CaseSummaryOut]:
-    return service.list_cases(session, clock, limit)
+    return service.list_cases(session, principal.supplier_id, clock, limit)
 
 
 @router.post("/cases", response_model=schemas.CaseOut, status_code=201)
-def create_case(data: schemas.CaseCreate, session: SessionDep, clock: ClockDep) -> schemas.CaseOut:
-    return service.create_case(session, clock, data)
+def create_case(
+    principal: PrincipalDep, data: schemas.CaseCreate, session: SessionDep, clock: ClockDep
+) -> schemas.CaseOut:
+    return service.create_case(session, principal.supplier_id, clock, data)
 
 
 @router.get("/cases/{case_id}", response_model=schemas.CaseOut)
-def get_case(case_id: str, session: SessionDep, clock: ClockDep) -> schemas.CaseOut:
-    return service.get_case(session, clock, case_id)
+def get_case(
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
+) -> schemas.CaseOut:
+    return service.get_case(session, principal.supplier_id, clock, case_id)
 
 
 @router.get("/cases/{case_id}/checklist", response_model=schemas.ChecklistOut)
-def get_checklist(case_id: str, session: SessionDep, clock: ClockDep) -> schemas.ChecklistOut:
-    return service.get_checklist(session, clock, case_id)
+def get_checklist(
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
+) -> schemas.ChecklistOut:
+    return service.get_checklist(session, principal.supplier_id, clock, case_id)
 
 
 @router.get("/cases/{case_id}/interest", response_model=schemas.InterestOut)
 def get_interest(
-    case_id: str, session: SessionDep, clock: ClockDep, as_of: date | None = None
+    principal: PrincipalDep,
+    case_id: str,
+    session: SessionDep,
+    clock: ClockDep,
+    as_of: date | None = None,
 ) -> schemas.InterestOut:
-    return service.get_interest(session, clock, case_id, as_of)
+    return service.get_interest(session, principal.supplier_id, clock, case_id, as_of)
 
 
 @router.get("/cases/{case_id}/responses", response_model=list[schemas.ResponseOut])
-def list_responses(case_id: str, session: SessionDep, clock: ClockDep) -> list[schemas.ResponseOut]:
-    return service.list_responses(session, clock, case_id)
+def list_responses(
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
+) -> list[schemas.ResponseOut]:
+    return service.list_responses(session, principal.supplier_id, clock, case_id)
 
 
 @router.post(
     "/cases/{case_id}/responses", response_model=list[schemas.ResponseOut], status_code=201
 )
 def record_response(
-    case_id: str, data: schemas.ResponseCreate, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep,
+    case_id: str,
+    data: schemas.ResponseCreate,
+    session: SessionDep,
+    clock: ClockDep,
 ) -> list[schemas.ResponseOut]:
-    return service.record_response(session, clock, case_id, data)
+    return service.record_response(session, principal.supplier_id, clock, case_id, data)
 
 
 @router.post(
@@ -108,24 +120,30 @@ def record_response(
     response_model=list[schemas.ResponseOut],
 )
 def remove_objection(
+    principal: PrincipalDep,
     case_id: str,
     response_id: str,
     data: schemas.ObjectionRemoval,
     session: SessionDep,
     clock: ClockDep,
 ) -> list[schemas.ResponseOut]:
-    return service.remove_objection(session, clock, case_id, response_id, data.removed_on)
+    return service.remove_objection(
+        session, principal.supplier_id, clock, case_id, response_id, data.removed_on
+    )
 
 
 @router.get("/cases/{case_id}/evidence", response_model=list[schemas.EvidenceOut])
-def list_evidence(case_id: str, session: SessionDep) -> list[schemas.EvidenceOut]:
-    return service.list_evidence(session, case_id)
+def list_evidence(
+    principal: PrincipalDep, case_id: str, session: SessionDep
+) -> list[schemas.EvidenceOut]:
+    return service.list_evidence(session, principal.supplier_id, case_id)
 
 
 @router.post("/cases/{case_id}/evidence", response_model=schemas.EvidenceOut, status_code=201)
 def upload_evidence(
+    principal: PrincipalDep,
     case_id: str,
-    request: Request,
+    limiter: LimiterDep,
     session: SessionDep,
     clock: ClockDep,
     settings: SettingsDep,
@@ -134,10 +152,10 @@ def upload_evidence(
     kind: Annotated[EvidenceKind, Form()],
     note: Annotated[str | None, Form(max_length=500)] = None,
 ) -> schemas.EvidenceOut:
-    limiter: RateLimiter = request.app.state.rate_limiter
-    limiter.hit(RateLimitCategory.EVIDENCE_UPLOAD, "demo-supplier")
+    limiter.hit(RateLimitCategory.EVIDENCE_UPLOAD, principal.user_id)
     return service.upload_evidence(
         session,
+        principal.supplier_id,
         clock,
         settings,
         store,
@@ -155,8 +173,10 @@ def _chunks(handle: BinaryIO) -> Iterator[bytes]:
 
 
 @router.get("/evidence/{evidence_id}/download")
-def download_evidence(evidence_id: str, session: SessionDep, store: StoreDep) -> FileResponse:
-    item, path = service.evidence_file(session, store, evidence_id)
+def download_evidence(
+    principal: PrincipalDep, evidence_id: str, session: SessionDep, store: StoreDep
+) -> FileResponse:
+    item, path = service.evidence_file(session, principal.supplier_id, store, evidence_id)
     return FileResponse(
         path,
         media_type=item.mime_type,
@@ -167,14 +187,16 @@ def download_evidence(evidence_id: str, session: SessionDep, store: StoreDep) ->
 
 @router.post("/cases/{case_id}/integrity-check", response_model=schemas.IntegrityOut)
 def integrity_check(
-    case_id: str, session: SessionDep, clock: ClockDep, store: StoreDep
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep, store: StoreDep
 ) -> schemas.IntegrityOut:
-    return service.check_integrity(session, clock, store, case_id)
+    return service.check_integrity(session, principal.supplier_id, clock, store, case_id)
 
 
 @router.get("/cases/{case_id}/timeline", response_model=list[schemas.TimelineEventOut])
-def timeline(case_id: str, session: SessionDep) -> list[schemas.TimelineEventOut]:
-    return service.list_timeline(session, case_id)
+def timeline(
+    principal: PrincipalDep, case_id: str, session: SessionDep
+) -> list[schemas.TimelineEventOut]:
+    return service.list_timeline(session, principal.supplier_id, case_id)
 
 
 def _stream_and_close(handle: IO[bytes]) -> Iterator[bytes]:
@@ -187,12 +209,16 @@ def _stream_and_close(handle: IO[bytes]) -> Iterator[bytes]:
 
 @router.get("/cases/{case_id}/evidence-pack")
 def download_evidence_pack(
-    case_id: str, request: Request, session: SessionDep, clock: ClockDep, store: StoreDep
+    principal: PrincipalDep,
+    case_id: str,
+    limiter: LimiterDep,
+    session: SessionDep,
+    clock: ClockDep,
+    store: StoreDep,
 ) -> StreamingResponse:
     """Build and download the case's evidence pack (ZIP). Read-only; refused if integrity fails."""
-    limiter: RateLimiter = request.app.state.rate_limiter
-    limiter.hit(RateLimitCategory.PACK_GENERATION, case_id[:64])
-    export = pack_service.export_pack(session, clock, store, case_id)
+    limiter.hit(RateLimitCategory.PACK_GENERATION, f"{principal.supplier_id}|{case_id[:64]}")
+    export = pack_service.export_pack(session, principal.supplier_id, clock, store, case_id)
     return StreamingResponse(
         _stream_and_close(export.file),
         media_type="application/zip",

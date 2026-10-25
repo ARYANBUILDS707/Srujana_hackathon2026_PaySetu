@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { landingCopy as copy } from "@/content/landing";
@@ -56,9 +57,17 @@ export default function LandingPage() {
             </span>
             {copy.productName}
           </span>
-          <a href="#how-it-works" className="text-small font-medium text-ink-muted hover:text-ink">
-            How it works
-          </a>
+          <nav aria-label="Account" className="flex items-center gap-4">
+            <a
+              href="#how-it-works"
+              className="hidden text-small font-medium text-ink-muted hover:text-ink md:inline"
+            >
+              How it works
+            </a>
+            <Link href="/login" className="text-small font-medium text-ink-muted hover:text-ink">
+              Sign in
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -94,7 +103,7 @@ export default function LandingPage() {
             <ol className="mt-8 grid gap-x-8 gap-y-6 md:grid-cols-2 lg:grid-cols-5">
               {copy.steps.map((step, index) => (
                 <li key={step.title} className="border-t-2 border-primary pt-4">
-                  <span className="font-mono text-small text-brass">
+                  <span className="font-mono text-small text-ink-muted">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <h3 className="mt-1 text-h3 text-ink">{step.title}</h3>
