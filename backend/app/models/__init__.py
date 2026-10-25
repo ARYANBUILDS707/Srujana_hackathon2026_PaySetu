@@ -3,7 +3,7 @@
 Tables follow DATABASE.md; deviations are listed in each module's docstring.
 """
 
-from app.models.auth import PasswordResetToken, User, UserSession
+from app.models.auth import EmailVerificationToken, PasswordResetToken, User, UserSession
 from app.models.base import Base
 from app.models.entities import (
     BankRate,
@@ -21,6 +21,7 @@ __all__ = [
     "Buyer",
     "BuyerResponse",
     "Case",
+    "EmailVerificationToken",
     "EvidenceItem",
     "PasswordResetToken",
     "Supplier",

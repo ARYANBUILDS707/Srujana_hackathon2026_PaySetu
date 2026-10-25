@@ -11,6 +11,8 @@ interface SessionValue {
   me: Me;
   signOut: () => Promise<void>;
   signOutEverywhere: () => Promise<void>;
+  /** Re-reads the current user (e.g. after the email was confirmed in another tab). */
+  refresh: () => Promise<Me>;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -70,6 +72,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     router.replace("/login?reason=signed-out-everywhere");
   }, [router]);
 
+  const refresh = useCallback(async () => {
+    const current = await api<Me>("/auth/me");
+    setMe(current);
+    return current;
+  }, []);
+
   if (!me)
     return (
       <div className="mx-auto max-w-7xl p-4 lg:p-8">
@@ -77,7 +85,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       </div>
     );
   return (
-    <SessionContext.Provider value={{ me, signOut, signOutEverywhere }}>
+    <SessionContext.Provider value={{ me, signOut, signOutEverywhere, refresh }}>
       {children}
     </SessionContext.Provider>
   );

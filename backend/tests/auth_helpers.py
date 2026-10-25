@@ -1,5 +1,8 @@
 """Sign-in helpers for integration tests (Phase 6). Placeholder credentials, never real."""
 
+import re
+from email import message_from_bytes, policy
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -20,7 +23,8 @@ def create_demo_login(settings: Settings, clock: Clock) -> None:
     db = Database(settings.database_url)
     try:
         with db.session() as session:
-            create_demo_account(session, clock, DEMO_EMAIL, TEST_PASSWORD)
+            # Verified explicitly, like `DEMO_ACCOUNT_VERIFIED=1 make demo-account` (Phase 7A).
+            create_demo_account(session, clock, DEMO_EMAIL, TEST_PASSWORD, verified=True)
     finally:
         db.dispose()
 
@@ -54,3 +58,31 @@ def signup(
         **changes,
     }
     return client.post("/api/v1/auth/signup", json=body, headers=CSRF)
+
+
+VERIFY_LINK = re.compile(r"/verify-email#token=([A-Za-z0-9_-]+)")
+
+
+def outbox_messages(settings: Settings, email: str, kind: str) -> list[Any]:
+    """Messages of `kind` for `email` in the development outbox, oldest first."""
+    folder = Path(settings.storage_dir) / "outbox"
+    found = []
+    for path in sorted(folder.glob("*.eml")) if folder.exists() else []:
+        message = message_from_bytes(path.read_bytes(), policy=policy.default)
+        if message["To"] == email and message["X-PaySetu-Kind"] == kind:
+            found.append(message)
+    return found
+
+
+def latest_verification_token(settings: Settings, email: str) -> str:
+    message = outbox_messages(settings, email, "email_verification")[-1]
+    match = VERIFY_LINK.search(message.get_content())
+    assert match, "verification link not found"
+    return match.group(1)
+
+
+def verify_email(client: TestClient, settings: Settings, email: str) -> None:
+    """Complete email verification the way a user does: with the emailed link's token."""
+    token = latest_verification_token(settings, email)
+    response = client.post("/api/v1/auth/verify-email", json={"token": token}, headers=CSRF)
+    assert response.status_code == 200, response.text

@@ -580,9 +580,14 @@ def test_no_token_password_or_address_reaches_the_logs(
     logged = buffer.getvalue()
     for secret in (token, TEST_PASSWORD, NEW_PASSWORD, "third-sample-passphrase", EMAIL):
         assert secret not in logged
-    outcomes = [
-        json.loads(line)["outcome"]
+    deliveries = [
+        (json.loads(line)["kind"], json.loads(line)["outcome"])
         for line in logged.splitlines()
         if json.loads(line).get("event") == "email_delivery"
     ]
-    assert outcomes == ["sent", "sent", "sent"]  # reset link, reset notice, change notice
+    assert deliveries == [
+        ("email_verification", "sent"),  # Phase 7A: sent at signup
+        ("password_reset", "sent"),
+        ("password_changed", "sent"),  # reset notice
+        ("password_changed", "sent"),  # change notice
+    ]

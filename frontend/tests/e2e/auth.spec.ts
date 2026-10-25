@@ -11,6 +11,7 @@ import {
   signUpWithSampleBuyer,
   TEST_PASSWORD,
   uniqueEmail,
+  verificationLinkFor,
 } from "./helpers";
 
 async function fillSignup(
@@ -39,7 +40,14 @@ test("a supplier signs up, uses the workspace, signs out and signs back in", asy
   await fillSignup(page, email);
   await page.getByRole("button", { name: "Create account" }).click();
 
+  // Phase 7A: a new account must confirm its email before the workspace opens.
   await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByTestId("verification-required")).toContainText(email);
+  const link = await verificationLinkFor(email);
+  await page.goto(link);
+  await page.getByRole("button", { name: "Confirm my email" }).click();
+  await expect(page.getByTestId("verify-done")).toContainText("Email confirmed");
+  await page.getByRole("link", { name: "Continue to PaySetu" }).click();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("main")).toContainText("E2E Signup Traders (TEST)");
   await expect(page.getByText("Record your first delivery")).toBeVisible();

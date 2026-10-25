@@ -24,6 +24,19 @@ def password_reset(to: str, link: str, minutes: int) -> OutgoingEmail:
     return OutgoingEmail(to, "Reset your PaySetu password", body, "password_reset")
 
 
+def email_verification(to: str, link: str, hours: int) -> OutgoingEmail:
+    body = (
+        "Confirm the email address for your PaySetu account.\n\n"
+        f"Open this link within {hours} hours:\n\n"
+        f"{link}\n\n"
+        "The link works once. Confirming your email lets you open your case workspace. It does "
+        "not verify your business, Udyam registration or MSMED eligibility.\n\n"
+        "If you did not create a PaySetu account, ignore this email.\n\n"
+        "PaySetu prepares evidence. It is not legal advice.\n"
+    )
+    return OutgoingEmail(to, "Confirm your email for PaySetu", body, "email_verification")
+
+
 def password_changed(to: str, when: datetime, how: str, forgot_link: str) -> OutgoingEmail:
     action = "reset with an emailed link" if how == "reset" else "changed from your account"
     body = (

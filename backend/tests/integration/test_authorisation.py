@@ -17,7 +17,7 @@ from app.config import Settings
 from app.db import Database
 from app.main import create_app
 from seed.demo import seed
-from tests.auth_helpers import CSRF, sign_in_as_demo, signup
+from tests.auth_helpers import CSRF, sign_in_as_demo, signup, verify_email
 
 PDF = b"%PDF-1.4\n% SAMPLE authorisation test document, not real evidence\n"
 PUBLIC_ROUTES = {
@@ -28,6 +28,8 @@ PUBLIC_ROUTES = {
     # Phase 6.1: token-authenticated (reset) or answer identically for any email (forgot).
     ("POST", "/api/v1/auth/forgot-password"),
     ("POST", "/api/v1/auth/reset-password"),
+    # Phase 7A: the emailed token is the credential; the link may be opened signed out.
+    ("POST", "/api/v1/auth/verify-email"),
 }
 
 
@@ -55,9 +57,11 @@ def owner(app: Any, app_settings: Settings, frozen_clock: FrozenClock) -> Iterat
 
 
 @pytest.fixture
-def intruder(app: Any) -> TestClient:
+def intruder(app: Any, app_settings: Settings) -> TestClient:
+    """A second supplier with a VERIFIED email, so ownership (404) is what stops it."""
     client = TestClient(app)
     assert signup(client, "intruder@example.com").status_code == 201
+    verify_email(client, app_settings, "intruder@example.com")
     return client
 
 

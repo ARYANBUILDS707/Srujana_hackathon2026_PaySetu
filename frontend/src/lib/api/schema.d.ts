@@ -121,6 +121,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Verification
+         * @description Send a new link to the signed-in user's own address (earlier links stop working).
+         *
+         *     Requires the session, so it can only ever email the caller's own address: there is no
+         *     email parameter and nothing to enumerate. One request per minute, five per hour.
+         */
+        post: operations["resend_verification_api_v1_auth_resend_verification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/reset-password": {
         parameters: {
             query?: never;
@@ -152,6 +175,28 @@ export interface paths {
         put?: never;
         /** Signup */
         post: operations["signup_api_v1_auth_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Email
+         * @description Consume a verification token (no session needed: the link may be opened anywhere).
+         *
+         *     Marks only the token's own user as verified; never signs anyone in or changes a session.
+         */
+        post: operations["verify_email_api_v1_auth_verify_email_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -867,6 +912,16 @@ export interface components {
              */
             notification: "sent" | "failed";
         };
+        /** ResendVerificationOut */
+        ResendVerificationOut: {
+            /**
+             * Notification
+             * @enum {string}
+             */
+            notification: "sent" | "failed";
+            /** Retry After Seconds */
+            retry_after_seconds: number;
+        };
         /** ResetPasswordIn */
         ResetPasswordIn: {
             /** New Password */
@@ -992,6 +1047,8 @@ export interface components {
         UserOut: {
             /** Email */
             email: string;
+            /** Email Verified */
+            email_verified: boolean;
             /** Full Name */
             full_name: string;
             /** Id */
@@ -1009,6 +1066,19 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VerifyEmailIn */
+        VerifyEmailIn: {
+            /** Token */
+            token: string;
+        };
+        /** VerifyEmailOut */
+        VerifyEmailOut: {
+            /**
+             * Email Verified
+             * @constant
+             */
+            email_verified: true;
         };
     };
     responses: never;
@@ -1174,6 +1244,26 @@ export interface operations {
             };
         };
     };
+    resend_verification_api_v1_auth_resend_verification_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResendVerificationOut"];
+                };
+            };
+        };
+    };
     reset_password_api_v1_auth_reset_password_post: {
         parameters: {
             query?: never;
@@ -1227,6 +1317,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_email_api_v1_auth_verify_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyEmailOut"];
                 };
             };
             /** @description Validation Error */

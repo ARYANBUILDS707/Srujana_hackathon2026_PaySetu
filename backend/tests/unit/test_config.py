@@ -267,3 +267,8 @@ def test_production_refuses_a_relaxed_signup_limit(isolated_env: None) -> None:
     assert _load(**PRODUCTION_LIVE, auth_signup_limit_per_hour=5).app_env is AppEnv.PRODUCTION
     message = _error(**PRODUCTION_LIVE, auth_signup_limit_per_hour=6)
     assert "AUTH_SIGNUP_LIMIT_PER_HOUR" in message
+
+
+def test_email_verification_links_default_to_24_hours(isolated_env: None) -> None:
+    assert _load().email_verification_hours == 24
+    assert "EMAIL_VERIFICATION_HOURS" in _error(email_verification_hours=0)

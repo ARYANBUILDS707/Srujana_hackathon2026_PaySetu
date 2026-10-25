@@ -15,6 +15,8 @@ export class ApiError extends Error {
     message: string,
     readonly fieldErrors: FieldError[] = [],
     readonly requestId: string | null = null,
+    /** Seconds from a 429's Retry-After header, when present. */
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(message);
     this.name = "ApiError";
@@ -96,6 +98,7 @@ async function problemFrom(response: Response): Promise<ApiError> {
       problem.detail ?? problem.title ?? "The request failed.",
       problem.errors ?? [],
       problem.request_id ?? response.headers.get("x-request-id"),
+      Number(response.headers.get("retry-after")) || null,
     );
   } catch {
     return new ApiError(response.status, "http_error", "The request failed.");

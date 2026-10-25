@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { VerificationRequired } from "@/components/account/VerificationRequired";
 import { appCopy } from "@/content/app";
+import { authCopy } from "@/content/auth";
 import { useSession } from "@/lib/session/SessionContext";
 
-type NavItem = (typeof appCopy.nav)[number];
+type NavItem = { href: string; label: string; match: string; icon: IconName };
+
+// Until the email is confirmed (Phase 7A) the workspace is replaced by the confirmation
+// screen; only it and Account settings are reachable.
+const unverifiedNav: NavItem[] = [
+  { href: "/app", label: authCopy.verify.navVerify, match: "exact", icon: "check" },
+  ...appCopy.nav.filter((item) => item.href === "/app/settings"),
+];
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.match === "exact") return pathname === item.href;
@@ -103,17 +112,22 @@ function Account() {
 }
 
 function SidebarBody({ pathname }: { pathname: string }) {
+  const { me } = useSession();
+  const verified = me.user.email_verified;
+  const nav = verified ? appCopy.nav : unverifiedNav;
   return (
     <>
-      <Link
-        href={appCopy.primaryAction.href}
-        className="flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-body font-medium text-white transition-colors duration-150 hover:bg-primary-hover"
-      >
-        <Icon name="plus" className="size-4" />
-        {appCopy.primaryAction.label}
-      </Link>
-      <nav aria-label="Main" className="mt-6 flex flex-col gap-1">
-        {appCopy.nav.map((item) => (
+      {verified ? (
+        <Link
+          href={appCopy.primaryAction.href}
+          className="flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-body font-medium text-white transition-colors duration-150 hover:bg-primary-hover"
+        >
+          <Icon name="plus" className="size-4" />
+          {appCopy.primaryAction.label}
+        </Link>
+      ) : null}
+      <nav aria-label="Main" className={`${verified ? "mt-6" : ""} flex flex-col gap-1`}>
+        {nav.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
       </nav>
@@ -132,6 +146,8 @@ function AccountName() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { me } = useSession();
+  const showWorkspace = me.user.email_verified || pathname === "/app/settings";
   const [menu, setMenu] = useState({ open: false, path: pathname });
   const open = menu.open && menu.path === pathname; // navigating closes the menu
 
@@ -218,7 +234,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <main className="min-w-0 px-4 py-6 lg:px-8 lg:py-8">
-        <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <div className="mx-auto w-full max-w-7xl">
+          {showWorkspace ? children : <VerificationRequired />}
+        </div>
         <p className="mx-auto mt-12 max-w-7xl text-caption text-ink-muted">{appCopy.disclaimer}</p>
       </main>
     </div>

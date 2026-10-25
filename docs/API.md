@@ -64,9 +64,9 @@ Failing either returns **403 `csrf_rejected`**. This includes `POST /auth/signup
 
 | HTTP | `code` values | When |
 | --- | --- | --- |
-| 400 | `bad_request`, `invalid_reset_token` | Malformed JSON or multipart; a reset token that is unknown, used, revoked or expired |
+| 400 | `bad_request`, `invalid_reset_token`, `invalid_verification_token` | Malformed JSON or multipart; a reset token that is unknown, used, revoked or expired |
 | 401 | `unauthenticated`, `session_expired`, `invalid_credentials` | No, revoked or unknown session; expired session; wrong email or password at login |
-| 403 | `csrf_rejected`, `forbidden` | CSRF failure; action not allowed for this principal |
+| 403 | `csrf_rejected`, `forbidden`, `email_not_verified` | CSRF failure; action not allowed for this principal; case workspace used before the email is verified |
 | 404 | `not_found` | Missing or not owned |
 | 409 | `conflict`, `invalid_state`, `profile_incomplete`, `duplicate_evidence`, `already_sent`, `integrity_failed` | State conflicts |
 | 410 | `link_expired`, `link_revoked` | Share links (an invalid token also returns `link_revoked`) |
@@ -115,6 +115,10 @@ Messages are safe to show to users. Internal details never appear in responses.
 | POST | `/auth/forgot-password` | – | `{email}`. Always **202** `{ "detail": "If an account exists for this email, PaySetu will send it a link…" }`, identical for unknown or inactive accounts; the email is sent after the response. **Built (Phase 6.1)** | P1 |
 | POST | `/auth/reset-password` | – | `{token, new_password}`. Consumes the single-use, 15-minute token; revokes every session; does **not** sign in (clears the cookie); emails a notice. 200 `{ "notification": … }`; **400 `invalid_reset_token`** for unknown, used, revoked or expired tokens (one generic message). **Built (Phase 6.1)** | P1 |
 | POST | `/auth/logout-all` | S | Revoke every session of the current user on every device and clear the cookie; 204. **Built (Phase 6.1)** | P0 |
+| POST | `/auth/verify-email` | – (token) | `{token}`. Consumes the single-use verification token (expiry `EMAIL_VERIFICATION_HOURS`, default 24) and marks **that token's** user as verified. 200 `{ "email_verified": true }`; **400 `invalid_verification_token`** for unknown, used, replaced or expired tokens; never signs in. 120/hour per IP. **Built (Phase 7A)** | P0 |
+| POST | `/auth/resend-verification` | S | Emails a new link to the caller's own address and revokes earlier ones (no email parameter). 200 `{ "notification": "sent" \| "failed", "retry_after_seconds": 60 }`; 409 `already_verified`; 429 with `Retry-After` (1 per 60 s, 5 per hour per user). **Built (Phase 7A)** | P0 |
+
+**Email verification (Phase 7A).** Signup creates the user unverified and emails `PUBLIC_BASE_URL/verify-email#token=…`. `user.email_verified` appears in the signup, login and `/auth/me` responses. Every case-workspace route (Sections 2.3 onwards: supplier, buyers, cases, responses, evidence, downloads, integrity, timeline, checklist, interest, evidence pack) answers **403 `email_not_verified`** until the email is verified; the auth routes above stay available. Verification proves control of the inbox only.
 
 Paths follow the Phase 6.1 brief; the earlier plan used `/auth/password/{change,forgot,reset}` (DECISIONS.md Section 9). The reset link has the form `PUBLIC_BASE_URL/reset-password#token=…`: the token is in the URL fragment, never in a path or query string that a server could log.
 
@@ -510,6 +514,8 @@ Future inbound webhooks (inbound email parsing, eSign callbacks) must:
 | `POST /auth/forgot-password` | 3/hour; 10/hour | IP + email; IP |
 | `POST /auth/reset-password` | 10/hour | IP |
 | `POST /auth/change-password` | 5 per 15 min | user |
+| `POST /auth/verify-email` | 120/hour | IP |
+| `POST /auth/resend-verification` | 1 per 60 s; 5/hour | user |
 | `/public/share/*` | 60/min; 10 invalid tokens/min | IP |
 | `POST /cases/{id}/evidence` | 30/min | user |
 | `POST /communications/{id}/send` | 10/hour | user |

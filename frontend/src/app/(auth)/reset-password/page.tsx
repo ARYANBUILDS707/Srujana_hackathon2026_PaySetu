@@ -42,6 +42,14 @@ export default function ResetPasswordPage() {
     const token = taken.current;
     // Runs after hydration: the fragment is only readable in the browser.
     setStage(token ? { kind: "form", token } : { kind: "missing" });
+
+    // Opening another emailed link in this same tab changes only the fragment (no reload).
+    function onHashChange() {
+      const next = takeTokenFromFragment();
+      if (next) setStage({ kind: "form", token: next });
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   const mismatch = confirm.length > 0 && confirm !== password;

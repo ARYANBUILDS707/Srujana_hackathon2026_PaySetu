@@ -76,6 +76,7 @@ erDiagram
 | `terms_version` | TEXT | no | Version of Terms + Privacy Notice accepted |
 | `terms_accepted_at` | ts | no | DPDP consent record |
 | `is_active` | bool | no | Default 1; set to 0 on deletion request |
+| `email_verified_at` | ts | yes | *Phase 7A (migration `5c2e8a41f0b7`).* Set when a verification link (or a password-reset link) sent to `email` is used. NULL for every account created before Phase 7A |
 | `last_login_at` | ts | yes | |
 | `deletion_requested_at` | ts | yes | P1 |
 | `created_at`, `updated_at` | ts | no | |
@@ -106,6 +107,17 @@ erDiagram
 | `expires_at` | ts | no | created + 30 min |
 | `used_at` | ts | yes | Single use |
 | `created_at` | ts | no | |
+
+### 3.3a `email_verification_tokens` (Phase 7A, as built)
+
+| Column | Type | Null | Constraints / notes |
+| --- | --- | --- | --- |
+| `id` | id | no | PK |
+| `user_id` | id | no | FK → `users.id` ON DELETE CASCADE; indexed |
+| `email` | TEXT | no | Address the link was sent to; the token is valid only while it equals `users.email` |
+| `token_hash` | hash | no | HMAC-SHA256 under `TOKEN_HASH_KEY`; `UNIQUE` |
+| `created_at`, `expires_at` | ts | no | Expiry `EMAIL_VERIFICATION_HOURS` (default 24) |
+| `used_at`, `revoked_at` | ts | yes | Consumed; or replaced by a newer link, a failed delivery or a successful verification/reset |
 
 ### 3.4 `suppliers`
 

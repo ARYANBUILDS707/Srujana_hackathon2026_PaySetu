@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ResendVerification } from "@/components/account/ResendVerification";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { controlClass, Field } from "@/components/ui/Fields";
@@ -167,7 +169,7 @@ function SignOutEverywhere() {
 }
 
 export default function SettingsPage() {
-  const { me } = useSession();
+  const { me, refresh } = useSession();
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader title={copy.title} description={copy.description} />
@@ -176,11 +178,23 @@ export default function SettingsPage() {
           <dt className="text-small text-ink-muted">Name</dt>
           <dd className="break-words text-ink">{me.user.full_name}</dd>
           <dt className="text-small text-ink-muted">Email</dt>
-          <dd className="break-all text-ink">{me.user.email}</dd>
+          <dd className="break-all text-ink">
+            {me.user.email}{" "}
+            <Badge tone={me.user.email_verified ? "success" : "warning"}>
+              {me.user.email_verified
+                ? authCopy.verify.settingsVerified
+                : authCopy.verify.settingsUnverified}
+            </Badge>
+          </dd>
           <dt className="text-small text-ink-muted">Business</dt>
           <dd className="break-words text-ink">{me.supplier.legal_name}</dd>
         </dl>
       </Card>
+      {me.user.email_verified ? null : (
+        <Card title={authCopy.verify.requiredTitle} description={authCopy.verify.scope}>
+          <ResendVerification onAlreadyVerified={() => void refresh()} />
+        </Card>
+      )}
       <ChangePassword email={me.user.email} />
       <SignOutEverywhere />
     </div>

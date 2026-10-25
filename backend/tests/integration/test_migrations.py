@@ -18,12 +18,14 @@ from tests.conftest import BACKEND_DIR, TEST_SETTINGS, alembic_config
 BASELINE = "bf48eb38df15"
 DEMO_CORE = "7f9909eb7e4c"  # demo case core (vertical slice)
 ACCOUNTS = "099b88746350"  # accounts and ownership (Phase 6)
-HEAD = "d71bd50903a9"  # password reset tokens (Phase 6.1)
+RESET_TOKENS = "d71bd50903a9"  # password reset tokens (Phase 6.1)
+HEAD = "5c2e8a41f0b7"  # email verification (Phase 7A)
 DEMO_TABLES = {
     "alembic_version",
     "users",
     "sessions",
     "password_reset_tokens",
+    "email_verification_tokens",
     "suppliers",
     "buyers",
     "cases",
@@ -58,7 +60,13 @@ def test_single_linear_history_starting_at_the_baseline() -> None:
     script = ScriptDirectory.from_config(alembic_config("sqlite://"))
     assert script.get_heads() == [HEAD]
     assert script.get_base() == BASELINE
-    assert [r.revision for r in script.walk_revisions()] == [HEAD, ACCOUNTS, DEMO_CORE, BASELINE]
+    assert [r.revision for r in script.walk_revisions()] == [
+        HEAD,
+        RESET_TOKENS,
+        ACCOUNTS,
+        DEMO_CORE,
+        BASELINE,
+    ]
 
 
 def test_migration_files_follow_the_naming_convention() -> None:
