@@ -503,6 +503,19 @@ Future inbound webhooks (inbound email parsing, eSign callbacks) must:
 4. be idempotent by provider event ID
 5. return 2xx quickly and never trust the payload for ownership
 
+### Business onboarding (Phase 7B, as built)
+
+All routes need a session **and a verified email** (401 / 403 `email_not_verified`), act only on the caller's own supplier, and are mounted with the other supplier routes (not in production). Statuses: `NOT_STARTED`, `DRAFT`, `PENDING_REVIEW`, `NEEDS_INFORMATION`, `VERIFIED`, `REJECTED`; suppliers can only reach `DRAFT` and `PENDING_REVIEW`.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/onboarding` | The caller's profile: status, `editable`, draft fields, current certificate (id, filename, size, SHA-256, upload time), `udyam_claim_conflict`, `missing_for_submission`, `submitted_at`, `submissions[]` |
+| PUT | `/onboarding/draft` | Create or replace the draft (PUT semantics: omitted fields are cleared). Fields: `enterprise_name`, `udyam_number` (normalised to `UDYAM-XX-00-0000000`), `enterprise_class` (`micro`/`small`/`medium`), `registration_date` (not in the future), `address_line1`, `address_line2`, `city`, `state`, `pin_code` (6 digits), `contact_email`, `contact_phone` (Indian mobile, stored `+91…`), `representative_name`, `representative_role`, `authorisation_note`, `authority_confirmed`. Unknown fields (status, owner, reviewer, certificate ID…) → 422. 409 `onboarding_locked` once submitted |
+| POST | `/onboarding/certificate` | Multipart `file`: the Udyam certificate PDF (≤ `BUSINESS_CERTIFICATE_MAX_MB`, default 5 MB). 201 with the profile. 413 `file_too_large`; 415 `not_a_pdf`, `damaged_pdf`, `pdf_active_content`; 409 `onboarding_locked`; 20/hour per user. Replacing keeps the earlier file |
+| GET | `/onboarding/certificates/{id}/download` | Original bytes as an attachment (`application/pdf`, `nosniff`, `private, no-store`, `CSP: sandbox`, `X-PaySetu-SHA256`). 404 unless the caller owns it |
+| POST | `/onboarding/submit` | Validates required fields and the certificate (422 lists the missing ones), re-hashes the stored certificate (409 `integrity_failed` if changed), records the Udyam claim (contested if another supplier holds it), stores an immutable snapshot and sets `PENDING_REVIEW`. 409 `onboarding_locked` if already submitted |
+| GET | `/onboarding/submissions` | Submission history, newest first: revision, time, snapshot SHA-256, certificate ID, `claim_contested` |
+
 ---
 
 ## 5. Rate Limiting
@@ -516,6 +529,7 @@ Future inbound webhooks (inbound email parsing, eSign callbacks) must:
 | `POST /auth/change-password` | 5 per 15 min | user |
 | `POST /auth/verify-email` | 120/hour | IP |
 | `POST /auth/resend-verification` | 1 per 60 s; 5/hour | user |
+| `POST /onboarding/certificate` | 20/hour | user |
 | `/public/share/*` | 60/min; 10 invalid tokens/min | IP |
 | `POST /cases/{id}/evidence` | 30/min | user |
 | `POST /communications/{id}/send` | 10/hour | user |

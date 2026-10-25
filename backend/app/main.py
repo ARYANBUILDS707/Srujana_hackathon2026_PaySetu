@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import api_router, demo_cases
+from app.api.v1 import api_router, demo_cases, onboarding
 from app.clock import Clock, SystemClock
 from app.config import AppEnv, Settings, get_settings
 from app.db import Database
@@ -20,6 +20,7 @@ from app.security.rate_limit import (
     RateLimiter,
     RateLimitRule,
 )
+from app.storage.business_store import BusinessDocumentStore
 from app.storage.evidence_store import EvidenceStore
 
 API_PREFIX = "/api/v1"
@@ -67,11 +68,14 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     app.state.evidence_store = EvidenceStore(resolved.storage_dir)
     # Outbound email (Phase 6.1): file outbox when EMAIL_MODE=simulated, SMTP otherwise.
     app.state.email_sender = build_sender(resolved, app.state.clock)
+    # Business documents (Phase 7B): a private store separate from the Evidence Vault.
+    app.state.business_store = BusinessDocumentStore(resolved.storage_dir)
     app.include_router(api_router, prefix=API_PREFIX)
     # Case routes of the evaluation build: authenticated and supplier-scoped (Phase 6), but
     # still never mounted in production while the legal rules await review.
     if resolved.app_env is not AppEnv.PRODUCTION:
         app.include_router(demo_cases.router, prefix=API_PREFIX)
+        app.include_router(onboarding.router, prefix=API_PREFIX)
     register_error_handlers(app)
     # Starlette runs the last-added middleware first. Request order (T1.3, T1.5):
     # request context -> security headers -> body size limit -> CSRF -> share rate limit -> app.

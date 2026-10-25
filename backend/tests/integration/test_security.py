@@ -230,6 +230,7 @@ def test_rate_limit_table_matches_api_contract() -> None:
     assert RATE_LIMITS[RateLimitCategory.VERIFY_EMAIL] == RateLimitRule(120, 3600)
     assert RATE_LIMITS[RateLimitCategory.VERIFY_RESEND_COOLDOWN] == RateLimitRule(1, 60)
     assert RATE_LIMITS[RateLimitCategory.VERIFY_RESEND] == RateLimitRule(5, 3600)
+    assert RATE_LIMITS[RateLimitCategory.CERTIFICATE_UPLOAD] == RateLimitRule(20, 3600)
     assert RATE_LIMITS[RateLimitCategory.PUBLIC_SHARE] == RateLimitRule(60, 60)
     assert RATE_LIMITS[RateLimitCategory.PUBLIC_SHARE_INVALID_TOKEN] == RateLimitRule(10, 60)
     assert RATE_LIMITS[RateLimitCategory.EVIDENCE_UPLOAD] == RateLimitRule(30, 60)

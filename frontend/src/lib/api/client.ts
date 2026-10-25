@@ -1,4 +1,4 @@
-// The only place that calls `fetch` (AGENTS.md Section 4). Requests go to the same origin;
+// The only place that calls `fetch` (or XMLHttpRequest, for upload progress) (AGENTS.md 4). Requests go to the same origin;
 // in development Next.js proxies /api/* to the backend. No secrets exist in the browser.
 
 export interface FieldError {
@@ -29,7 +29,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT";
   json?: unknown;
   form?: FormData;
 }
@@ -137,4 +137,47 @@ export async function apiDownload(path: string): Promise<Download> {
     filename: named.replace(/[^A-Za-z0-9._-]/g, "_"),
     packSha256: response.headers.get("x-paysetu-pack-sha256"),
   };
+}
+
+/**
+ * POST multipart form data with upload progress (0 to 1). Same CSRF header, error format and
+ * session handling as `api()`; uses XMLHttpRequest because fetch cannot report upload progress.
+ */
+export function apiUpload<T>(
+  path: string,
+  form: FormData,
+  onProgress: (fraction: number) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", `/api/v1${path}`);
+    request.setRequestHeader("Accept", "application/json");
+    request.setRequestHeader("X-PaySetu-Client", "web");
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded / event.total);
+    };
+    request.onerror = () =>
+      reject(
+        new ApiError(
+          0,
+          "network_error",
+          "Could not reach the PaySetu server. Check that the API is running and try again.",
+        ),
+      );
+    request.onload = () => {
+      const response = new Response(request.responseText, {
+        status: request.status,
+        headers: { "retry-after": request.getResponseHeader("retry-after") ?? "" },
+      });
+      if (request.status >= 200 && request.status < 300) {
+        resolve(JSON.parse(request.responseText) as T);
+        return;
+      }
+      void problemFrom(response).then((error) => {
+        reportSessionEnded(path, error);
+        reject(error);
+      });
+    };
+    request.send(form);
+  });
 }

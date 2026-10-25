@@ -37,6 +37,7 @@ class RateLimitCategory(StrEnum):
     VERIFY_EMAIL = "verify_email"  # POST /auth/verify-email, key IP
     VERIFY_RESEND_COOLDOWN = "verify_resend_cooldown"  # POST /auth/resend-verification, user
     VERIFY_RESEND = "verify_resend"  # POST /auth/resend-verification, key user
+    CERTIFICATE_UPLOAD = "certificate_upload"  # POST /onboarding/certificate, key user
     PUBLIC_SHARE = "public_share"  # /public/share/*, key IP
     PUBLIC_SHARE_INVALID_TOKEN = "public_share_invalid_token"  # failed lookups, key IP
     EVIDENCE_UPLOAD = "evidence_upload"  # key user
@@ -64,6 +65,7 @@ RATE_LIMITS: dict[RateLimitCategory, RateLimitRule] = {
     RateLimitCategory.VERIFY_EMAIL: RateLimitRule(120, 3600),
     RateLimitCategory.VERIFY_RESEND_COOLDOWN: RateLimitRule(1, 60),
     RateLimitCategory.VERIFY_RESEND: RateLimitRule(5, 3600),
+    RateLimitCategory.CERTIFICATE_UPLOAD: RateLimitRule(20, 3600),
     RateLimitCategory.PUBLIC_SHARE: RateLimitRule(60, 60),
     RateLimitCategory.PUBLIC_SHARE_INVALID_TOKEN: RateLimitRule(10, 60),
     RateLimitCategory.EVIDENCE_UPLOAD: RateLimitRule(30, 60),

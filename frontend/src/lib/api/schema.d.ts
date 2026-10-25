@@ -434,6 +434,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Onboarding
+         * @description The signed-in supplier's onboarding profile, status and submission history.
+         */
+        get: operations["get_onboarding_api_v1_onboarding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Certificate
+         * @description Upload (or replace) the draft's Udyam certificate. PDF only, size-limited.
+         */
+        post: operations["upload_certificate_api_v1_onboarding_certificate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/certificates/{certificate_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Certificate
+         * @description The original certificate bytes, as an attachment, to its owner only.
+         */
+        get: operations["download_certificate_api_v1_onboarding_certificates__certificate_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Draft
+         * @description Create or replace the draft (only while DRAFT or NEEDS_INFORMATION; else 409).
+         */
+        put: operations["save_draft_api_v1_onboarding_draft_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Submissions
+         * @description Submission history, newest first.
+         */
+        get: operations["submissions_api_v1_onboarding_submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit
+         * @description Submit for review: PENDING_REVIEW plus an immutable snapshot. Never verifies.
+         */
+        post: operations["submit_api_v1_onboarding_submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier": {
         parameters: {
             query?: never;
@@ -490,6 +610,11 @@ export interface components {
             total_claimable: string | null;
             /** Uses Unverified Rates */
             uses_unverified_rates: boolean;
+        };
+        /** Body_upload_certificate_api_v1_onboarding_certificate_post */
+        Body_upload_certificate_api_v1_onboarding_certificate_post: {
+            /** File */
+            file: string;
         };
         /** Body_upload_evidence_api_v1_cases__case_id__evidence_post */
         Body_upload_evidence_api_v1_cases__case_id__evidence_post: {
@@ -636,6 +761,19 @@ export interface components {
             /** Reference */
             reference: string;
         };
+        /** CertificateOut */
+        CertificateOut: {
+            /** Id */
+            id: string;
+            /** Original Filename */
+            original_filename: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Uploaded At */
+            uploaded_at: string;
+        };
         /** ChangePasswordIn */
         ChangePasswordIn: {
             /** Current Password */
@@ -717,6 +855,44 @@ export interface components {
          * @enum {string}
          */
         DealType: "verbal" | "written";
+        /**
+         * DraftIn
+         * @description A full draft (PUT semantics: an omitted field is cleared). Everything is optional for a
+         *     draft; the required set is checked on submission.
+         */
+        DraftIn: {
+            /** Address Line1 */
+            address_line1?: string | null;
+            /** Address Line2 */
+            address_line2?: string | null;
+            /** Authorisation Note */
+            authorisation_note?: string | null;
+            /**
+             * Authority Confirmed
+             * @default false
+             */
+            authority_confirmed: boolean;
+            /** City */
+            city?: string | null;
+            /** Contact Email */
+            contact_email?: string | null;
+            /** Contact Phone */
+            contact_phone?: string | null;
+            enterprise_class?: components["schemas"]["EnterpriseClass"] | null;
+            /** Enterprise Name */
+            enterprise_name?: string | null;
+            /** Pin Code */
+            pin_code?: string | null;
+            /** Registration Date */
+            registration_date?: string | null;
+            /** Representative Name */
+            representative_name?: string | null;
+            representative_role?: components["schemas"]["RepresentativeRole"] | null;
+            /** State */
+            state?: string | null;
+            /** Udyam Number */
+            udyam_number?: string | null;
+        };
         /**
          * EnterpriseClass
          * @enum {string}
@@ -904,6 +1080,53 @@ export interface components {
              */
             removed_on: string;
         };
+        /** OnboardingOut */
+        OnboardingOut: {
+            /** Address Line1 */
+            address_line1: string | null;
+            /** Address Line2 */
+            address_line2: string | null;
+            /** Authorisation Note */
+            authorisation_note: string | null;
+            /** Authority Confirmed */
+            authority_confirmed: boolean;
+            certificate: components["schemas"]["CertificateOut"] | null;
+            /** City */
+            city: string | null;
+            /** Contact Email */
+            contact_email: string | null;
+            /** Contact Phone */
+            contact_phone: string | null;
+            /** Editable */
+            editable: boolean;
+            enterprise_class: components["schemas"]["EnterpriseClass"] | null;
+            /** Enterprise Name */
+            enterprise_name: string | null;
+            /** Missing For Submission */
+            missing_for_submission: string[];
+            /** Pin Code */
+            pin_code: string | null;
+            /** Registration Date */
+            registration_date: string | null;
+            /** Representative Name */
+            representative_name: string | null;
+            representative_role: components["schemas"]["RepresentativeRole"] | null;
+            /** State */
+            state: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "NOT_STARTED" | "DRAFT" | "PENDING_REVIEW" | "NEEDS_INFORMATION" | "VERIFIED" | "REJECTED";
+            /** Submissions */
+            submissions: components["schemas"]["SubmissionOut"][];
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Udyam Claim Conflict */
+            udyam_claim_conflict: boolean;
+            /** Udyam Number */
+            udyam_number: string | null;
+        };
         /** PasswordUpdatedOut */
         PasswordUpdatedOut: {
             /**
@@ -912,6 +1135,11 @@ export interface components {
              */
             notification: "sent" | "failed";
         };
+        /**
+         * RepresentativeRole
+         * @enum {string}
+         */
+        RepresentativeRole: "proprietor" | "partner" | "designated_partner" | "director" | "authorised_signatory" | "other";
         /** ResendVerificationOut */
         ResendVerificationOut: {
             /**
@@ -991,6 +1219,19 @@ export interface components {
             full_name: string;
             /** Password */
             password: string;
+        };
+        /** SubmissionOut */
+        SubmissionOut: {
+            /** Certificate Id */
+            certificate_id: string;
+            /** Claim Contested */
+            claim_contested: boolean;
+            /** Revision */
+            revision: number;
+            /** Snapshot Sha256 */
+            snapshot_sha256: string;
+            /** Submitted At */
+            submitted_at: string;
         };
         /** SupplierOut */
         SupplierOut: {
@@ -1883,6 +2124,163 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthOut"];
+                };
+            };
+        };
+    };
+    get_onboarding_api_v1_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+        };
+    };
+    upload_certificate_api_v1_onboarding_certificate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_certificate_api_v1_onboarding_certificate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_certificate_api_v1_onboarding_certificates__certificate_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                certificate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_draft_api_v1_onboarding_draft_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submissions_api_v1_onboarding_submissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionOut"][];
+                };
+            };
+        };
+    };
+    submit_api_v1_onboarding_submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
                 };
             };
         };

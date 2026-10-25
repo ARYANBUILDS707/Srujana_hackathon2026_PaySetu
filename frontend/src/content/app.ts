@@ -15,6 +15,12 @@ export const appCopy = {
   nav: [
     { href: "/app", label: "Dashboard", match: "exact", icon: "dashboard" as const },
     { href: "/app/cases", label: "Cases", match: "prefix", icon: "cases" as const },
+    {
+      href: "/app/onboarding",
+      label: "Business profile",
+      match: "exact",
+      icon: "building" as const,
+    },
     { href: "/app/settings", label: "Settings", match: "exact", icon: "settings" as const },
   ],
   primaryAction: { href: "/app/cases/new", label: "Record delivery" },

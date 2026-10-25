@@ -119,6 +119,15 @@ erDiagram
 | `created_at`, `expires_at` | ts | no | Expiry `EMAIL_VERIFICATION_HOURS` (default 24) |
 | `used_at`, `revoked_at` | ts | yes | Consumed; or replaced by a newer link, a failed delivery or a successful verification/reset |
 
+### 3.3b Business onboarding tables (Phase 7B, as built; migration `8e1f3c9a2b64`)
+
+| Table | Purpose and key constraints |
+| --- | --- |
+| `business_profiles` | One per supplier (`supplier_id` UNIQUE): status (CHECK: DRAFT, PENDING_REVIEW, NEEDS_INFORMATION, VERIFIED, REJECTED; no row = NOT_STARTED), the draft fields, `certificate_id` (FK), `revision`, `submitted_at`, timestamps. Writes guarded by conditional UPDATE on the editable statuses |
+| `business_certificates` | Udyam certificate metadata: supplier, display filename, size, SHA-256, storage key, uploader, time. Append-only (SQLite triggers forbid UPDATE and DELETE); bytes in `STORAGE_DIR/business/` |
+| `business_submissions` | Immutable snapshot per submission: `(supplier_id, revision)` UNIQUE, Udyam number, certificate, `claim_contested`, canonical-JSON snapshot and its SHA-256, submitter, time. Triggers forbid UPDATE and DELETE |
+| `udyam_claims` | One row per (supplier, number) submitted; `contested`. Partial UNIQUE index on `udyam_number WHERE contested = 0`: one uncontested claim per number; later claimants are contested, not rejected. No DELETE; only `contested` may change (for review) |
+
 ### 3.4 `suppliers`
 
 | Column | Type | Null | Constraints / notes |

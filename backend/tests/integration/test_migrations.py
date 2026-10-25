@@ -19,13 +19,18 @@ BASELINE = "bf48eb38df15"
 DEMO_CORE = "7f9909eb7e4c"  # demo case core (vertical slice)
 ACCOUNTS = "099b88746350"  # accounts and ownership (Phase 6)
 RESET_TOKENS = "d71bd50903a9"  # password reset tokens (Phase 6.1)
-HEAD = "5c2e8a41f0b7"  # email verification (Phase 7A)
+EMAIL_VERIFICATION = "5c2e8a41f0b7"  # email verification (Phase 7A)
+HEAD = "8e1f3c9a2b64"  # business onboarding (Phase 7B)
 DEMO_TABLES = {
     "alembic_version",
     "users",
     "sessions",
     "password_reset_tokens",
     "email_verification_tokens",
+    "business_certificates",
+    "business_profiles",
+    "business_submissions",
+    "udyam_claims",
     "suppliers",
     "buyers",
     "cases",
@@ -62,6 +67,7 @@ def test_single_linear_history_starting_at_the_baseline() -> None:
     assert script.get_base() == BASELINE
     assert [r.revision for r in script.walk_revisions()] == [
         HEAD,
+        EMAIL_VERIFICATION,
         RESET_TOKENS,
         ACCOUNTS,
         DEMO_CORE,
@@ -109,6 +115,12 @@ def test_append_only_triggers_exist(migrated_database_url: str) -> None:
         "evidence_items_exclusion_only",
         "trg_suppliers_owned_unless_demo_insert",
         "trg_suppliers_owned_unless_demo_update",
+        "business_submissions_no_update",
+        "business_submissions_no_delete",
+        "business_certificates_no_update",
+        "business_certificates_no_delete",
+        "udyam_claims_no_delete",
+        "udyam_claims_contested_only",
     }
 
 

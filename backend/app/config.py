@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     session_absolute_days: int = Field(default=30, ge=1, le=365)
     # Signups per hour per IP (API.md Section 5: 5). Raised only for automated test runs that
     # create many accounts from one address; production refuses anything above the default.
+    # Phase 7B: largest accepted Udyam certificate PDF.
+    business_certificate_max_mb: int = Field(default=5, ge=1, le=15)
     # Phase 7A: how long an email-verification link stays valid.
     email_verification_hours: int = Field(default=24, ge=1, le=168)
     auth_signup_limit_per_hour: int = Field(default=DEFAULT_SIGNUP_LIMIT_PER_HOUR, ge=1, le=1000)

@@ -14,10 +14,19 @@ from app.models.entities import (
     Supplier,
     TimelineEventRow,
 )
+from app.models.onboarding import (
+    BusinessCertificate,
+    BusinessProfile,
+    BusinessSubmission,
+    UdyamClaim,
+)
 
 __all__ = [
     "BankRate",
     "Base",
+    "BusinessCertificate",
+    "BusinessProfile",
+    "BusinessSubmission",
     "Buyer",
     "BuyerResponse",
     "Case",
@@ -26,6 +35,7 @@ __all__ = [
     "PasswordResetToken",
     "Supplier",
     "TimelineEventRow",
+    "UdyamClaim",
     "User",
     "UserSession",
 ]

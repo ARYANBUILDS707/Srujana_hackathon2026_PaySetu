@@ -3,14 +3,16 @@
 import { useState, type FormEvent } from "react";
 import { ResendVerification } from "@/components/account/ResendVerification";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { controlClass, Field } from "@/components/ui/Fields";
 import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { authCopy } from "@/content/auth";
+import { onboardingCopy, onboardingStatusLabel, onboardingStatusTone } from "@/content/onboarding";
 import { api, asApiError, type ApiError } from "@/lib/api/client";
-import type { PasswordUpdated } from "@/lib/api/types";
+import type { Onboarding, PasswordUpdated } from "@/lib/api/types";
+import { useApiGet } from "@/lib/hooks/useApiGet";
 import { useSession } from "@/lib/session/SessionContext";
 
 const copy = authCopy.settings;
@@ -168,6 +170,29 @@ function SignOutEverywhere() {
   );
 }
 
+/** Phase 7B: business verification status, kept separate from case eligibility. */
+function BusinessStatus() {
+  const { data, error } = useApiGet<Onboarding>("/onboarding");
+  return (
+    <Card title={onboardingCopy.settingsLabel} description={onboardingCopy.selfDeclared}>
+      {error ? (
+        <Notice tone="danger">{error.message}</Notice>
+      ) : !data ? (
+        <p className="text-small text-ink-muted">Loading…</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3" data-testid="business-status">
+          <Badge tone={onboardingStatusTone[data.status]}>
+            {onboardingStatusLabel[data.status]}
+          </Badge>
+          <ButtonLink href="/app/onboarding" variant="secondary">
+            {onboardingCopy.settingsLink}
+          </ButtonLink>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const { me, refresh } = useSession();
   return (
@@ -195,6 +220,7 @@ export default function SettingsPage() {
           <ResendVerification onAlreadyVerified={() => void refresh()} />
         </Card>
       )}
+      {me.user.email_verified ? <BusinessStatus /> : null}
       <ChangePassword email={me.user.email} />
       <SignOutEverywhere />
     </div>

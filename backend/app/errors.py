@@ -175,7 +175,8 @@ async def _request_validation(request: Request, exc: Exception) -> JSONResponse:
         FieldError(
             field=".".join(str(p) for p in issue.get("loc", ()) if p != "body") or "body",
             code=str(issue.get("type", "invalid")),
-            message=str(issue.get("msg", "Invalid value")),
+            # Custom validators raise ValueError("…"); pydantic prefixes "Value error, ".
+            message=str(issue.get("msg", "Invalid value")).removeprefix("Value error, "),
         )
         for issue in issues
     ]
