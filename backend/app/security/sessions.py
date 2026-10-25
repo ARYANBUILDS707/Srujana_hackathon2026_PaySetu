@@ -31,6 +31,13 @@ def ip_hash(settings: Settings, ip: str) -> str:
     return hmac.new(key, ip.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
+def keyed_hash(settings: Settings, token: str) -> str:
+    """HMAC-SHA256 under TOKEN_HASH_KEY: used for password-reset tokens, so a copy of the
+    database alone cannot be used to confirm a guessed token."""
+    key = settings.token_hash_key.get_secret_value().encode("utf-8")
+    return hmac.new(key, token.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
 def cookie_secure(settings: Settings) -> bool:
     """`Secure` whenever the browser-facing origin is https (always, in production)."""
     return settings.public_base_url.startswith("https://")

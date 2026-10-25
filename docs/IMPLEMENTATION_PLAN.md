@@ -116,7 +116,7 @@ Legal readings are **not** decided here. Every tier I and C rule (PRD Section 4)
 | --- | --- | --- | --- |
 | T3.1 | Migration: `users`, `sessions` | `alembic/versions/…`, `app/models/` | Matches DATABASE.md 3.1–3.2. **Done (Phase 6, 25 Oct 2026):** migration `099b88746350`, also adding `suppliers.owner_user_id` (nullable for unowned demo data; DECISIONS.md Section 8) |
 | T3.2 | Password hashing (Argon2id) + common-password check; session create/resolve/slide/revoke; `SupplierPrincipal` dependency | `app/security/passwords.py`, `app/security/sessions.py` | Unit tests incl. expiry (idle and absolute) and revocation. **Done (Phase 6):** session logic in `app/services/auth.py`, dependency in `app/api/deps.py`; tests in `tests/integration/test_auth.py` |
-| T3.3 | Endpoints: signup, login, logout, me, password change | `app/api/v1/auth.py`, `app/services/auth.py` | API.md 2.2 behaviour; generic errors; rate limits; cookie flags; tests for 401, CSRF, enumeration-safe messages. **Done except password change (Phase 6).** Every existing supplier route now requires a session and is supplier-scoped (`tests/integration/test_authorisation.py`) |
+| T3.3 | Endpoints: signup, login, logout, me, password change | `app/api/v1/auth.py`, `app/services/auth.py` | API.md 2.2 behaviour; generic errors; rate limits; cookie flags; tests for 401, CSRF, enumeration-safe messages. **Done (Phase 6; password change in Phase 6.1 as `/auth/change-password`).** Every existing supplier route now requires a session and is supplier-scoped (`tests/integration/test_authorisation.py`) |
 | T3.4 | Migration: `suppliers`, `buyers` (buyers created here, used in Phase 4) | migrations, models | Matches DATABASE.md 3.4–3.5 incl. the composite unique |
 | T3.5 | Supplier profile endpoints (`GET/PUT /supplier`) with computed eligibility; supplier-scoped repository base class | `app/api/v1/supplier.py`, `app/repositories/base.py` | Validation tests (Udyam, GSTIN, PIN); eligibility in the response |
 
@@ -298,7 +298,7 @@ Legal readings are **not** decided here. Every tier I and C rule (PRD Section 4)
 
 | Task | Description | Notes |
 | --- | --- | --- |
-| T13.1 | Password reset (`password_reset_tokens`, forgot/reset endpoints and pages) | Needs SMTP |
+| T13.1 | Password reset (`password_reset_tokens`, forgot/reset endpoints and pages) | Needs SMTP. **Done in Phase 6.1** (file outbox in development, SMTP in production) |
 | T13.2 | `.eml` upload with DKIM grading (`dkimpy`) + prefilled response | New dependency already listed in ARCHITECTURE.md |
 | T13.3 | Udyam verification adapter (simulated + sandbox), labelled "simulated" | Prompt 13; needs provider keys |
 | T13.4 | Data export and deletion request (DPDP) | Retention per D12 |

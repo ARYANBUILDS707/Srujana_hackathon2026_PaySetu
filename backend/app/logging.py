@@ -22,7 +22,19 @@ from app.errors import internal_error_response
 
 REQUEST_ID_HEADER = "X-Request-ID"
 LOGGER_NAME = "paysetu"
-_ALLOWED_EXTRA = ("event", "method", "path", "status", "duration_ms", "error_type")
+_ALLOWED_EXTRA = (
+    "event",
+    "method",
+    "path",
+    "status",
+    "duration_ms",
+    "error_type",
+    # Email delivery (app.mail): never the address, body, link or token.
+    "kind",
+    "outcome",
+    "mode",
+    "user_id",
+)
 # Share tokens appear in public URLs (API.md Section 7); they are replaced before logging.
 _TOKEN_PATH = re.compile(r"^(/api/v1/public/share/)[^/]+")
 

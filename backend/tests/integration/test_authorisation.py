@@ -25,6 +25,9 @@ PUBLIC_ROUTES = {
     ("POST", "/api/v1/auth/signup"),
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/logout"),
+    # Phase 6.1: token-authenticated (reset) or answer identically for any email (forgot).
+    ("POST", "/api/v1/auth/forgot-password"),
+    ("POST", "/api/v1/auth/reset-password"),
 }
 
 

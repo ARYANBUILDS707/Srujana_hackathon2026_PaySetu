@@ -1,7 +1,7 @@
 """Request and response schemas for authentication (API.md Section 2.2; Phase 6)."""
 
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
@@ -80,3 +80,41 @@ class AccountSupplierOut(BaseModel):
 class MeOut(BaseModel):
     user: UserOut
     supplier: AccountSupplierOut
+
+
+class _NewPassword(_In):
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def _password_policy(cls, value: str) -> str:
+        problem = password_problem(value)
+        if problem:
+            raise ValueError(problem)
+        return value
+
+
+class ForgotPasswordIn(_In):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, value: str) -> str:
+        return _normalise_email(value)
+
+
+class ResetPasswordIn(_NewPassword):
+    token: str = Field(min_length=1, max_length=128)
+
+
+class ChangePasswordIn(_NewPassword):
+    current_password: str = Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)
+
+
+class ForgotPasswordOut(BaseModel):
+    detail: str
+
+
+class PasswordUpdatedOut(BaseModel):
+    # Whether the confirmation email was accepted for delivery. Never claimed when it failed.
+    notification: Literal["sent", "failed"]

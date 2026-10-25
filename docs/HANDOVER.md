@@ -1,18 +1,18 @@
 # PaySetu: Project Handover
 
-Snapshot taken 25 Oct 2026, after Phase 6 (authentication and case-level authorisation). Verified against the workspace, not from memory. The previous handover's findings were audited in `docs/AUDIT_REPORT.md` (Section 9 records what was resolved).
+Snapshot taken 25 Oct 2026, after Phase 6.1 (password reset, password change and session management), on top of Phase 6 (authentication and case-level authorisation). Verified against the workspace, not from memory. The previous handover's findings were audited in `docs/AUDIT_REPORT.md` (Section 9 records what was resolved).
 
 ## 1. Project overview
 
 PaySetu helps Indian micro and small suppliers (Udyam-registered) keep provable evidence of a delivery and track the MSMED Act payment clock: acceptance date, due date, interest and a readiness checklist. It prepares and organises evidence; it is not a law firm, does not file claims and does not predict outcomes.
 
-Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema: `docs/DATABASE.md`. API contract: `docs/API.md`. Plan: `docs/IMPLEMENTATION_PLAN.md`. Decisions and legal review items: `docs/DECISIONS.md` (Phase 6 decisions: Section 8). Coding rules: `AGENTS.md`.
+Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema: `docs/DATABASE.md`. API contract: `docs/API.md`. Plan: `docs/IMPLEMENTATION_PLAN.md`. Decisions and legal review items: `docs/DECISIONS.md` (Phase 6 decisions: Section 8; Phase 6.1: Section 9). Coding rules: `AGENTS.md`.
 
 ## 2. Git state
 
-- Branch `backend`. Latest commit: `3175836 feat: complete PaySetu frontend redesign` (the redesign is committed).
-- **Phase 6 is not committed.** `git status`: 41 modified and 17 untracked entries (the untracked ones include `docs/AUDIT_REPORT.md`, the new migration, the auth modules and tests, and the `(auth)` and `lib/session` folders). Nothing has been pushed.
-- Suggested commit grouping for the owner: (1) audit report and documentation fixes (DESIGN, README, AUDIT_REPORT); (2) backend auth: migration, models, security, services, routes, tests, `requirements.txt`, `.env.example`, Makefile; (3) frontend auth: session provider, login and signup, shell, accessibility token fix, e2e; (4) remaining docs (HANDOVER, DECISIONS, API, ARCHITECTURE, DATABASE, IMPLEMENTATION_PLAN).
+- Branch `backend`. Latest commit: `665a6ab feat: implement secure authentication and case authorisation` (Phase 6, committed by the owner).
+- **Phase 6.1 is not committed.** `git status`: 30 modified and 8 untracked entries (new: the `d71bd50903a9` migration, `backend/app/mail/`, `backend/tools/outbox.py`, `test_passwords.py`, the forgot-password, reset-password and settings pages, `passwords.spec.ts`). Nothing has been pushed.
+- Suggested commit grouping: (1) backend: migration, mail package, auth service and routes, rate limits, log fields, tests, `.env.example`, Makefile, `tools/outbox.py`; (2) frontend: pages, settings, session context, nav, e2e; (3) docs.
 
 ## 3. Completed features
 
@@ -20,11 +20,13 @@ Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema
 - Platform: typed settings with a production gate, database and migrations, problem+json errors, request IDs, redacting JSON logs, injectable clock, body limit, CSRF, security headers, in-memory rate limits.
 - Supplier routes: buyers, cases, buyer responses, evidence upload and download, integrity check, timeline, checklist, interest, evidence-pack ZIP (Section 5).
 - **Phase 6, authentication:** signup (creates user, supplier and session together), login, logout, me. Argon2id password hashes (`argon2-cffi` 25.1.0), 10 to 128 characters, common passwords refused. 256-bit session tokens stored only as SHA-256, in an HttpOnly, SameSite=Lax cookie (Secure on https). Sessions expire after 7 idle days (sliding, refreshed at most hourly) or 30 days after login, and on logout. Login revokes any earlier session in the browser. Login and signup errors are generic, and an unknown email still costs one Argon2 check. Rate limits: login 5/min per IP+email and 20/hour per IP, signup 5/hour per IP, 300/min per user on other routes.
+- **Phase 6.1, passwords and sessions:** forgot password (always the same 202 answer; email sent after the response), reset password (single-use, 15-minute token stored only as HMAC; consumed atomically with the password change; every session revoked; no automatic sign-in), change password (current password required; reuse of the current one refused; every session revoked and this browser given a new one), sign out everywhere. Confirmation emails after every change, with an honest `sent`/`failed` result. Email through `app/mail/`: a development file outbox (`STORAGE_DIR/outbox/*.eml`, `make email-outbox`) or SMTP.
 - **Phase 6, authorisation:** one dependency resolves the cookie to `SupplierPrincipal(user_id, supplier_id)` on every supplier route. Services scope every query by that `supplier_id`, so another supplier's case, buyer, response, evidence file, download, timeline, interest, integrity check or pack answers 404, and writes leave the case untouched. Owner IDs in request bodies are rejected.
 
 **Frontend (Next.js 16.4.3, React 19.3, Tailwind 4):**
 - "Oxford Blue + Stone" design system (Geist), committed in `3175836`: landing page, dashboard, cases, Record delivery, case workspace (Overview with the DeemedClock timeline and the evidence pack, Evidence Vault, Buyer responses, Case Strength, Interest, Timeline).
 - **Phase 6:** `/login` and `/signup` pages with field-level errors and loading states. A session guard on `/app/*` sends signed-out visitors to `/login?next=…`, and back afterwards (only `/app` paths are accepted). A session that ends mid-use leads to `/login?reason=expired` with an explanation. The sidebar and mobile menu show the user and business and a **Sign out** button.
+- **Phase 6.1:** `/forgot-password` and `/reset-password` pages (the token is read from the URL fragment once, removed from the address bar and kept only in memory; missing, invalid and expired-link states). **Account settings** (`/app/settings`, new sidebar item): account details, Change password, and Sign out everywhere with a confirmation step. "Forgot password?" on the sign-in page.
 - Accessibility (audit F3): a `control` token for input boundaries (3:1 or more on every surface); brass removed from small text; the contrast table is recomputed in DESIGN.md 2.1.
 
 **Domain engine (pure Python, `backend/app/domain/`, 100% line and branch coverage):** unchanged in Phase 6.
@@ -47,6 +49,10 @@ Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema
 | POST | `/auth/signup`, `/auth/login` | none (rate-limited, CSRF headers required) | always |
 | POST | `/auth/logout` | cookie if present; idempotent 204 | always |
 | GET | `/auth/me` | session | always |
+| POST | `/auth/forgot-password` (3/hour per IP+email, 10/hour per IP) | none; always 202 | always |
+| POST | `/auth/reset-password` (10/hour per IP) | reset token in the body | always |
+| POST | `/auth/change-password` (5 per 15 min per user) | session | always |
+| POST | `/auth/logout-all` | session | always |
 | GET | `/supplier` | session | not in production |
 | GET, POST | `/buyers` | session, own buyers only | not in production |
 | GET, POST | `/cases` | session, own cases only | not in production |
@@ -61,9 +67,9 @@ All writes need `Origin` equal to `PUBLIC_BASE_URL` and `X-PaySetu-Client: web`.
 
 ## 6. Database and migrations
 
-- Revisions: `bf48eb38df15` (baseline) → `7f9909eb7e4c` (demo case core) → **`099b88746350` (accounts and ownership)**: `users`, `sessions`, `suppliers.owner_user_id` (nullable, unique; only a demo supplier may be unowned, enforced by triggers on SQLite and a CHECK on PostgreSQL).
+- Revisions: `bf48eb38df15` (baseline) → `7f9909eb7e4c` (demo case core) → `099b88746350` (accounts and ownership) → **`d71bd50903a9` (password reset tokens, Phase 6.1; creates one table, changes no row)**. Accounts and ownership added `users`, `sessions`, `suppliers.owner_user_id` (nullable, unique; only a demo supplier may be unowned, enforced by triggers on SQLite and a CHECK on PostgreSQL).
 - **Existing data:** the migration assigns no row to anyone. The seeded demo supplier stays unowned and unreachable until `DEMO_ACCOUNT_PASSWORD='…' make demo-account` gives it a login (default email `demo@paysetu.example`; refuses production; claims only an unowned demo supplier; the password is never printed).
-- **Local database migrated this session:** `backend/storage/paysetu.db` was backed up to `backend/storage/paysetu.db.pre-phase6.bak` (git-ignored), then upgraded. Row counts were identical before and after (1 supplier, 1 buyer, 3 cases, 3 evidence items, 16 timeline events, 2 responses, 1 bank rate). It has 0 users and the demo supplier is unowned. Run `make demo-account` to see that data in the app.
+- **Local database migrated (both phases):** `backend/storage/paysetu.db` was backed up before each migration (`paysetu.db.pre-phase6.bak`, `paysetu.db.pre-phase6_1.bak`, git-ignored). Before and after `d71bd50903a9` the row counts were identical: 2 users, 1 session, 2 suppliers, 1 buyer, 3 cases, 3 evidence items, 16 timeline events, 2 responses.
 
 ## 7. Test results (run 25 Oct 2026, final code)
 
@@ -71,12 +77,18 @@ All writes need `Origin` equal to `PUBLIC_BASE_URL` and `X-PaySetu-Client: web`.
 | --- | --- |
 | `make lint` (ruff check + format, eslint, prettier) | Pass |
 | `make typecheck` (mypy strict on 87 files; tsc) | Pass |
-| `make test` | **477 passed** (203 integration, 274 unit), 1 warning (Starlette notice about `httpx2`); domain coverage 100% line and branch (1,023 statements, 264 branches) |
-| Phase 6 backend tests | `test_auth.py` (34 tests: signup, validation, duplicates, login, generic errors, inactive users, rate limits, CSRF, logs, me, logout, forged cookies, idle and absolute expiry, sliding, Secure cookies on https, production mounting, demo account, concurrent signup), `test_authorisation.py` (16 tests: every documented operation needs a session; 9 routes, including the integrity check, plus 4 more write attempts answer 404 across suppliers and change nothing; owner IDs in bodies rejected; per-supplier numbering; logout stops access), 2 migration tests (data preserved and unassigned; only demo suppliers may be unowned), 2 config tests |
-| Whole-app coverage (not gated) | 99% overall; `services/auth.py` 98% (password-rehash branch untested); `services/pack.py` 88% |
-| `make build` (Next.js) | Pass; 13 routes including `/login` and `/signup` |
-| `alembic upgrade head` / `alembic check` / downgrade and upgrade | Pass; models and schema agree |
-| Playwright e2e (30 tests = 15 × 360×800 and 1280×800; real backend; each test signs up its own account) | **30/30 passed with `--workers=2`.** With the default 4 workers, four full runs after the auth tests were in place had timing failures in 6, 2, 1 and 1 tests (a different test each time). Traces show the API responding in about 2 s or less; the failures came from the Next.js **dev** server compiling routes on first use (up to 3.8 s) while the host was heavily loaded (load average 11 to 50, including a running `make dev` with `--reload` and the macOS malware scanner) |
+| `make test` | **509 passed** (235 integration, 274 unit), 1 warning (Starlette notice about `httpx2`); domain coverage 100% line and branch (1,023 statements, 264 branches). Ran 3 times in a row after the outbox-ordering fix below: 509/509 each time |
+| Phase 6.1 backend tests | `test_passwords.py` (32 tests): reset email with a hash-only token and private outbox files; identical answers for known, unknown and inactive emails; earlier tokens revoked; rate limits (forgot, reset, change); CSRF; full reset flow (password changed, all sessions revoked, no sign-in, notice sent); reused, expired (15 min boundary), invalid and oversized tokens; policy failures that do not consume the token; four concurrent resets with one token (exactly one wins); cross-account isolation; failed reset email (same answer, token revoked, safe log line); failed notice reported as `failed`; SMTP sender with a fake server (settings used, failure mapped); production outbox withholds bodies; change password (new session here, others revoked, old cookie dead, outstanding links revoked; wrong current, reuse, weak, no session, no CSRF); sign out everywhere (every device, other users untouched, old cookie dead); no token, password or address in logs |
+| Phase 6 backend tests | `test_auth.py` (34), `test_authorisation.py` (16, now listing forgot and reset as the only new public routes), migration and config tests: all still pass |
+| Whole-app coverage (not gated) | 99%; `api/v1/auth.py` 100%, `mail/` 98 to 100%, `services/auth.py` 97% |
+| `make lint`, `make typecheck` (mypy strict on 92 files; tsc) | Pass |
+| `make build` (Next.js) | Pass, including `/forgot-password`, `/reset-password` and `/app/settings` |
+| `alembic upgrade head` / `alembic check` / downgrade and upgrade | Pass |
+| Playwright e2e (38 tests = 19 × 360×800 and 1280×800; real backend) | **38/38 passed with `--workers=2`, in two consecutive runs** (57.8 s and 55.8 s). New `passwords.spec.ts`: forgot → reset with the link read from the development outbox → sign in with the new password, reused link refused; unknown email and broken links; change password in settings; sign out everywhere across two browser contexts. Not re-run with 4 workers this session: Phase 6 found that configuration times out on a loaded machine (dev-server compile time), see Section 12 |
+
+**Flaky test found and fixed this session.** `test_a_new_request_revokes_the_previous_unused_token` failed in about half of the runs. Cause: outbox file names began with the injected clock's timestamp, which the tests freeze, so two messages sorted by a random suffix and the "newest" was picked at random. Fix: file names now include a nanosecond counter, so the outbox always sorts in send order (`app/mail/senders.py`). After the fix: 10/10 runs of the file and 3/3 full runs passed. No assertion was relaxed.
+
+**Development-mode bug found by e2e and fixed.** The reset page read the token in an effect that React's development mode runs twice; the second run found the already-cleared fragment and showed "incomplete link". The token is now kept in a ref after the first read.
 
 ## 8. Commands
 
@@ -89,14 +101,17 @@ DEMO_ACCOUNT_PASSWORD='…' make demo-account   # optional login for the demo su
 make dev                   # API :8000 + web :3000; sign up or sign in at http://localhost:3000
 make lint | make typecheck | make test | make build | make e2e
 make api-types             # regenerate frontend types after any API change
+make email-outbox          # newest development emails, including reset links (refuses production)
 ```
+
+Local email testing (forgot and reset password): README.md, "Local email testing".
 
 `make e2e` starts its own backend on :8100 (fresh database, `AUTH_SIGNUP_LIMIT_PER_HOUR=200`, a demo account with a test-only password) and Next on :3100 (`.next-e2e`). On a busy machine run `cd frontend && npx playwright test --workers=2`.
 
 ## 9. Security limitations (do not claim production-ready)
 
 - **Production is not supported yet.** The supplier routes are unmounted in production, the legal rules are unreviewed, and the evidence pack is labelled an evaluation export.
-- **No password change, reset or account deletion.** A user who forgets a password cannot recover the account. A compromised session ends only by logout or expiry (no "sign out everywhere").
+- **Password reset and change are built (Phase 6.1); account deletion is not.** Reset needs working email: with `EMAIL_MODE=simulated` links exist only in the local outbox. Only the current password is checked against reuse (no password history). Forgot-password responses for real and unknown accounts differ by a few milliseconds because only a real account gets a database write; email delivery itself is outside the response.
 - **Rate limits and lockout are in memory and per process.** They reset on restart and do not cover multiple instances. There is no per-account lockout beyond 5 attempts per minute per IP+email.
 - **Common-password list is small** (bundled, about 40 entries). No breached-password check, no 2FA, no email verification: anyone can sign up with an address they do not own.
 - **Signup consent is an evaluation notice**, not counsel-reviewed Terms or a Privacy Notice (no DPDP-grade consent record).
@@ -128,8 +143,8 @@ Advocate review is required before any non-demo use. Full register: `docs/DECISI
 
 ## 13. Recommended next tasks (priority order)
 
-1. **Owner review and commit** of Phase 6 in the groups in Section 2.
-2. **Auth completion:** password change (revoke other sessions), password reset with SMTP (P1), "sign out everywhere", account deletion request; record `actor_id` on new timeline events.
+1. **Owner review and commit** of Phase 6.1 in the groups in Section 2.
+2. **Auth completion:** account deletion request, email verification at signup, record `actor_id` on new timeline events; configure a real SMTP relay before any non-local use.
 3. **Phase 7:** onboarding and supplier profile editing, then Udyam verification.
 4. **E2E stability:** production-build web server for Playwright, or 2 workers by default.
 5. **Security hardening (T11.4):** `pip-audit` and `npm audit` as tools, trusted-proxy IP handling, shared rate-limit store before multiple instances.

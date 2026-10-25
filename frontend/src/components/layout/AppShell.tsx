@@ -30,6 +30,7 @@ const sectionLabel: Record<string, string> = {
 function crumbs(pathname: string): { label: string; href?: string }[] {
   const parts = pathname.split("/").filter(Boolean).slice(1); // drop "app"
   if (parts.length === 0) return [{ label: "Dashboard" }];
+  if (parts[0] === "settings") return [{ label: "Account settings" }];
   if (parts[0] !== "cases") return [{ label: "Dashboard", href: "/app" }];
   const trail: { label: string; href?: string }[] = [{ label: "Cases", href: "/app/cases" }];
   if (parts.length === 1) return [{ label: "Cases" }];

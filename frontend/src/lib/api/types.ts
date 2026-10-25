@@ -25,3 +25,5 @@ export type DealType = S["DealType"];
 export type Me = S["MeOut"];
 export type SignupBody = S["SignupIn"];
 export type LoginBody = S["LoginIn"];
+export type PasswordUpdated = S["PasswordUpdatedOut"];
+export type ForgotPasswordResult = S["ForgotPasswordOut"];

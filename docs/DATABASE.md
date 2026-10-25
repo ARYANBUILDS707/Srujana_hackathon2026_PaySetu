@@ -96,6 +96,8 @@ erDiagram
 
 ### 3.3 `password_reset_tokens` (P1)
 
+*As built (Phase 6.1, migration `d71bd50903a9`):* `token_hash` is HMAC-SHA256 under `TOKEN_HASH_KEY`; expiry is **15 minutes** (not 30); extra columns `revoked_at` (superseded by a newer request, a password change or reset, or a failed delivery) and `ip_hash` (HMAC of the requesting IP). See DECISIONS.md Section 9.
+
 | Column | Type | Null | Constraints / notes |
 | --- | --- | --- | --- |
 | `id` | id | no | PK |

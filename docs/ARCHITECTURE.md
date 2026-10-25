@@ -322,7 +322,9 @@ PaySetu/
   - Flags `HttpOnly`, `Secure` (production), `SameSite=Lax`, `Path=/`
   - Idle expiry 7 days (sliding, refreshed at most hourly)
   - Absolute expiry 30 days
-- Logout revokes the session row. Changing the password revokes all other sessions.
+- Logout revokes the session row. Changing the password revokes all other sessions. *As built (Phase 6.1):* changing the password revokes every session including the current one and issues a fresh session to the requesting browser; a reset revokes every session and does not sign in; `POST /auth/logout-all` revokes every session of the user.
+- *Password reset (Phase 6.1):* single-use 15-minute tokens, stored only as HMAC under `TOKEN_HASH_KEY`, consumed by one conditional UPDATE in the same transaction as the password change. The emailed link carries the token in the URL fragment (`/reset-password#token=…`). Forgot-password always answers 202 with the same body and sends the email after the response.
+- *Email (Phase 6.1):* `app/mail/senders.py` behind an `EmailSender` interface: a file outbox for `EMAIL_MODE=simulated` (`STORAGE_DIR/outbox/*.eml`, read with `make email-outbox`, body withheld in production) and SMTP for `EMAIL_MODE=smtp`. Delivery outcomes are logged without addresses, links or tokens.
 - Login and signup errors are generic. There is no user enumeration.
 
 **Implementation status (Phase 6, 25 Oct 2026).** Built: signup (creates user, supplier and session together), login, logout, me, idle and absolute expiry, hourly sliding, revocation, session-fixation protection, and the rate limits in 8.5. Code: `app/security/passwords.py`, `app/security/sessions.py`, `app/services/auth.py`, `app/api/v1/auth.py`, and the `current_principal` dependency in `app/api/deps.py`. Every supplier route takes `SupplierPrincipal` from that dependency and passes `supplier_id` to the services, which scope every query (8.4). Not built yet: password change and password reset (P1). The common-password list is small and bundled. Deviations are in DECISIONS.md Section 8.

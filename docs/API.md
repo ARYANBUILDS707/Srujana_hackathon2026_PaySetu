@@ -64,7 +64,7 @@ Failing either returns **403 `csrf_rejected`**. This includes `POST /auth/signup
 
 | HTTP | `code` values | When |
 | --- | --- | --- |
-| 400 | `bad_request` | Malformed JSON or multipart |
+| 400 | `bad_request`, `invalid_reset_token` | Malformed JSON or multipart; a reset token that is unknown, used, revoked or expired |
 | 401 | `unauthenticated`, `session_expired`, `invalid_credentials` | No, revoked or unknown session; expired session; wrong email or password at login |
 | 403 | `csrf_rejected`, `forbidden` | CSRF failure; action not allowed for this principal |
 | 404 | `not_found` | Missing or not owned |
@@ -111,9 +111,12 @@ Messages are safe to show to users. Internal details never appear in responses.
 | POST | `/auth/login` | – | Create a session (revokes any session the browser already had). **Built** | P0 |
 | POST | `/auth/logout` | – (cookie if present) | Revoke the current session and clear the cookie; idempotent, always 204. **Built** | P0 |
 | GET | `/auth/me` | S | Current user and supplier summary (`Cache-Control: no-store`). **Built**; profile completeness and adapter modes not yet included | P0 |
-| POST | `/auth/password/change` | S | Change password; revokes other sessions. **Not built yet** | P0 |
-| POST | `/auth/password/forgot` | – | Always 202; sends a reset email if the account exists | P1 |
-| POST | `/auth/password/reset` | – | Token + new password | P1 |
+| POST | `/auth/change-password` | S | `{current_password, new_password}`. Revokes **every** session of the user and gives this browser a new session cookie; emails a notice. 200 `{ "notification": "sent" \| "failed" }`; 422 `current_password` wrong or `new_password` unchanged or weak. **Built (Phase 6.1)** | P0 |
+| POST | `/auth/forgot-password` | – | `{email}`. Always **202** `{ "detail": "If an account exists for this email, PaySetu will send it a link…" }`, identical for unknown or inactive accounts; the email is sent after the response. **Built (Phase 6.1)** | P1 |
+| POST | `/auth/reset-password` | – | `{token, new_password}`. Consumes the single-use, 15-minute token; revokes every session; does **not** sign in (clears the cookie); emails a notice. 200 `{ "notification": … }`; **400 `invalid_reset_token`** for unknown, used, revoked or expired tokens (one generic message). **Built (Phase 6.1)** | P1 |
+| POST | `/auth/logout-all` | S | Revoke every session of the current user on every device and clear the cookie; 204. **Built (Phase 6.1)** | P0 |
+
+Paths follow the Phase 6.1 brief; the earlier plan used `/auth/password/{change,forgot,reset}` (DECISIONS.md Section 9). The reset link has the form `PUBLIC_BASE_URL/reset-password#token=…`: the token is in the URL fragment, never in a path or query string that a server could log.
 
 `POST /auth/signup`:
 
@@ -504,7 +507,9 @@ Future inbound webhooks (inbound email parsing, eSign callbacks) must:
 | --- | --- | --- |
 | `POST /auth/login` | 5/min and 20/hour | IP + email; IP |
 | `POST /auth/signup` | 5/hour (`AUTH_SIGNUP_LIMIT_PER_HOUR`; production refuses a higher value) | IP |
-| `POST /auth/password/forgot` (P1) | 3/hour | IP + email |
+| `POST /auth/forgot-password` | 3/hour; 10/hour | IP + email; IP |
+| `POST /auth/reset-password` | 10/hour | IP |
+| `POST /auth/change-password` | 5 per 15 min | user |
 | `/public/share/*` | 60/min; 10 invalid tokens/min | IP |
 | `POST /cases/{id}/evidence` | 30/min | user |
 | `POST /communications/{id}/send` | 10/hour | user |

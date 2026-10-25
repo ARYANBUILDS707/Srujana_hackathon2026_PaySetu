@@ -5,20 +5,26 @@
 - Login errors are generic and take the same time whether or not the account exists.
 - Sessions expire after SESSION_IDLE_HOURS without use (sliding, refreshed at most hourly) and
   SESSION_ABSOLUTE_DAYS after login, and are revoked by logout.
+- Phase 6.1: password reset by emailed single-use token, password change and sign-out
+  everywhere. Every password change (either way) revokes all of the user's sessions.
 """
 
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.clock import Clock, format_utc_timestamp
 from app.config import Settings
-from app.errors import Conflict, Unauthenticated
-from app.models import Supplier, User, UserSession
+from app.db import Database
+from app.errors import BadRequest, Conflict, FieldError, Unauthenticated, ValidationFailed
+from app.mail import templates
+from app.mail.senders import EmailSender, deliver
+from app.models import PasswordResetToken, Supplier, User, UserSession
 from app.schemas import auth as schemas
 from app.security import passwords
 from app.security import sessions as tokens
@@ -265,3 +271,209 @@ def create_demo_account(session: Session, clock: Clock, email: str, password: st
         supplier.owner_user_id = user.id
         supplier.updated_at = now
         return user.id
+
+
+# ------------------------------------------------------------------ Phase 6.1: passwords
+
+RESET_TOKEN_MINUTES = 15
+FORGOT_PASSWORD_MESSAGE = (
+    "If an account exists for this email, PaySetu will send it a link to reset the password. "
+    "The link works once and expires after 15 minutes."
+)
+INVALID_RESET_TOKEN = "This reset link is invalid, has expired or has already been used."
+
+
+@dataclass(frozen=True)
+class PendingReset:
+    """A reset token waiting to be emailed. `token` is the raw value: never store or log it."""
+
+    token_id: str
+    user_id: str
+    email: str
+    token: str
+
+
+@dataclass(frozen=True)
+class PasswordUpdate:
+    user_id: str
+    email: str
+    changed_at: datetime
+
+
+def _revoke_all_sessions(session: Session, user_id: str, now: str) -> None:
+    session.execute(
+        update(UserSession)
+        .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+        .values(revoked_at=now)
+    )
+
+
+def _revoke_reset_tokens(session: Session, user_id: str, now: str) -> None:
+    session.execute(
+        update(PasswordResetToken)
+        .where(
+            PasswordResetToken.user_id == user_id,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
+
+
+def request_password_reset(
+    session: Session, clock: Clock, settings: Settings, email: str, client: ClientInfo
+) -> PendingReset | None:
+    """Issue a new reset token for an active account; None (silently) for any other email.
+
+    Issuing a token revokes every earlier unused one for that account.
+    """
+    with session.begin():
+        user = session.scalars(select(User).where(User.email == email)).first()
+        if user is None or not user.is_active:
+            return None
+        now = clock.now_utc()
+        _revoke_reset_tokens(session, user.id, format_utc_timestamp(now))
+        token = tokens.new_token()
+        row = PasswordResetToken(
+            id=str(uuid.uuid4()),
+            user_id=user.id,
+            token_hash=tokens.keyed_hash(settings, token),
+            created_at=format_utc_timestamp(now),
+            expires_at=format_utc_timestamp(now + timedelta(minutes=RESET_TOKEN_MINUTES)),
+            used_at=None,
+            revoked_at=None,
+            ip_hash=tokens.ip_hash(settings, client.ip),
+        )
+        session.add(row)
+        return PendingReset(row.id, user.id, user.email, token)
+
+
+def reset_link(settings: Settings, token: str) -> str:
+    # The token travels in the URL fragment: browsers never send fragments to a server or in
+    # a Referer header, so it stays out of access logs and third-party requests.
+    return f"{settings.public_base_url}/reset-password#token={token}"
+
+
+def deliver_password_reset(
+    database: Database, sender: EmailSender, settings: Settings, clock: Clock, pending: PendingReset
+) -> bool:
+    """Email the reset link (run after the response is sent). If delivery fails the token is
+    revoked, so no link that the user never received stays valid."""
+    message = templates.password_reset(
+        pending.email, reset_link(settings, pending.token), RESET_TOKEN_MINUTES
+    )
+    if deliver(sender, message, pending.user_id):
+        return True
+    with database.session() as session, session.begin():
+        session.execute(
+            update(PasswordResetToken)
+            .where(PasswordResetToken.id == pending.token_id, PasswordResetToken.used_at.is_(None))
+            .values(revoked_at=_now(clock))
+        )
+    return False
+
+
+def reset_password(
+    session: Session, clock: Clock, settings: Settings, data: schemas.ResetPasswordIn
+) -> PasswordUpdate:
+    """Consume the token and set the new password in one transaction; revoke every session.
+
+    Consumption is a single conditional UPDATE (`used_at IS NULL AND revoked_at IS NULL AND
+    expires_at > now`), so of two concurrent requests with the same token exactly one wins.
+    """
+    new_hash = passwords.hash_password(data.new_password)  # slow; outside the transaction
+    if len(data.token) > tokens.MAX_TOKEN_LENGTH:
+        raise BadRequest(INVALID_RESET_TOKEN, code="invalid_reset_token")
+    token_hash = tokens.keyed_hash(settings, data.token)
+    with session.begin():
+        now_dt = clock.now_utc()
+        now = format_utc_timestamp(now_dt)
+        result = session.execute(
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.used_at.is_(None),
+                PasswordResetToken.revoked_at.is_(None),
+                PasswordResetToken.expires_at > now,
+            )
+            .values(used_at=now)
+            .execution_options(synchronize_session=False)
+        )
+        consumed = cast(CursorResult[Any], result).rowcount == 1
+        row = (
+            session.scalars(
+                select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+            ).first()
+            if consumed
+            else None
+        )
+        user = session.get(User, row.user_id) if row is not None else None
+        if user is None or not user.is_active:
+            raise BadRequest(INVALID_RESET_TOKEN, code="invalid_reset_token")
+        user.password_hash = new_hash
+        user.updated_at = now
+        _revoke_all_sessions(session, user.id, now)
+        _revoke_reset_tokens(session, user.id, now)
+        return PasswordUpdate(user.id, user.email, now_dt)
+
+
+def change_password(
+    session: Session,
+    clock: Clock,
+    settings: Settings,
+    principal: SupplierPrincipal,
+    data: schemas.ChangePasswordIn,
+    client: ClientInfo,
+) -> tuple[PasswordUpdate, str]:
+    """Verify the current password, set the new one, revoke EVERY session of the user
+    (including the one making the request) and start a fresh session for this browser.
+
+    Security decision (DECISIONS.md Section 9): the caller stays signed in, but on a new
+    session token, so a copy of the old cookie, wherever it is, stops working.
+    """
+    with session.begin():
+        user = session.get(User, principal.user_id)
+        current_hash = user.password_hash if user else None
+    if user is None or not passwords.verify_password(current_hash, data.current_password):
+        raise ValidationFailed(
+            errors=[FieldError("current_password", "incorrect", "Current password is incorrect.")]
+        )
+    if passwords.verify_password(current_hash, data.new_password):
+        raise ValidationFailed(
+            errors=[
+                FieldError(
+                    "new_password",
+                    "unchanged",
+                    "Choose a password different from your current one.",
+                )
+            ]
+        )
+    new_hash = passwords.hash_password(data.new_password)
+    with session.begin():
+        user = session.get(User, principal.user_id)
+        if user is None or user.password_hash != current_hash:
+            # Changed by a concurrent request since we verified it: ask the user to retry.
+            raise Conflict("Your password was just changed elsewhere. Sign in again.")
+        now_dt = clock.now_utc()
+        now = format_utc_timestamp(now_dt)
+        user.password_hash = new_hash
+        user.updated_at = now
+        _revoke_all_sessions(session, user.id, now)
+        _revoke_reset_tokens(session, user.id, now)
+        token = _start_session(session, clock, settings, user, client)
+        return PasswordUpdate(user.id, user.email, now_dt), token
+
+
+def notify_password_changed(
+    sender: EmailSender, settings: Settings, update_: PasswordUpdate, how: str
+) -> bool:
+    message = templates.password_changed(
+        update_.email, update_.changed_at, how, f"{settings.public_base_url}/forgot-password"
+    )
+    return deliver(sender, message, update_.user_id)
+
+
+def logout_all(session: Session, clock: Clock, principal: SupplierPrincipal) -> None:
+    """Revoke every session of the current user, on every device."""
+    with session.begin():
+        _revoke_all_sessions(session, principal.user_id, _now(clock))

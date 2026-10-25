@@ -38,3 +38,23 @@ class UserSession(Base):
     revoked_at: Mapped[str | None] = mapped_column(TS)
     user_agent: Mapped[str | None] = mapped_column(String(200))
     ip_hash: Mapped[str | None] = mapped_column(HASH)  # HMAC of the IP; never the raw IP
+
+
+class PasswordResetToken(Base):
+    """A single-use, 15-minute password-reset token (DATABASE.md 3.3; Phase 6.1).
+
+    Only an HMAC of the token (key TOKEN_HASH_KEY) is stored. `used_at` marks consumption;
+    `revoked_at` marks a token superseded by a newer request, a password change, or a failed
+    delivery. A token is valid only while both are null and `expires_at` is in the future.
+    """
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[str] = mapped_column(ID, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(HASH, unique=True)
+    created_at: Mapped[str] = mapped_column(TS)
+    expires_at: Mapped[str] = mapped_column(TS)
+    used_at: Mapped[str | None] = mapped_column(TS)
+    revoked_at: Mapped[str | None] = mapped_column(TS)
+    ip_hash: Mapped[str | None] = mapped_column(HASH)  # HMAC of the requesting IP

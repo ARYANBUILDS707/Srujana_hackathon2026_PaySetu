@@ -10,6 +10,7 @@ import { loginHref } from "./redirect";
 interface SessionValue {
   me: Me;
   signOut: () => Promise<void>;
+  signOutEverywhere: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -61,11 +62,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
+  const signOutEverywhere = useCallback(async () => {
+    // Throws if the request fails, so the caller can show the error; on success every
+    // session (including this one) is revoked and the cookie is cleared.
+    await api<void>("/auth/logout-all", { method: "POST" });
+    setMe(null);
+    router.replace("/login?reason=signed-out-everywhere");
+  }, [router]);
+
   if (!me)
     return (
       <div className="mx-auto max-w-7xl p-4 lg:p-8">
         <LoadingBlock label="Checking your session" />
       </div>
     );
-  return <SessionContext.Provider value={{ me, signOut }}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={{ me, signOut, signOutEverywhere }}>
+      {children}
+    </SessionContext.Provider>
+  );
 }

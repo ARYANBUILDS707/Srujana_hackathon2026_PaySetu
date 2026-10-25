@@ -9,6 +9,7 @@ from app.config import AppEnv, Settings, get_settings
 from app.db import Database
 from app.errors import register_error_handlers
 from app.logging import RequestContextMiddleware, configure_logging
+from app.mail.senders import build_sender
 from app.security.body_limit import BodySizeLimitMiddleware, max_body_bytes
 from app.security.csrf import CsrfMiddleware
 from app.security.headers import SecurityHeadersMiddleware
@@ -64,6 +65,8 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         },
     )
     app.state.evidence_store = EvidenceStore(resolved.storage_dir)
+    # Outbound email (Phase 6.1): file outbox when EMAIL_MODE=simulated, SMTP otherwise.
+    app.state.email_sender = build_sender(resolved, app.state.clock)
     app.include_router(api_router, prefix=API_PREFIX)
     # Case routes of the evaluation build: authenticated and supplier-scoped (Phase 6), but
     # still never mounted in production while the legal rules await review.

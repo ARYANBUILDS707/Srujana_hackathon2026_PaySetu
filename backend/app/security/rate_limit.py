@@ -30,7 +30,10 @@ class RateLimitCategory(StrEnum):
     LOGIN_ACCOUNT = "login_account"  # POST /auth/login, key IP + email
     LOGIN_IP = "login_ip"  # POST /auth/login, key IP
     SIGNUP = "signup"  # POST /auth/signup, key IP
-    PASSWORD_FORGOT = "password_forgot"  # POST /auth/password/forgot (P1), key IP + email
+    PASSWORD_FORGOT = "password_forgot"  # POST /auth/forgot-password, key IP + email
+    PASSWORD_FORGOT_IP = "password_forgot_ip"  # POST /auth/forgot-password, key IP
+    PASSWORD_RESET = "password_reset"  # POST /auth/reset-password, key IP
+    PASSWORD_CHANGE = "password_change"  # POST /auth/change-password, key user
     PUBLIC_SHARE = "public_share"  # /public/share/*, key IP
     PUBLIC_SHARE_INVALID_TOKEN = "public_share_invalid_token"  # failed lookups, key IP
     EVIDENCE_UPLOAD = "evidence_upload"  # key user
@@ -52,6 +55,9 @@ RATE_LIMITS: dict[RateLimitCategory, RateLimitRule] = {
     RateLimitCategory.LOGIN_IP: RateLimitRule(20, 3600),
     RateLimitCategory.SIGNUP: RateLimitRule(5, 3600),
     RateLimitCategory.PASSWORD_FORGOT: RateLimitRule(3, 3600),
+    RateLimitCategory.PASSWORD_FORGOT_IP: RateLimitRule(10, 3600),
+    RateLimitCategory.PASSWORD_RESET: RateLimitRule(10, 3600),
+    RateLimitCategory.PASSWORD_CHANGE: RateLimitRule(5, 900),
     RateLimitCategory.PUBLIC_SHARE: RateLimitRule(60, 60),
     RateLimitCategory.PUBLIC_SHARE_INVALID_TOKEN: RateLimitRule(10, 60),
     RateLimitCategory.EVIDENCE_UPLOAD: RateLimitRule(30, 60),

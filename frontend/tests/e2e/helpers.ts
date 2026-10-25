@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 
 // Test-only placeholders, matching the e2e backend in playwright.config.ts. Never real.
@@ -85,4 +87,39 @@ export async function signOut(page: Page) {
   if (await menu.isVisible()) await menu.click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login\?reason=signed-out$/);
+}
+
+/**
+ * The newest message of `kind` for `email` in the e2e backend's development outbox
+ * (`EMAIL_MODE=simulated` writes `.eml` files to STORAGE_DIR/outbox; see playwright.config.ts).
+ * Returns the decoded body, or null if none has arrived yet.
+ */
+export function readOutbox(email: string, kind: string): string | null {
+  const dir = path.resolve(process.cwd(), "../backend/storage/e2e/outbox");
+  if (!existsSync(dir)) return null;
+  const bodies = readdirSync(dir)
+    .filter((name) => name.endsWith(".eml"))
+    .sort()
+    .map((name) => readFileSync(path.join(dir, name), "utf8"))
+    .filter((raw) => raw.includes(`To: ${email}`) && raw.includes(`X-PaySetu-Kind: ${kind}`));
+  const raw = bodies.at(-1);
+  if (!raw) return null;
+  // Long lines are quoted-printable encoded: remove soft line breaks and decode =XX.
+  return raw
+    .replace(/=\r?\n/g, "")
+    .replace(/=([0-9A-F]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+/** Wait for a reset email and return the path + fragment of its link. */
+export async function resetLinkFor(email: string): Promise<string> {
+  let link = "";
+  await expect
+    .poll(() => {
+      const body = readOutbox(email, "password_reset");
+      const match = body && /https?:\/\/[^/\s]+(\/reset-password#token=[A-Za-z0-9_-]+)/.exec(body);
+      link = match ? match[1] : "";
+      return link;
+    })
+    .not.toBe("");
+  return link;
 }

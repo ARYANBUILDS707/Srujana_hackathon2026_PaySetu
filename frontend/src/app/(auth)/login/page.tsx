@@ -81,6 +81,12 @@ function LoginForm() {
         <Button type="submit" loading={busy} disabled={!email.trim() || !password}>
           {copy.submit}
         </Button>
+        <Link
+          href="/forgot-password"
+          className="w-fit text-small font-medium text-info hover:text-primary hover:underline"
+        >
+          {authCopy.forgot.linkFromLogin}
+        </Link>
       </form>
 
       <p className="mt-6 text-small text-ink-muted">
