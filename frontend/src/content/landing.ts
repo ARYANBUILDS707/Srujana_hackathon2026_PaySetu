@@ -16,15 +16,15 @@ export const landingCopy = {
       body: "Every file gets a SHA-256 fingerprint and a time, so any later change can be detected.",
     },
     {
-      title: "Export a claim pack",
-      body: "Download an organised evidence pack for the MSME ODR portal or an advocate you choose.",
+      title: "Check your case",
+      body: "See what is missing from your file, and an illustrative interest figure from the recorded bank rates.",
     },
   ],
   notHeading: "What PaySetu is not",
   notBody:
     "PaySetu is not a law firm, collection agency, lawyer marketplace or government portal. It prepares and organises evidence; the ODR portal, Facilitation Councils and courts decide disputes.",
-  signUp: "Sign up",
-  logIn: "Log in",
-  accountsUnavailable: "Accounts are not available yet. Sign-up opens in a later release.",
+  openDemo: "Open the demo workspace",
+  demoNote:
+    "Evaluation build: synthetic supplier data, no login, running locally. Sign-up arrives in a later release.",
   disclaimer: "PaySetu prepares evidence. It is not legal advice.",
 } as const;

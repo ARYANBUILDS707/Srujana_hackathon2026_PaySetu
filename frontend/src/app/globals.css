@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Design tokens from docs/DESIGN.md Sections 2–4.
+ * Design tokens from docs/DESIGN.md Sections 2–4 (blue-and-white palette, approved 25 Oct 2026).
  * Tailwind's default palette, radii, shadows and breakpoints are cleared so components can
  * only use PaySetu tokens. Light theme only in MVP (ADR-017).
  */
@@ -11,30 +11,24 @@
   --color-transparent: transparent;
   --color-current: currentColor;
 
-  --color-paper: #faf8f3;
+  --color-canvas: #f3f6f8;
   --color-surface: #ffffff;
-  --color-surface-sunken: #f2efe7;
-  --color-rule: #ddd7ca;
-  --color-rule-strong: #b9b1a0;
-  --color-ink: #1b2430;
-  --color-ink-muted: #545e6b;
-  --color-ink-faint: #7a828c;
-  --color-primary: #23408e;
-  --color-primary-hover: #1b3373;
-  --color-primary-tint: #e8edf8;
-  --color-seal: #a3352a;
-  --color-seal-tint: #f7e9e6;
-  --color-success: #1f6f47;
-  --color-success-tint: #e6f2ea;
-  --color-warning: #8a5300;
-  --color-warning-tint: #fcf1dc;
+  --color-surface-sunken: #e9eef3;
+  --color-rule: #dce6f1;
+  --color-rule-strong: #7a8794;
+  --color-ink: #1d2226;
+  --color-ink-muted: #666666;
+  --color-ink-faint: #6b6b6b;
+  --color-primary: #0a66c2;
+  --color-primary-hover: #004182;
+  --color-primary-tint: #e8f1fa;
+  --color-success: #057642;
+  --color-success-tint: #e3f4ea;
+  --color-warning: #8a5a00;
+  --color-warning-tint: #fdf1d8;
   --color-danger: #b42318;
-  --color-danger-tint: #fbe9e7;
-  --color-info: #2f5b7a;
-  --color-info-tint: #e7eff5;
-  --color-simulated: #6b4fa0;
-  --color-simulated-tint: #efeaf7;
-  --color-focus: #23408e;
+  --color-danger-tint: #fce9e7;
+  --color-focus: #0a66c2;
 
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
@@ -60,12 +54,12 @@
   --text-caption--font-weight: 500;
 
   --radius-*: initial;
-  --radius-sm: 4px;
   --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-full: 9999px;
 
   --shadow-*: initial;
-  --shadow-float: 0 4px 16px rgba(27, 36, 48, 0.12);
+  --shadow-float: 0 4px 16px rgba(29, 34, 38, 0.12);
 
   --breakpoint-*: initial;
   --breakpoint-md: 40rem;
@@ -77,7 +71,7 @@
 
 @layer base {
   html {
-    background-color: var(--color-paper);
+    background-color: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
   }

@@ -7,10 +7,10 @@ limits, security headers and error formats apply as for every API route.
 
 from collections.abc import Iterator
 from datetime import date
-from typing import Annotated, BinaryIO
+from typing import IO, Annotated, BinaryIO
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.clock import Clock, get_clock
@@ -20,6 +20,7 @@ from app.domain.types import EvidenceKind
 from app.schemas import cases as schemas
 from app.security.rate_limit import RateLimitCategory, RateLimiter
 from app.services import cases as service
+from app.services import pack as pack_service
 from app.storage.evidence_store import EvidenceStore
 
 router = APIRouter(tags=["demo"])
@@ -174,3 +175,32 @@ def integrity_check(
 @router.get("/cases/{case_id}/timeline", response_model=list[schemas.TimelineEventOut])
 def timeline(case_id: str, session: SessionDep) -> list[schemas.TimelineEventOut]:
     return service.list_timeline(session, case_id)
+
+
+def _stream_and_close(handle: IO[bytes]) -> Iterator[bytes]:
+    try:
+        while chunk := handle.read(1024 * 1024):
+            yield chunk
+    finally:
+        handle.close()
+
+
+@router.get("/cases/{case_id}/evidence-pack")
+def download_evidence_pack(
+    case_id: str, request: Request, session: SessionDep, clock: ClockDep, store: StoreDep
+) -> StreamingResponse:
+    """Build and download the case's evidence pack (ZIP). Read-only; refused if integrity fails."""
+    limiter: RateLimiter = request.app.state.rate_limiter
+    limiter.hit(RateLimitCategory.PACK_GENERATION, case_id[:64])
+    export = pack_service.export_pack(session, clock, store, case_id)
+    return StreamingResponse(
+        _stream_and_close(export.file),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{export.filename}"',
+            "Content-Length": str(export.size_bytes),
+            "Cache-Control": "private, no-store",
+            "X-PaySetu-Pack-SHA256": export.pack_sha256,
+            "Access-Control-Expose-Headers": "X-PaySetu-Pack-SHA256, Content-Disposition",
+        },
+    )

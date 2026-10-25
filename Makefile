@@ -9,7 +9,7 @@ API_PORT ?= 8000
 WEB_PORT ?= 3000
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-backend setup-frontend dev dev-api dev-web lint format typecheck \
+.PHONY: help api-types setup setup-backend setup-frontend dev dev-api dev-web lint format typecheck \
 	test e2e build migrate migrate-status seed
 
 help: ## List available targets
@@ -43,7 +43,7 @@ format: ## Apply formatters
 	cd frontend && npm run format
 
 typecheck: ## Type-check backend (mypy strict) and frontend (tsc)
-	cd backend && .venv/bin/mypy app tests alembic seed
+	cd backend && .venv/bin/mypy app tests alembic seed tools
 	cd frontend && npm run typecheck
 
 test: ## Run backend tests with the 100% branch-coverage gate on app/domain
@@ -63,3 +63,7 @@ migrate-status: ## Show the current and head migration revisions
 
 seed: ## Load SYNTHETIC demo data (refuses production; run after make migrate)
 	cd backend && .venv/bin/python -m seed.demo
+
+api-types: ## Regenerate frontend API types from the backend OpenAPI schema
+	cd backend && .venv/bin/python -m tools.export_openapi > ../frontend/openapi.json
+	cd frontend && npx openapi-typescript openapi.json -o src/lib/api/schema.d.ts

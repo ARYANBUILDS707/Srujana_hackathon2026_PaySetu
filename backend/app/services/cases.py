@@ -5,12 +5,16 @@ next action, integrity). This module only gathers stored facts, calls the domain
 timeline events. Demo mode: one synthetic supplier, no authentication (local use only).
 """
 
+import functools
 import json
 import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.clock import Clock, format_utc_timestamp
@@ -53,7 +57,7 @@ from app.repositories import cases as repo
 from app.rules.loader import CURRENT_RULE_SET_VERSION, load_rule_set
 from app.schemas import cases as out
 from app.security.body_limit import MIB
-from app.storage.evidence_store import EvidenceStore
+from app.storage.evidence_store import EvidenceStore, StoredFile
 
 LATE_RECORD_THRESHOLD_DAYS = 2
 
@@ -322,6 +326,42 @@ def _checklist(
     )
 
 
+# ------------------------------------------------------------- allocation conflicts
+
+# Case references and timeline sequence numbers are allocated by reading the current maximum.
+# Two requests can read the same value before either commits; the database's unique constraint
+# then rejects the second insert. The loser re-reads in a fresh transaction and tries again.
+_ALLOCATION_CONSTRAINTS = (
+    "cases.supplier_id, cases.reference",
+    "timeline_events.case_id, timeline_events.seq",
+)
+_MAX_ALLOCATION_ATTEMPTS = 5
+
+
+def _is_allocation_conflict(error: IntegrityError) -> bool:
+    return any(name in str(error.orig) for name in _ALLOCATION_CONSTRAINTS)
+
+
+def _retry_allocation_conflict[**P, R](func: Callable[P, R]) -> Callable[P, R]:
+    """Retry a whole service transaction when it loses a reference/sequence allocation race.
+
+    Only for functions whose database work is one `with session.begin():` block (a rollback
+    leaves the session clean) and that do not consume one-shot inputs such as upload streams.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        for _ in range(_MAX_ALLOCATION_ATTEMPTS - 1):
+            try:
+                return func(*args, **kwargs)
+            except IntegrityError as error:
+                if not _is_allocation_conflict(error):
+                    raise
+        return func(*args, **kwargs)  # last attempt: any error propagates
+
+    return wrapper
+
+
 # ------------------------------------------------------------------------ supplier
 
 
@@ -375,6 +415,7 @@ def create_buyer(session: Session, clock: Clock, data: out.BuyerCreate) -> out.B
 # --------------------------------------------------------------------------- cases
 
 
+@_retry_allocation_conflict
 def create_case(session: Session, clock: Clock, data: out.CaseCreate) -> out.CaseOut:
     with session.begin():
         supplier = _supplier(session)
@@ -627,6 +668,7 @@ def list_responses(session: Session, clock: Clock, case_id: str) -> list[out.Res
         return _response_outs(case, repo.list_responses(session, case.id), clock.today())
 
 
+@_retry_allocation_conflict
 def record_response(
     session: Session, clock: Clock, case_id: str, data: out.ResponseCreate
 ) -> list[out.ResponseOut]:
@@ -665,6 +707,7 @@ def record_response(
         return _response_outs(case, rows, clock.today())
 
 
+@_retry_allocation_conflict
 def remove_objection(
     session: Session, clock: Clock, case_id: str, response_id: str, removed_on: date
 ) -> list[out.ResponseOut]:
@@ -720,10 +763,30 @@ def upload_evidence(
     chunks: Any,
     note: str | None,
 ) -> out.EvidenceOut:
+    # The upload stream can only be read once, so the file is stored before the (retryable)
+    # database step. A stored file without a row is harmless: content-addressed, never exposed.
+    with session.begin():
+        supplier = _supplier(session)
+        _case(session, supplier, case_id)  # access check before accepting any bytes
+        supplier_id = supplier.id
+    stored = store.save(supplier_id, chunks, max_bytes=settings.max_upload_mb * MIB)
+    return _record_evidence(session, clock, settings, case_id, stored, kind, filename, note)
+
+
+@_retry_allocation_conflict
+def _record_evidence(
+    session: Session,
+    clock: Clock,
+    settings: Settings,
+    case_id: str,
+    stored: StoredFile,
+    kind: EvidenceKind,
+    filename: str,
+    note: str | None,
+) -> out.EvidenceOut:
     with session.begin():
         supplier = _supplier(session)
         case = _case(session, supplier, case_id)
-        stored = store.save(supplier.id, chunks, max_bytes=settings.max_upload_mb * MIB)
         if (
             repo.case_storage_bytes(session, case.id) + stored.size_bytes
             > settings.max_case_storage_mb * MIB
@@ -795,48 +858,76 @@ def evidence_file(
         return item, str(store.path_for(item.storage_key))
 
 
+@dataclass(frozen=True)
+class Verification:
+    """Result of re-hashing stored evidence and re-walking the timeline chain (read-only)."""
+
+    passed: bool
+    checked_files: int
+    checked_events: int
+    head_hash: str | None
+    mismatches: list[out.MismatchOut]
+
+
+def _verify_case(session: Session, store: EvidenceStore, case: Case) -> Verification:
+    evidence = repo.list_evidence(session, case.id)
+    files = verify_files(
+        [FileRecord(e.id, e.sha256) for e in evidence],
+        {e.id: store.current_sha256(e.storage_key) for e in evidence},
+    )
+    chain = verify_chain([_to_domain_event(r) for r in repo.list_timeline(session, case.id)])
+    mismatches = [
+        out.MismatchOut(
+            type="file",
+            reference=m.evidence_id,
+            detail="missing" if m.actual is None else "hash does not match the recorded hash",
+        )
+        for m in files.mismatches
+    ] + [
+        out.MismatchOut(type="timeline", reference=f"seq {m.seq}", detail=m.reason)
+        for m in chain.mismatches
+    ]
+    return Verification(
+        passed=files.result is CheckResult.PASS and chain.result is CheckResult.PASS,
+        checked_files=files.checked_files,
+        checked_events=chain.checked_events,
+        head_hash=chain.head_hash,
+        mismatches=mismatches,
+    )
+
+
+def verify_case(session: Session, store: EvidenceStore, case_id: str) -> Verification:
+    """Verify a case without recording anything (used by the evidence-pack export)."""
+    with session.begin():
+        return _verify_case(session, store, _case(session, _supplier(session), case_id))
+
+
+@_retry_allocation_conflict
 def check_integrity(
     session: Session, clock: Clock, store: EvidenceStore, case_id: str
 ) -> out.IntegrityOut:
     with session.begin():
         case = _case(session, _supplier(session), case_id)
-        evidence = repo.list_evidence(session, case.id)
-        files = verify_files(
-            [FileRecord(e.id, e.sha256) for e in evidence],
-            {e.id: store.current_sha256(e.storage_key) for e in evidence},
-        )
-        chain = verify_chain([_to_domain_event(r) for r in repo.list_timeline(session, case.id)])
-        passed = files.result is CheckResult.PASS and chain.result is CheckResult.PASS
-        mismatches = [
-            out.MismatchOut(
-                type="file",
-                reference=m.evidence_id,
-                detail="missing" if m.actual is None else "hash does not match the recorded hash",
-            )
-            for m in files.mismatches
-        ] + [
-            out.MismatchOut(type="timeline", reference=f"seq {m.seq}", detail=m.reason)
-            for m in chain.mismatches
-        ]
+        result = _verify_case(session, store, case)
         row = _append(
             session,
             clock,
             case.id,
-            "integrity_verified" if passed else "integrity_failed",
+            "integrity_verified" if result.passed else "integrity_failed",
             {
-                "result": "pass" if passed else "fail",
-                "checked_files": files.checked_files,
-                "checked_events": chain.checked_events,
-                "head_hash": chain.head_hash,
+                "result": "pass" if result.passed else "fail",
+                "checked_files": result.checked_files,
+                "checked_events": result.checked_events,
+                "head_hash": result.head_hash,
             },
             actor_type=ActorType.SYSTEM,
         )
         return out.IntegrityOut(
-            result="pass" if passed else "fail",
-            checked_files=files.checked_files,
-            checked_events=chain.checked_events,
-            mismatches=mismatches,
-            timeline_head_hash=chain.head_hash,
+            result="pass" if result.passed else "fail",
+            checked_files=result.checked_files,
+            checked_events=result.checked_events,
+            mismatches=result.mismatches,
+            timeline_head_hash=result.head_hash,
             recorded_event_seq=row.seq,
         )
 

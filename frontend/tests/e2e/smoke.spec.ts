@@ -14,10 +14,26 @@ test("landing page loads with PaySetu content and no horizontal scroll", async (
   expect(hasHorizontalScroll).toBe(false);
 });
 
-test("account actions are disabled until authentication ships", async ({ page }) => {
+test("landing page opens the demo workspace", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("link", { name: "Open the demo workspace" }).click();
 
-  for (const name of ["Sign up", "Log in"]) {
-    await expect(page.getByRole("link", { name })).toHaveAttribute("aria-disabled", "true");
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByText("Demo mode.")).toBeVisible();
+});
+
+test("keyboard focus is visible on interactive elements", async ({ page }) => {
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+
+  for (let step = 0; step < 4; step++) {
+    await page.keyboard.press("Tab");
+    const outline = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement as Element);
+      return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+    });
+    expect(outline.style).not.toBe("none");
+    expect(outline.width).toBeGreaterThanOrEqual(2);
   }
 });

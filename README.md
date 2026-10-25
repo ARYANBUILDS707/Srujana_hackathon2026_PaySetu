@@ -401,10 +401,10 @@ The task-level plan, with completion criteria and the first milestone, is in [do
 | --- | --- |
 | Documentation | Draft v1.1 complete and consistency-reviewed: README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
 | Phase 0 (foundation) | Done on branch `dev`: runnable backend and frontend skeletons, tooling, Makefile, smoke tests |
-| Frontend | Next.js 16.4.3 skeleton with design tokens and a landing page. No application screens yet |
+| Frontend | Next.js 16.4.3 demo workspace on the real demo APIs: landing page, dashboard, case list, New delivery, and per-case Overview (DeemedClock strip, key dates with "why this date", amounts, next step, **Download Evidence Pack**), Evidence (upload, SHA-256, integrity check), Buyer responses, Case Strength, Interest and Timeline. Blue-and-white design system (docs/DESIGN.md). No login (demo mode); no letters, packs or sharing yet |
 | Backend | FastAPI 0.162.0 skeleton with `GET /api/v1/health` (static liveness only). Phase 1: T1.1 typed settings (`app/config.py`) with startup validation and the production gate. T1.2 database engine and sessions (`app/db.py`) with Alembic. Milestone M1-B: pure legal and evidence engine in `backend/app/domain/` (rule set, DeemedClock, interest, eligibility, integrity, checklist, next action); not yet exposed through the API |
 | Database | T1.2 done: SQLAlchemy 2.1.6 engine and sessions; SQLite pragmas (WAL, foreign keys, busy timeout 5000 ms, synchronous NORMAL); Alembic 1.20.1 with an empty baseline migration (`bf48eb38df15`). **No business tables yet** (Phase 3 onwards) |
-| Tests | Backend: 264 pytest tests (21 integration incl. database and migration tests, 243 unit, incl. 24 counsel-readable legal fixtures and 37 settings tests); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 2 Playwright smoke tests × 2 viewports (360×800, 1280×800) |
+| Tests | Backend: 264 pytest tests (21 integration incl. database and migration tests, 243 unit, incl. 24 counsel-readable legal fixtures and 37 settings tests); **100% line and branch coverage** of `backend/app/domain/` (1,023 statements, 264 branches), enforced by `make test`. Frontend: 5 Playwright tests × 2 viewports (360×800, 1280×800) against the real backend (nothing mocked) |
 | External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
 | Legal review of rules and templates | Not done. Interest defaults D3–D5 are owner-approved provisional simulation defaults only. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25) |
 
@@ -444,10 +444,11 @@ make migrate-status  # current revision and head revision
 
 ```bash
 make migrate && make seed   # schema + one synthetic demo supplier, a sample buyer, one UNVERIFIED bank rate
-make dev-api                # demo endpoints under /api/v1 (not mounted when APP_ENV=production)
+make dev                    # API on :8000 and the web app on :3000 together
+# open http://localhost:3000, then "Open the demo workspace"
 ```
 
-Demo endpoints: `GET /supplier`, `GET|POST /buyers`, `GET|POST /cases`, `GET /cases/{id}`, `/cases/{id}/checklist`, `/cases/{id}/interest`, `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection`, `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/timeline`. Writes need `Origin: http://localhost:3000` and `X-PaySetu-Client: web` (CSRF). Deviations are listed in [docs/DECISIONS.md Section 7](docs/DECISIONS.md#7-hackathon-demo-vertical-slice-25-oct-2026-owner-directed).
+Demo endpoints: `GET /supplier`, `GET|POST /buyers`, `GET|POST /cases`, `GET /cases/{id}`, `/cases/{id}/checklist`, `/cases/{id}/interest`, `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection`, `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/timeline`. `GET /cases/{id}/evidence-pack` downloads a ZIP (summary, DeemedClock and interest, timeline, checklist, verification report, original evidence, SHA-256 manifest); it is refused if integrity verification fails and carries no Section 63 certificate. Writes need `Origin: http://localhost:3000` and `X-PaySetu-Client: web` (CSRF). Deviations are listed in [docs/DECISIONS.md Section 7](docs/DECISIONS.md#7-hackathon-demo-vertical-slice-25-oct-2026-owner-directed).
 
 Other migration commands, run from `backend/`:
 
@@ -474,7 +475,8 @@ make lint           # ruff check + ruff format --check; eslint + prettier --chec
 make typecheck      # mypy (strict) on backend/app and backend/tests; next typegen + tsc --noEmit
 make test           # pytest + 100% branch-coverage gate on backend/app/domain
 make build          # next build (production)
-make e2e            # Playwright smoke tests at 360×800 and 1280×800
+make e2e            # Playwright journeys at 360×800 and 1280×800 against a fresh real backend (needs `make setup`)
+make api-types      # regenerate frontend API types after any backend API change
 make help           # list all targets
 ```
 

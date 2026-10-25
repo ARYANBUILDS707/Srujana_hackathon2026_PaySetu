@@ -465,3 +465,30 @@ The owner prioritised an evaluation-ready backend slice over strict phase order.
 | **Bank rate is unverified.** The seed inserts only 5.75% from 2026-10-07 (LS-03 ideation document), `verified = false`; no earlier rate is invented. Interest periods it does not cover report `rate_data_unavailable` | No verified RBI series on record | Before real use: load verified RBI rates (operator migration, DATABASE.md 3.15) |
 | **Letters not built**: intimation and demand are reported as not done (checklist C11, C13) | Out of scope | Phase 9 |
 | Evidence uploads rate-limited under one demo key | No users yet | Phase 3/5 (per-user key) |
+
+### 7.1 Frontend demo workspace (25 Oct 2026, owner-directed)
+
+| Item | Decision / deviation | Resolve in |
+| --- | --- | --- |
+| **Colour system** | Owner-approved blue-and-white palette replaces the paper/ink/red palette. Recorded in DESIGN.md Section 2 (tokens, rules, verified WCAG contrast ratios). Red is now only for genuine errors and integrity failures; verified = green; pending review and demo/simulated = amber | Done |
+| **API types are generated, not hand-written** | `openapi-typescript` (already on the ARCHITECTURE.md list) added as a dev dependency. `make api-types` exports the backend OpenAPI schema and regenerates `frontend/src/lib/api/schema.d.ts`; rerun it after any API change | Done |
+| **Cache Components turned off** | `cacheComponents` and `partialPrefetching` were scaffold defaults from Phase 0, required by no document. They forced a Suspense workaround on every client page and produced dev-time "instant navigation" warnings for a fully client-fetched app | Revisit if server-rendered pages are added |
+| **Copy catalogue is partial** | Navigation, status labels, next-step text and landing copy are in `src/content/`. Form field labels and some one-line messages are still inline in page files, contrary to AGENTS.md Section 4 | Move before Hindi/regional copy (PRD: out of MVP) |
+| **No file-upload progress bar** | Uploads show a busy button, not a progress bar (DESIGN.md 5.3) | Frontend polish |
+| **Backend race fix** | E2E exposed a case-reference and timeline-sequence race (two simultaneous requests computed the same number; second insert returned 500). Fixed with a bounded retry in `app/services/cases.py`, covered by deterministic tests | Done |
+| **Known demo dead end** | Checklist item C07 (invoice details) needs the buyer's GSTIN. The seeded sample buyer has none, so that item stays "missing" for it; a buyer created in the New delivery form with a GSTIN clears it. There is no buyer-edit endpoint yet | Phase 4 (buyers) |
+
+### 7.2 Evidence pack export, hackathon MVP (25 Oct 2026, owner-directed)
+
+Implemented as `GET /api/v1/cases/{id}/evidence-pack` (`app/services/pack.py`, `app/documents/pack.py`). Deviations from PRD FR-PACK-01 to FR-PACK-06 and API.md 2.11:
+
+| Deviation | Why | Resolve in |
+| --- | --- | --- |
+| **On-demand, not stored or versioned.** No `sealed_packs` table, no `pack_generated` timeline event; the pack ID (SHA-256 of `manifest.json`) is returned in a header only | Export must not mutate audit events; minimal scope | Phase 10 (T10.1 to T10.3) |
+| **Markdown and JSON, not PDF.** README, summary, DeemedClock and interest, timeline, checklist and verification report are `.md`; `timeline.json` and `manifest.json` carry hashes | No PDF library installed or approved; owner preferred no new dependency | Phase 10 (ReportLab) |
+| **No Section 63 certificate draft.** FR-PACK-06 wants a watermarked draft | None may be generated without a counsel-reviewed template (LR-16). The pack says so explicitly | After LR-16 |
+| **Integrity gate as FR-PACK-04.** Export is refused (409 `integrity_failed`) if any file or the chain fails; files are re-hashed again as they are read, and the case's timeline head is compared before and after | Prevents packing altered evidence, including a change during the build | Done |
+| **No auth; demo routes only.** Same demo-mode limits as DECISIONS 7 | Phase 3 not built | Phase 3 |
+| **No advocate link, no `07_supplier_documents/`, no counsel-questions file** | Out of scope for the MVP | Phase 10 |
+| **Verification logic shared, not copied.** `check_integrity` now calls `_verify_case`, also used read-only by the export | Single source of truth; behaviour of `check_integrity` unchanged (existing tests pass) | Done |
+| **E2E isolation.** Playwright builds the dev server into `.next-e2e` (`NEXT_DIST_DIR`) so tests can run while a developer's `next dev` is running | Next.js locks the build directory per server | Done |

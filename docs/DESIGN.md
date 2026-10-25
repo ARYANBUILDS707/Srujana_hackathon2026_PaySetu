@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft v1.0, derived from PRD.md v1.0 |
+| Status | Draft v1.1: colour system and visual direction replaced on 25 Oct 2026 (owner-approved blue-and-white palette). All non-colour requirements are unchanged |
 | Scope | Supplier web app (mobile-first), Buyer Cost Page, Advocate view, generated PDFs |
 | Rule | When this document and an individual screen disagree, this document wins. Change the document first, then the screen |
 
@@ -10,17 +10,20 @@
 
 ## 1. Visual Direction
 
-### 1.1 The idea: "a well-kept register"
+### 1.1 The idea: a calm, professional LegalTech workspace
 
-PaySetu should feel like a **carefully maintained business register**: the ledger, challan book and stamped file that Indian suppliers already trust, made clear and calm. It is a record-keeping tool that holds up in a dispute, not a fintech dashboard or a marketing site.
+*Replaces the earlier "well-kept register" paper-and-ink direction (colours only; the principles in 1.2 stand).*
+
+PaySetu should feel like a **modern professional SaaS workspace** for legal-adjacent records: a clean left sidebar and a top header, white cards on a subtle grey canvas, one blue primary colour, and clear typography. It uses a familiar professional-network style of blue and white, but must not copy any other brand's logo, icons or exact layouts.
 
 | Do | Don't |
 | --- | --- |
-| Paper-toned surfaces, ink-coloured text, ruled lines and clear dates | Gradients, glassmorphism, glowing cards, hero illustrations of people with laptops |
-| One strong accent ("seal") used only for sealed or verified states | A rainbow of status colours |
+| White cards (8–12px radius) on a light grey canvas; sidebar and top header | Gradients, glassmorphism, glowing cards, hero illustrations of people with laptops |
+| One blue primary for buttons, links, progress, selected navigation and focus | A rainbow of status colours |
+| Green for verified or successful states, amber for warnings and pending legal review, red only for genuine errors and integrity failures | Red for ordinary emphasis, or for "overdue" headlines |
 | Numbers and dates as the hero content, set in tabular figures | Big vanity metrics, charts for their own sake |
 | Plain language with the legal reference available on demand | Legal jargon up front, or "AI-powered" language |
-| Restraint: every element earns its place | Decorative icons beside every heading |
+| Restraint: every element earns its place | Decorative icons beside every heading, decorative animation |
 
 ### 1.2 Design principles
 
@@ -42,38 +45,36 @@ All colors are referenced by token name, never by raw hex in components. The MVP
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `paper` | `#FAF8F3` | App background |
-| `surface` | `#FFFFFF` | Cards, panels, inputs |
-| `surface-sunken` | `#F2EFE7` | Table headers, code/hash wells, day-strip track |
-| `rule` | `#DDD7CA` | Borders, dividers, ruled lines |
-| `rule-strong` | `#B9B1A0` | Input borders, focused dividers |
-| `ink` | `#1B2430` | Primary text |
-| `ink-muted` | `#545E6B` | Secondary text, labels |
-| `ink-faint` | `#7A828C` | Placeholder and disabled text (never for essential info) |
-| `primary` | `#23408E` | Primary buttons, links, active navigation, today marker |
-| `primary-hover` | `#1B3373` | Hover/pressed state of primary |
-| `primary-tint` | `#E8EDF8` | Selected rows, active tab background |
-| `seal` | `#A3352A` | Sealed/verified-integrity marks, pack seal. **Not used for errors** |
-| `seal-tint` | `#F7E9E6` | Seal badge background |
-| `success` | `#1F6F47` | Met checklist items, sent, settled |
-| `success-tint` | `#E6F2EA` | |
-| `warning` | `#8A5300` | Window closing, warnings, objection raised |
-| `warning-tint` | `#FCF1DC` | |
-| `danger` | `#B42318` | Errors, overdue, integrity failure, destructive actions |
-| `danger-tint` | `#FBE9E7` | |
-| `info` | `#2F5B7A` | Neutral notices, legal explanations |
-| `info-tint` | `#E7EFF5` | |
-| `simulated` | `#6B4FA0` | Simulated/sandbox label only |
-| `simulated-tint` | `#EFEAF7` | |
-| `focus` | `#23408E` | Focus ring (2px, offset 2px) |
+| `canvas` | `#F3F6F8` | Page background (secondary background) |
+| `surface` | `#FFFFFF` | Cards, panels, inputs, header, sidebar (main background) |
+| `surface-sunken` | `#E9EEF3` | Table headers, hash wells, day-strip track |
+| `rule` | `#DCE6F1` | Card borders, dividers |
+| `rule-strong` | `#7A8794` | Input and control borders (3:1 minimum against white) |
+| `ink` | `#1D2226` | Primary text |
+| `ink-muted` | `#666666` | Secondary text, labels |
+| `ink-faint` | `#6B6B6B` | Placeholder text (still 4.5:1; never lighter) |
+| `primary` | `#0A66C2` | Primary buttons, links, selected navigation, progress, today marker |
+| `primary-hover` | `#004182` | Hover/pressed state of primary |
+| `primary-tint` | `#E8F1FA` | Selected navigation, active tab, notices |
+| `success` | `#057642` | Verified, met checklist items, settled |
+| `success-tint` | `#E3F4EA` | |
+| `warning` | `#8A5A00` | Warnings, pending legal review, window closing, objection raised |
+| `warning-tint` | `#FDF1D8` | |
+| `danger` | `#B42318` | Genuine errors, integrity failure, destructive actions |
+| `danger-tint` | `#FCE9E7` | |
+| `focus` | `#0A66C2` | Focus ring (2px, offset 2px) |
+
+Retired tokens: `paper`, `seal`, `seal-tint`, `info`, `info-tint`, `simulated`, `simulated-tint`. Notices and legal explanations use `primary-tint`; demo and simulated labels use `warning` (they are, in effect, a pending-review state).
+
+Verified contrast (WCAG 2.2): `ink` on `surface`/`canvas` 16.0/14.8:1; `ink-muted` on `surface`/`canvas`/`surface-sunken` 5.7/5.3/4.9:1; `ink-faint` on `surface`/`canvas` 5.3/4.9:1; `primary` on `surface`/`canvas`/`primary-tint` 5.7/5.2/5.0:1; white on `primary` 5.7:1 and on `primary-hover` 10.1:1; `success`, `warning` and `danger` on their tints 5.0/5.3/5.6:1 and on `surface` 5.7/5.9/6.6:1; `rule-strong` on `surface`/`canvas` 3.7/3.4:1.
 
 ### 2.2 Rules
 
-- Text contrast is at least 4.5:1 against its background, and at least 3:1 for large text and UI boundaries. All token pairs above meet this on `surface` and `paper`. Verify any new pair before use.
+- Text contrast is at least 4.5:1 against its background, and at least 3:1 for large text and UI boundaries. All token pairs above meet this on `surface` and `canvas` (see the verified ratios in 2.1). Verify any new pair before use.
 - Status is never shown by color alone. Every status color comes with an icon and/or a text label.
-- `seal` red is reserved for integrity. Errors use `danger`. Do not swap them.
+- **Red (`danger`) is only for genuine errors and evidence-integrity failures.** Verified and sealed states are green (`success`); pending legal review, demo and simulated labels are amber (`warning`).
 - Tints are for backgrounds only. Text on a tint uses the matching strong token (e.g. `warning` text on `warning-tint`).
-- **Overdue** amounts use `danger`. **Interest** figures use `ink` with an "Illustrative" label. Do not color interest green; it is not income yet.
+- **Overdue** is shown as a `warning` badge with text, not a red headline (it is a status, not a system error). **Interest** figures use `ink` with an "Illustrative" label. Do not color interest green; it is not income yet.
 
 ---
 
@@ -137,9 +138,9 @@ Base unit is 4px. Allowed values: `4, 8, 12, 16, 20, 24, 32, 40, 48, 64`. No oth
 
 ### 4.2 Shape and elevation
 
-- Radius: `4px` for inputs, buttons and badges; `8px` for cards and dialogs; `999px` for pills only. Nothing larger.
+- Radius: `8px` for inputs, buttons and small controls; `12px` for cards and dialogs; `999px` for pills (badges) only. Nothing larger.
 - Elevation: borders (`rule`) by default. Shadows are only for floating layers (dialogs, menus, toasts): one shadow token, `0 4px 16px rgba(27,36,48,0.12)`.
-- Ruled lines: lists and timelines use 1px `rule` dividers like a register, not floating cards for each row.
+- Cards: white `surface` with a 1px `rule` border on the `canvas` background. Lists and timelines inside a card use 1px `rule` dividers, not a card per row.
 
 ### 4.3 Grid and widths
 
@@ -197,7 +198,7 @@ Every screen is built from these components. A new component needs a reason reco
 
 ### 5.4 `HashChip`
 
-- A mono short hash (`9f2c41ab…e07d`) in a `surface-sunken` well, with a small seal icon.
+- A mono short hash (`9f2c41ab…e07d`) in a `surface-sunken` well, with a small check icon once the server has confirmed the hash.
 - Tap/click opens a popover with: the full hash (selectable), the algorithm (SHA-256), the recorded time, and a "Copy" button (with a "Copied" confirmation announced to screen readers).
 
 ### 5.5 `StatusBadge`
@@ -215,9 +216,9 @@ A pill with an icon and a text label. Fixed vocabulary:
 | Settled | `success` | check-double |
 | Closed | neutral | archive |
 | Draft / Approved / Sent / Send failed / Sent manually | neutral / `info` / `success` / `danger` / `success` | — |
-| Simulated | `simulated` | flask |
-| Sealed / Integrity verified | `seal` | seal |
-| Integrity failed | `danger` | broken-seal |
+| Simulated / Demo | `warning` | flask |
+| Sealed / Integrity verified | `success` | shield-check |
+| Integrity failed | `danger` | shield-alert |
 
 ### 5.6 `DayStrip`: the DeemedClock visual (signature component)
 
@@ -257,7 +258,7 @@ A pill with an icon and a text label. Fixed vocabulary:
 - A vertical ruled list in time order (newest first by default, toggle to oldest first).
 - Each row shows: time (IST), actor ("You", "System", "Advocate link: A. Sharma", "Buyer link"), event description, and a `HashChip` for the event hash. Linked evidence or communications show as inline links.
 - Backdated or "recorded later" events show a `warning` caption: "Recorded 5 days after delivery".
-- An integrity status banner at the top: "Chain verified 01 Nov 2026, 14:32 IST" (`seal`) or "Not verified since last change" (neutral) or "Chain broken at entry #14" (`danger`).
+- An integrity status banner at the top: "Chain verified 01 Nov 2026, 14:32 IST" (`success`) or "Not verified since last change" (neutral) or "Chain broken at entry #14" (`danger`).
 
 ### 5.12 `DataList` (table on desktop, stacked on mobile)
 
@@ -288,7 +289,7 @@ Used before sending any communication or creating any share link.
 
 | Kind | Use |
 | --- | --- |
-| `SimulatedBanner` | Persistent, top of the app, when the server runs with any simulated provider: "Demo mode: emails and verifications are simulated." (`simulated` tone) |
+| `SimulatedBanner` | Persistent, top of the app, when the server runs with any simulated provider: "Demo mode: emails and verifications are simulated." (`warning` tone) |
 | `OfflineBanner` | "You're offline. Changes will not be saved." |
 | `DisclaimerFooter` | On every page: "PaySetu prepares evidence. It is not legal advice." + link |
 

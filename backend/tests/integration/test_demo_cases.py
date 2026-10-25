@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlalchemy.exc import DatabaseError
+from sqlalchemy.exc import DatabaseError, IntegrityError
 
 from app.clock import FrozenClock, format_utc_timestamp
 from app.config import Settings, load_settings
@@ -487,3 +487,109 @@ def test_interest_before_start_and_explicit_as_of(client: TestClient, buyer_id: 
     case_id = _case(client, buyer_id).json()["id"]
     early = client.get(f"/api/v1/cases/{case_id}/interest", params={"as_of": "2026-10-16"}).json()
     assert early["status"] == "not_yet_due" and early["periods"] == []
+
+
+# ------------------------------------------------- concurrent allocation (race) handling
+
+
+def test_case_reference_race_is_retried_not_a_500(
+    client: TestClient, buyer_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert _case(client, buyer_id).json()["reference"] == "PS-2026-0001"
+    import app.repositories.cases as repo
+
+    real = repo.count_cases_with_prefix
+    calls: list[int] = []
+
+    def stale_then_real(*args: Any, **kwargs: Any) -> int:
+        calls.append(1)
+        return 0 if len(calls) == 1 else real(*args, **kwargs)  # first read is stale
+
+    monkeypatch.setattr(repo, "count_cases_with_prefix", stale_then_real)
+    created = _case(client, buyer_id)
+    assert created.status_code == 201 and created.json()["reference"] == "PS-2026-0002"
+    assert len(calls) == 2  # lost the race once, then re-read the real count
+
+
+def test_timeline_sequence_race_is_retried(
+    client: TestClient, buyer_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case_id = _case(client, buyer_id).json()["id"]
+    import app.repositories.cases as repo
+
+    real = repo.list_timeline
+    calls: list[int] = []
+
+    def stale_then_real(*args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        return [] if len(calls) == 1 else real(*args, **kwargs)  # stale: "no events yet"
+
+    monkeypatch.setattr(repo, "list_timeline", stale_then_real)
+    body = {"kind": "other", "received_on": "2026-10-03", "channel": "email", "summary": "x"}
+    response = client.post(f"/api/v1/cases/{case_id}/responses", json=body, headers=CSRF)
+    assert response.status_code == 201
+    monkeypatch.undo()
+    events = client.get(f"/api/v1/cases/{case_id}/timeline").json()
+    assert [e["seq"] for e in events] == [1, 2]
+    assert events[1]["prev_hash"] == events[0]["event_hash"]
+
+
+def test_evidence_upload_survives_a_timeline_race_without_losing_the_file(
+    client: TestClient, buyer_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    case_id = _case(client, buyer_id).json()["id"]
+    import app.repositories.cases as repo
+
+    real = repo.list_timeline
+    calls: list[int] = []
+
+    def stale_then_real(*args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        return [] if len(calls) == 1 else real(*args, **kwargs)
+
+    monkeypatch.setattr(repo, "list_timeline", stale_then_real)
+    uploaded = _upload(client, case_id)
+    assert (
+        uploaded.status_code == 201 and uploaded.json()["sha256"] == hashlib.sha256(PDF).hexdigest()
+    )
+    monkeypatch.undo()
+    assert (
+        client.post(f"/api/v1/cases/{case_id}/integrity-check", headers=CSRF).json()["result"]
+        == "pass"
+    )
+
+
+def test_persistent_conflict_gives_up_after_bounded_attempts(
+    client: TestClient, buyer_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _case(client, buyer_id)
+    import app.repositories.cases as repo
+
+    calls: list[int] = []
+
+    def always_stale(*args: Any, **kwargs: Any) -> int:
+        calls.append(1)
+        return 0
+
+    monkeypatch.setattr(repo, "count_cases_with_prefix", always_stale)
+    response = _case(client, buyer_id)
+    assert response.status_code == 500 and response.json()["code"] == "internal_error"
+    assert len(calls) == 5  # bounded, never loops forever
+
+
+def test_other_integrity_errors_are_not_retried(
+    client: TestClient, buyer_id: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import app.repositories.cases as repo
+
+    calls: list[int] = []
+
+    def boom(*args: Any, **kwargs: Any) -> None:
+        calls.append(1)
+        raise IntegrityError(
+            "INSERT", {}, Exception("NOT NULL constraint failed: cases.invoice_number")
+        )
+
+    monkeypatch.setattr(repo, "get_buyer", boom)
+    response = _case(client, buyer_id)
+    assert response.status_code == 500 and len(calls) == 1

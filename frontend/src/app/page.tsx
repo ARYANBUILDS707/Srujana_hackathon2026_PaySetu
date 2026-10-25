@@ -1,51 +1,38 @@
+import { ButtonLink } from "@/components/ui/Button";
 import { landingCopy as copy } from "@/content/landing";
 
-// Landing page (DESIGN.md Section 12.1). Sign-up and log-in are shown but disabled until
-// authentication ships (Phase 3 / Phase 7); they must not link to routes that do not exist yet.
+// Landing page (DESIGN.md Section 12.1).
 export default function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="mx-auto w-full max-w-180 flex-1 px-4 py-12 md:px-6 lg:px-8 lg:py-16">
-        <p className="text-h3 text-primary">{copy.productName}</p>
-        <h1 className="mt-4 text-display text-ink">{copy.tagline}</h1>
-        <p className="mt-4 text-body text-ink-muted">{copy.intro}</p>
-
-        <div className="mt-8 flex flex-col gap-3 md:flex-row">
-          <span
-            role="link"
-            aria-disabled="true"
-            aria-describedby="accounts-unavailable"
-            className="inline-flex h-11 min-w-22 cursor-not-allowed items-center justify-center rounded-sm bg-primary px-4 font-medium text-white opacity-40"
-          >
-            {copy.signUp}
-          </span>
-          <span
-            role="link"
-            aria-disabled="true"
-            aria-describedby="accounts-unavailable"
-            className="inline-flex h-11 min-w-22 cursor-not-allowed items-center justify-center rounded-sm border border-rule-strong bg-surface px-4 font-medium text-ink opacity-40"
-          >
-            {copy.logIn}
-          </span>
+      <header className="border-b border-rule bg-surface">
+        <div className="mx-auto flex h-14 max-w-5xl items-center px-4 md:px-6">
+          <span className="text-h3 font-semibold text-primary">{copy.productName}</span>
         </div>
-        <p id="accounts-unavailable" className="mt-2 text-small text-ink-muted">
-          {copy.accountsUnavailable}
-        </p>
+      </header>
 
-        <section aria-labelledby="steps-heading" className="mt-12">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-12 md:px-6 lg:py-16">
+        <div className="max-w-2xl">
+          <h1 className="text-display text-ink">{copy.tagline}</h1>
+          <p className="mt-4 text-body text-ink-muted">{copy.intro}</p>
+          <div className="mt-8">
+            <ButtonLink href="/app">{copy.openDemo}</ButtonLink>
+          </div>
+          <p className="mt-3 text-small text-ink-muted">{copy.demoNote}</p>
+        </div>
+
+        <section aria-labelledby="steps-heading" className="mt-14">
           <h2 id="steps-heading" className="text-h2 text-ink">
             {copy.stepsHeading}
           </h2>
-          <ol className="mt-4 divide-y divide-rule border-y border-rule">
+          <ol className="mt-4 grid gap-4 md:grid-cols-3">
             {copy.steps.map((step, index) => (
-              <li key={step.title} className="flex gap-4 py-4">
-                <span className="font-mono text-small text-ink-muted tabular-nums">
-                  {String(index + 1).padStart(2, "0")}
+              <li key={step.title} className="rounded-lg border border-rule bg-surface p-5">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary-tint font-mono text-small text-primary">
+                  {index + 1}
                 </span>
-                <div>
-                  <h3 className="text-h3 text-ink">{step.title}</h3>
-                  <p className="mt-1 text-body text-ink-muted">{step.body}</p>
-                </div>
+                <h3 className="mt-3 text-h3 text-ink">{step.title}</h3>
+                <p className="mt-1 text-small text-ink-muted">{step.body}</p>
               </li>
             ))}
           </ol>
@@ -53,7 +40,7 @@ export default function LandingPage() {
 
         <section
           aria-labelledby="not-heading"
-          className="mt-12 rounded-md border-l-3 border-info bg-info-tint p-4"
+          className="mt-10 rounded-lg border-l-4 border-primary bg-primary-tint p-5"
         >
           <h2 id="not-heading" className="text-h3 text-ink">
             {copy.notHeading}
@@ -62,8 +49,8 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-rule px-4 py-6 md:px-6 lg:px-8">
-        <p className="mx-auto max-w-180 text-caption text-ink-muted">{copy.disclaimer}</p>
+      <footer className="border-t border-rule bg-surface px-4 py-6 md:px-6">
+        <p className="mx-auto max-w-5xl text-caption text-ink-muted">{copy.disclaimer}</p>
       </footer>
     </div>
   );

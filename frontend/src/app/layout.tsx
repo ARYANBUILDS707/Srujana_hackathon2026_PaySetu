@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-IN" className={`${plexSans.variable} ${plexMono.variable} antialiased`}>
-      <body className="min-h-dvh bg-paper text-body text-ink">{children}</body>
+      <body className="min-h-dvh bg-canvas text-body text-ink">{children}</body>
     </html>
   );
 }

@@ -7,8 +7,9 @@ const apiOrigin =
   (process.env.NODE_ENV === "development" ? "http://localhost:8000" : undefined);
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Playwright sets its own build directory, so e2e runs can coexist with a developer's
+  // `next dev` (Next.js locks the build directory per server).
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   turbopack: {
     rules: {
       "*.css": {

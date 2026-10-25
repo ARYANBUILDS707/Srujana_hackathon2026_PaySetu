@@ -5,3 +5,6 @@ package-lock.json
 playwright-report/
 test-results/
 AGENTS.md
+openapi.json
+src/lib/api/schema.d.ts
+.next-e2e/
