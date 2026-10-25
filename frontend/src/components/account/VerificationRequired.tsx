@@ -31,7 +31,7 @@ export function VerificationRequired() {
   return (
     <section
       aria-labelledby="verify-heading"
-      className="max-w-2xl rounded-lg border border-rule border-l-4 border-l-brass bg-surface p-4 md:p-6"
+      className="max-w-2xl rounded-lg border border-rule border-l-4 border-l-accent bg-surface p-4 md:p-6"
       data-testid="verification-required"
     >
       <h1 id="verify-heading" className="text-h1 text-ink">

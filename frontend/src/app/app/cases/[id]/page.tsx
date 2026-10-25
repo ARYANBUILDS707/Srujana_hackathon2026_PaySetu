@@ -9,9 +9,10 @@ import { DeliveryDetails } from "@/components/cases/DeliveryDetails";
 import { EvidencePackCard } from "@/components/cases/EvidencePackCard";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Disclosure } from "@/components/ui/Disclosure";
 import { Notice } from "@/components/ui/Notice";
 import { Progress } from "@/components/ui/Progress";
-import { appCopy, nextActionCopy } from "@/content/app";
+import { appCopy, clockGlossary, nextActionCopy } from "@/content/app";
 import type { BuyerResponse } from "@/lib/api/types";
 import { useApiGet } from "@/lib/hooks/useApiGet";
 
@@ -27,7 +28,7 @@ export default function CaseOverviewPage() {
       <div className="flex flex-col gap-6 lg:col-span-2">
         <section
           aria-labelledby="next-action"
-          className="rounded-lg border border-rule border-l-4 border-l-brass bg-surface p-4 md:p-6"
+          className="rounded-lg border border-rule border-l-4 border-l-accent bg-surface p-4 md:p-6"
         >
           <p className="text-caption uppercase tracking-wide text-ink-muted">Next step</p>
           <h2 id="next-action" className="mt-1 text-h2 text-ink">
@@ -44,6 +45,19 @@ export default function CaseOverviewPage() {
           description="The 15 days the buyer has to object in writing, then the dates that follow. Each date is calculated by the PaySetu backend from the recorded facts."
         >
           <DayStrip caseData={caseData} responses={responses.data ?? []} />
+          <Disclosure summary="What these terms mean">
+            <dl className="flex flex-col gap-2">
+              {clockGlossary.map((g) => (
+                <div key={g.term}>
+                  <dt className="font-medium text-ink">{g.term}</dt>
+                  <dd className="text-ink-muted">{g.meaning}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-2 text-caption text-ink-muted">
+              PaySetu&apos;s reading of the MSMED Act, pending review by an advocate.
+            </p>
+          </Disclosure>
           <div className="mt-6 border-t border-rule pt-6">
             <ClockTimeline caseData={caseData} responses={responses.data ?? []} />
           </div>

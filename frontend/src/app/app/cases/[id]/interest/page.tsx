@@ -96,6 +96,21 @@ export default function InterestPage() {
             </Notice>
           ) : null}
 
+          <Card title="How this figure is worked out">
+            <ol className="list-decimal space-y-1.5 pl-5 text-body text-ink">
+              <li>Interest can start the day after the payment deadline, if payment is late.</li>
+              <li>
+                The rate is three times the bank rate recorded for each period (the table below
+                shows which rate was used and whether it is verified).
+              </li>
+              <li>Interest is added to the balance at the end of every month (monthly rests).</li>
+            </ol>
+            <p className="mt-3 text-small text-ink-muted">
+              The calculation is done by PaySetu&apos;s interest engine on the server. It is an
+              illustration for preparing your file, not a demand or a legal opinion.
+            </p>
+          </Card>
+
           {data.periods.length > 0 ? (
             <Card
               title="Rate assumptions and workings"

@@ -38,7 +38,9 @@ class BusinessDocumentStore:
     def __init__(self, storage_dir: Path) -> None:
         self.root = (storage_dir / "business").resolve()
 
-    def save_pdf(self, supplier_id: str, chunks: Iterable[bytes], *, max_bytes: int) -> StoredDocument:
+    def save_pdf(
+        self, supplier_id: str, chunks: Iterable[bytes], *, max_bytes: int
+    ) -> StoredDocument:
         tmp_dir = self._ensure_dir(self.root / "tmp")
         tmp_path = tmp_dir / uuid.uuid4().hex
         digest = hashlib.sha256()

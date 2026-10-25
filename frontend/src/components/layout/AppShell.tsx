@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { Wordmark } from "@/components/ui/Wordmark";
 import { VerificationRequired } from "@/components/account/VerificationRequired";
 import { appCopy } from "@/content/app";
 import { authCopy } from "@/content/auth";
@@ -62,7 +63,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       aria-current={active ? "page" : undefined}
       className={`flex h-10 items-center gap-3 rounded-md px-3 text-body font-medium transition-colors duration-150 ${
         active
-          ? "bg-surface-hover text-ink shadow-[inset_3px_0_0_var(--color-brass)]"
+          ? "bg-surface-subtle font-semibold text-ink shadow-[inset_3px_0_0_var(--color-accent)]"
           : "text-ink-muted hover:bg-surface-subtle hover:text-ink"
       }`}
     >
@@ -72,18 +73,8 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   );
 }
 
-function Wordmark() {
-  return (
-    <Link href="/app" className="flex items-center gap-2 text-h3 font-semibold text-primary">
-      <span
-        aria-hidden="true"
-        className="flex size-7 items-center justify-center rounded-md bg-primary text-small text-white"
-      >
-        P
-      </span>
-      {appCopy.productName}
-    </Link>
-  );
+function AppWordmark() {
+  return <Wordmark href="/app" />;
 }
 
 function Account() {
@@ -121,7 +112,7 @@ function SidebarBody({ pathname }: { pathname: string }) {
       {verified ? (
         <Link
           href={appCopy.primaryAction.href}
-          className="flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-body font-medium text-white transition-colors duration-150 hover:bg-primary-hover"
+          className="flex h-10 items-center justify-center gap-2 rounded-md border border-rule-strong bg-surface px-4 text-body font-medium text-ink transition-colors duration-150 hover:border-ink hover:bg-surface-subtle"
         >
           <Icon name="plus" className="size-4" />
           {appCopy.primaryAction.label}
@@ -168,7 +159,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar: 240px */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-rule bg-surface p-4 lg:flex">
         <div className="flex h-8 items-center">
-          <Wordmark />
+          <AppWordmark />
         </div>
         <div className="mt-6">
           <SidebarBody pathname={pathname} />
@@ -184,7 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-20 border-b border-rule bg-surface lg:hidden">
         <div className="flex h-14 items-center justify-between px-4">
-          <Wordmark />
+          <AppWordmark />
           <button
             type="button"
             aria-expanded={open}

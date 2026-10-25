@@ -1,6 +1,6 @@
 # PaySetu: Project Handover
 
-Snapshot taken 25 Oct 2026, after Phase 7B (business onboarding and Udyam certificate submission), on top of Phase 7A (email verification), Phase 6.1 (password reset, change and sessions) and Phase 6 (authentication and case-level authorisation). Verified against the workspace, not from memory. The previous handover's findings were audited in `docs/AUDIT_REPORT.md` (Section 9 records what was resolved).
+Snapshot taken 25 Oct 2026, after the **final UI/UX redesign ("Warm Ledger")**, on top of Phase 7B (business onboarding), Phase 7A (email verification), Phase 6.1 (password reset, change and sessions) and Phase 6 (authentication and case-level authorisation). Verified against the workspace, not from memory. The previous handover's findings were audited in `docs/AUDIT_REPORT.md` (Section 9 records what was resolved).
 
 ## 1. Project overview
 
@@ -10,10 +10,64 @@ Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema
 
 ## 2. Git state
 
-- Branch `backend`. Latest commit: `578c865 feat: implement secure email verification` (Phase 7A, committed by the owner).
-- **Phase 7B is not committed.** `git status`: 22 modified and 10 untracked entries. Nothing has been pushed.
-- **Repository fix, please commit:** the root `.gitignore` had an unanchored `storage/` rule, which also matched the **source** package `backend/app/storage/`. As a result `backend/app/storage/__init__.py` and `evidence_store.py` (needed by the Evidence Vault since `8f85916`) were **never committed**: a fresh clone could not start the API. The rule is now anchored to the runtime folders (`/storage/`, `/backend/storage/`), and `backend/app/storage/` (including the new `business_store.py`) appears as untracked. A check of `git status --ignored` found no other ignored source files.
-- Suggested commit grouping: (1) `.gitignore` plus `backend/app/storage/` (repository fix); (2) backend onboarding: migration, models, schemas, service, routes, store, settings, rate limit, error-message fix, tests, `.env.example`; (3) frontend: onboarding page, settings status, navigation, API client (PUT, upload progress), e2e; (4) docs.
+- Branch `backend`. Latest commit and **safety checkpoint**: `ba06e5d feat: implement supplier business onboarding` (the working tree was clean when the redesign started; `git diff ba06e5d` shows everything the redesign changed, and `git checkout ba06e5d -- frontend docs` restores the previous frontend and docs if needed).
+- **The redesign is not committed.** It changes the frontend, `docs/DESIGN.md`, this handover and `docs/screenshots/`, plus two whitespace-only reformats in `backend/app/storage/` (see Section 2a). Nothing has been pushed.
+- Suggested commit grouping: (1) design tokens and shared components; (2) landing, dashboard and case workspace; (3) session-check fix and tests; (4) docs and screenshots; (5) the two backend formatting-only changes.
+
+## 2a. Final redesign (25 Oct 2026)
+
+**Visual direction.** "Warm Ledger" (DESIGN.md v1.3): warm white surfaces, charcoal type, black primary buttons, one orange accent, a faint peach gradient only on the landing hero and the sign-in pages, thin borders and hairline shadows, Geist type. Based on your written direction and the general style of the Aceternity Schedule marketing template; no screenshot was attached to the request and no template assets or branding were copied. Every token pair used for text meets WCAG AA; the bright orange `#F28B53` (2.4:1) is used decoratively only, with `#D9622A` for large headline emphasis and `#A4471A` for orange text (DESIGN.md 2.1).
+
+**What changed (frontend only; no API, database or legal-engine change).**
+- Global tokens replaced (`globals.css`); `brass` renamed `accent`; a shared `Wordmark`; softer secondary buttons; hairline card shadow.
+- **Landing page rebuilt:** minimal navbar (How it works, Features, Sign in, Create account), headline "Every payment has a *deadline.* / Every business deserves clarity.", one primary hero action, a framed product preview, a five-step workflow, a bento section for the five tools, "What PaySetu is not" and "Honest by design", and a footer. All figures are labelled sample content; the sample timeline mirrors the rules engine (deemed acceptance on the delivery day).
+- **Dashboard rebuilt:** a single **Recommended next step** for the most urgent case (overdue, then objection, then nearest due date), using that case's real `next_action` and checklist readiness from `GET /cases/{id}`; tracked principal, cases needing attention, payments due in 30 days; upcoming deadlines with days remaining; needs-attention and recent cases; business-profile status; eligibility. One primary action per view (the sidebar and header "Record delivery" are now secondary).
+- **Case workspace:** DeemedClock gains a plain-language glossary ("What these terms mean") written from the rule set's own explanations; Interest gains "How this figure is worked out"; Record delivery is framed as three guided questions; the shell, tabs and cards use the new tokens.
+- **Copy fix:** when the backend's next action was `generate_pack`, the UI still said pack export was "not available in this demo build yet"; it now points to the existing Evidence Pack.
+- **Bug fix (found during screenshots):** if the workspace's session check (`GET /auth/me`) failed for any reason (for example a 429 from the 300 requests/minute per-user limit, or a network error), the user was sent to the sign-in page as if signed out. Now only a 401 does that; other errors show the message with **Try again**.
+- **Auth, settings and onboarding** take the new visual language through the shared tokens and components; their behaviour is unchanged.
+
+**Route-to-API matrix (every screen checked against the code and the e2e suite).**
+
+| Route / action | Backend call(s) | Real behaviour verified by |
+| --- | --- | --- |
+| `/` landing | none (static; sample content labelled) | `smoke.spec`, `redesign.spec` |
+| `/signup` | `POST /auth/signup` (then verification email in the outbox) | `auth.spec` |
+| `/login` | `POST /auth/login` | `auth.spec`, `passwords.spec` |
+| `/verify-email` | `POST /auth/verify-email` | `auth.spec`, `verification.spec` |
+| Confirmation screen (unverified) | `POST /auth/resend-verification`, `GET /auth/me` | `verification.spec` |
+| `/forgot-password`, `/reset-password` | `POST /auth/forgot-password`, `POST /auth/reset-password` | `passwords.spec` |
+| `/app` dashboard | `GET /supplier`, `GET /cases`, `GET /onboarding`, `GET /cases/{id}` (focus case) | `redesign.spec`, `smoke.spec` |
+| `/app/cases` | `GET /cases` | screenshots, `demo-journey.spec` |
+| `/app/cases/new` | `GET /buyers`, `POST /buyers`, `POST /cases` | `demo-journey.spec` (incl. server validation) |
+| Case overview (DeemedClock, amounts, next step) | `GET /cases/{id}`, `GET /cases/{id}/responses` | `demo-journey.spec`, `redesign.spec` |
+| Evidence Vault | `GET/POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check` | `demo-journey.spec`, `evidence-pack.spec` |
+| Buyer responses | `GET/POST /cases/{id}/responses`, `POST …/remove-objection` | `demo-journey.spec` |
+| Case Strength | `GET /cases/{id}/checklist` | `demo-journey.spec` |
+| Interest | `GET /cases/{id}/interest?as_of=` | `demo-journey.spec` |
+| Timeline | `GET /cases/{id}/timeline` | `demo-journey.spec` |
+| Evidence Pack download | `GET /cases/{id}/evidence-pack` (refused on integrity failure) | `evidence-pack.spec` (ZIP and manifest checked; tamper refused) |
+| `/app/onboarding` | `GET /onboarding`, `PUT /onboarding/draft`, `POST /onboarding/certificate`, `GET /onboarding/certificates/{id}/download`, `POST /onboarding/submit` | `onboarding.spec` |
+| `/app/settings` | `GET /onboarding`, `POST /auth/change-password`, `POST /auth/logout-all`, `POST /auth/resend-verification` | `passwords.spec`, `verification.spec` |
+| Sign out | `POST /auth/logout` | `auth.spec` |
+| Cross-user isolation | every case and onboarding route answers 404 for another supplier | `auth.spec`, `onboarding.spec`, backend `test_authorisation.py` |
+
+Not available, and shown honestly: reviewer actions for business verification (status stays Pending review), letters and payments (C11 and C13 always missing), share links and the Buyer Cost Page.
+
+**Demo walkthrough (about 6 minutes).**
+1. `/`: the headline, the sample product preview and its label, the five steps, "What PaySetu is not".
+2. **Create account** → the "Confirm your email" screen → `make email-outbox` → open the link → **Confirm my email** → **Continue to PaySetu** (empty dashboard).
+3. **Record delivery** (three guided questions; use a delivery date about 20 days ago and the inline **Add a buyer**) → case overview: DeemedClock timeline, **What these terms mean**, **Why this date?**, amounts with the unverified-rate warning.
+4. **Evidence** → upload an invoice PDF → its SHA-256 → **Verify integrity** → "Integrity check passed".
+5. **Case Strength** (what is met and missing) → **Interest** (worked example and assumptions) → **Timeline** (hash-chained events).
+6. **Overview** → **Download Evidence Pack** → open the ZIP: README, summaries, original file, `manifest.json`.
+7. **Dashboard** → the **Recommended next step** for that case.
+8. **Business profile** → fill the form, upload a certificate PDF, **Save draft**, **Review & submit** → Pending review.
+9. **Settings** → business status; **Sign out**. Optional: **Forgot password?** with `make email-outbox`.
+
+Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/minute per-user limit is reached only by automated loops, not by a person clicking through the demo. Use `npm run build && npm start` for the demo if possible: the development server shows a Next.js badge and compiles pages on first visit.
+
+**Screenshots:** `docs/screenshots/` holds landing, dashboard, case overview, Evidence Vault and onboarding at 1440 px, and landing, dashboard and case overview at 360 px (real backend data from a test account; landing content is labelled sample). All 16 screens were also checked at 360, 390, 768, 1280 and 1440 px: no horizontal overflow, and every screen showed the intended page.
 
 ## 3. Completed features
 
@@ -90,16 +144,11 @@ All supplier routes above also require a **verified email** (403 `email_not_veri
 | --- | --- |
 | `make lint` (ruff check + format, eslint, prettier) | Pass |
 | `make typecheck` (mypy strict on 87 files; tsc) | Pass |
-| `make test` | **593 passed** (318 integration, 275 unit), 1 warning (Starlette notice about `httpx2`); domain coverage 100% line and branch. Ran twice in a row: 593/593 both times |
-| Phase 7B backend tests | `test_onboarding.py` (57 tests, 5 repeated runs all green): not started; save and resume with normalised values; PUT replaces the draft; six invalid Udyam formats and five accepted spellings; PIN, phone, email, class, role and length validation; future registration date; eight attempts to send status, owner, reviewer, certificate or revision fields (all 422, nothing written); private hashed upload with generated storage key, 0600 file, separate from evidence, download headers; eight invalid files (PNG, executable, no EOF, no catalog, JavaScript, Launch, embedded file, empty; nothing kept); oversized file; replacement keeps the old certificate; upload rate limit; submission with missing details (rolled back); submission to PENDING_REVIEW with a verified snapshot hash; editing, uploading and resubmitting after submission all 409; the onboarding API surface is exactly six operations and nothing reaches VERIFIED; database triggers block changes to snapshots, certificates and claims; a changed certificate file blocks submission; four concurrent submissions create one revision; a second supplier's claim is contested, not rejected; three concurrent claims leave exactly one uncontested; cross-user isolation; session, verified email and CSRF required; the demo supplier keeps its cases and eligibility unchanged after submitting; the migration creates no profile for existing suppliers |
-| Generic tests that now also cover onboarding | `test_authorisation.py` (every operation needs a session) and `test_verification.py` (every workspace operation needs a verified email) walk the OpenAPI schema, so the six new operations are included automatically |
-| Whole-app coverage (not gated) | 99%; `api/v1/onboarding.py` 100%, `services/onboarding.py` 98%, `storage/business_store.py` 93%, `schemas/onboarding.py` 95% |
-| `make lint`, `make typecheck` (mypy strict on 102 files; tsc) | Pass |
-| `make build` (Next.js) | Pass, including `/app/onboarding` |
-| `alembic upgrade head` / `alembic check` / downgrade and upgrade | Pass |
-| Playwright e2e (48 tests = 24 × 360×800 and 1280×800; real backend) | **48/48 passed with `--workers=2`, twice in a row** (51.5 s and 48.4 s). New `onboarding.spec.ts`: invalid Udyam guidance and server refusal, normalisation preview, non-PDF refused, upload with confirmation, save, reload and resume, review, submit, Pending review, API edit refused (409) and self-verification refused (422), settings status, case workspace still available; second supplier cannot download the first one's certificate (404) and is warned about the duplicate Udyam number. All earlier specs (DeemedClock, Evidence Vault, Case Strength, interest, evidence pack, auth, passwords, verification) pass unchanged |
-
-**Bugs found while testing and fixed:** (1) validation messages from custom validators reached users with pydantic's "Value error, " prefix (since Phase 6, e.g. signup password rules); the central error handler now strips it. (2) On the onboarding form a server error stayed under a field after the user corrected it; edits now clear it.
+| `make test` | **593 passed** (318 integration, 275 unit), 1 warning (Starlette notice about `httpx2`); domain coverage 100% line and branch. Unchanged by the redesign (no backend logic change) |
+| `make lint`, `make typecheck` (mypy strict on 102 files; tsc) | Pass. Lint found one over-long line in `business_store.py` (Phase 7B): ruff had never checked that file because it was git-ignored until the `.gitignore` fix. Fixed by reformatting (whitespace only, together with one line in `evidence_store.py`) |
+| `make build` (Next.js) | Pass |
+| Playwright e2e (56 tests = 28 × 360×800 and 1280×800; real backend) | **Final code: 56/56 with `--workers=2`, twice in a row** (1.4 and 1.5 min). New `redesign.spec.ts` (4 tests × 2): dashboard next step and figures match `GET /cases/{id}` and the CTA opens the case; DeemedClock glossary; landing labels sample content and has one hero primary action; a 429 on the session check is shown with Try again instead of a sign-out (the only simulated response in the suite) |
+| Earlier runs during the redesign (honest record) | Six full runs before the final two: four were all green; one had a single failure where the Next.js dev proxy dropped the login request (network error, the page correctly said it could not reach the server); one had a single failure in the password-reset test whose cause was not captured before the next run overwrote it. A deliberate stress run (`auth.spec` repeated 3 times against one backend) failed 8 logins with **429**: the 20 logins/hour per-IP limit working as designed. A normal full run makes about 18 logins from 127.0.0.1, so that limit has little headroom as the suite grows (Section 12) |
 
 ## 8. Commands
 
@@ -149,6 +198,8 @@ Advocate review is required before any non-demo use. Full register: `docs/DECISI
 
 ## 12. Known issues and technical debt
 
+- E2E login headroom: a full run makes about 18 of the 20 logins per hour allowed from one IP. Adding login-heavy tests will start hitting 429; raise the limit for the throwaway e2e backend only (as `AUTH_SIGNUP_LIMIT_PER_HOUR` does) or sign in fewer times per test.
+- E2E runs against the Next.js **dev** server: occasional timing failures and one dropped proxy connection were seen under load. A production-build web server for Playwright would remove that class of flake.
 - E2E timing on a loaded host with 4 workers (Section 7). Options: run e2e against `next build && next start` instead of `next dev`, or default to 2 workers.
 - React development mode runs effects twice, so every page fetch is doubled in dev (not in production builds).
 - Case references and timeline sequence numbers use read-then-insert with a bounded retry; replace with database sequences before multi-process deployment.

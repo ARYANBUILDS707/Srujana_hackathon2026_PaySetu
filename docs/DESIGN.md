@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft v1.2: "Oxford Blue + Stone" theme and Geist typeface adopted on 25 Oct 2026 (frontend redesign, commit `3175836`), replacing the v1.1 blue-and-white palette of the same day. Contrast re-verified for the current tokens (Section 2.1); `control` token added for input boundaries. All non-colour requirements are unchanged |
+| Status | Draft v1.3: "Warm Ledger" visual direction adopted on 25 Oct 2026 (final redesign; reference: the Aceternity Schedule marketing template's general style, no assets copied), replacing v1.2 "Oxford Blue + Stone". Contrast verified for every token pair in use (Section 2.1). All non-colour requirements are unchanged |
 | Scope | Supplier web app (mobile-first), Buyer Cost Page, Advocate view, generated PDFs |
 | Rule | When this document and an individual screen disagree, this document wins. Change the document first, then the screen |
 
@@ -10,20 +10,21 @@
 
 ## 1. Visual Direction
 
-### 1.1 The idea: a calm, professional LegalTech workspace
+### 1.1 The idea: a calm, warm, precise workspace ("Warm Ledger")
 
-*Theme "Oxford Blue + Stone" (25 Oct 2026). It replaced the v1.1 blue-and-white palette, which had replaced the earlier "well-kept register" paper-and-ink direction; the principles in 1.2 stand.*
+*Adopted 25 Oct 2026 for the final redesign. It replaces "Oxford Blue + Stone" (v1.2), which replaced the v1.1 blue-and-white palette; the principles in 1.2 stand.*
 
-PaySetu should feel like a **trustworthy, institutional but modern B2B workspace** for legal-adjacent records: a 240px left sidebar and a 64px top bar, white cards on a warm stone canvas, one deep Oxford-blue primary colour, a restrained brass accent, and clear typography. Stripe, Linear and Notion are references for principles (financial clarity, disciplined navigation, readable structure), never templates to copy; no other brand's logo, icons or layouts are reused.
+PaySetu should feel like a **mature, human-centred B2B product** for people who are not lawyers: warm white surfaces, charcoal type, crisp black primary buttons and a single orange accent used sparingly for emphasis. The visual reference is the general style of Aceternity's Schedule marketing template (white and warm off-white, bold controlled headings, thin borders, soft radius, bento feature sections, a faint peach gradient in marketing sections). Its branding and assets are not copied.
 
 | Do | Don't |
 | --- | --- |
-| White cards (8–12px radius) on a stone canvas; sidebar and top header | Gradients, glassmorphism, glowing cards, hero illustrations of people with laptops |
-| One Oxford-blue primary for buttons, links, progress and focus; brass only as a small decorative accent | A rainbow of status colours; brass as a status colour or as small text |
-| Green for verified or successful states, amber for warnings and pending legal review, red only for genuine errors and integrity failures | Red for ordinary emphasis, or for "overdue" headlines |
-| Numbers and dates as the hero content, set in tabular figures | Big vanity metrics, charts for their own sake |
-| Plain language with the legal reference available on demand | Legal jargon up front, or "AI-powered" language |
-| Restraint: every element earns its place | Decorative icons beside every heading, decorative animation |
+| White cards (8–14px radius, 1px `rule` border, a hairline `shadow-card`) on a warm `canvas` | Glassmorphism, heavy shadows, gradient-covered dashboards |
+| **One primary (black) action per view**; everything else secondary (outlined) or a text link | Several black buttons competing on one screen |
+| Orange only for emphasis: a dot, an active-navigation bar, a headline word, links in `accent-strong` | Orange as body text colour at small sizes, or as a status colour |
+| A faint peach radial gradient only in the landing hero and the sign-in pages | Gradients inside the working app |
+| Bento sections on the landing page with real explanations and clearly labelled sample content | Fake statistics, testimonials, user counts or "AI" claims |
+| Numbers and dates as the hero content, in tabular figures | Charts, scores or progress meters that are not backed by data |
+| Plain language with the legal reference available on demand (glossaries, "Why this date?") | Legal jargon up front |
 
 ### 1.2 Design principles
 
@@ -41,48 +42,47 @@ PaySetu should feel like a **trustworthy, institutional but modern B2B workspace
 
 ### 2.1 Tokens
 
-All colors are referenced by token name, never by raw hex in components. The MVP has a light theme only (PRD D9).
+All colors are referenced by token name, never by raw hex in components (`frontend/src/app/globals.css`). The MVP has a light theme only (PRD D9).
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `canvas` | `#F3F2EE` | Page background |
-| `surface` | `#FFFFFF` | Cards, panels, inputs, header, sidebar |
-| `surface-subtle` | `#F8F7F4` | Upload zones, quiet panels |
-| `surface-hover` / `surface-sunken` | `#E9EBE8` | Hover, selected navigation, hash wells, skeletons |
-| `rule` | `#D7D8D4` | Card borders, dividers |
-| `rule-strong` | `#AEB8BC` | Decorative stronger lines (timelines, dashed empty states); not for control boundaries |
-| `control` | `#7A858B` | Boundaries of inputs, selects, upload zones and secondary buttons (3:1 or more on every surface, WCAG 1.4.11) |
-| `ink` | `#172B40` | Primary text |
-| `ink-muted` | `#52606A` | Secondary text, labels |
-| `ink-faint` | `#69747B` | Placeholders inside white inputs and decorative icons only (4.8:1 on white; below 4.5:1 on every other surface) |
-| `primary` / `primary-hover` | `#223A53` / `#172B40` | Buttons, links, focus ring |
-| `brass` | `#B17B46` | Decorative accent only (active-nav marker, active-tab underline, next-step rule); never a status colour and never small text (3.6:1 on white) |
-| `success` / `success-tint` | `#287456` / `#EAF4EE` | Verified, met, settled |
-| `warning` / `warning-tint` | `#95651B` / `#FBF3E4` | Warnings, pending legal review, demo labels |
-| `danger` / `danger-tint` | `#A43F39` / `#FBEDEC` | Genuine errors, integrity failure |
-| `info` / `info-tint` (= `primary-tint`) | `#315D86` / `#EAF1F7` | Notices, calculated-by-PaySetu labels |
+| `canvas` | `#FAFAF8` | Page background of the app; alternating landing sections |
+| `surface` | `#FFFFFF` | Cards, panels, inputs, header, sidebar, landing background |
+| `surface-subtle` | `#F5F5F3` | Quiet panels, active navigation, upload zones |
+| `surface-hover` / `surface-sunken` | `#EEEDEA` | Hover, hash wells, skeletons, neutral badges |
+| `peach` | `#FFF2E9` | Gradient tint and highlight panels (marketing, auth, amount callouts) |
+| `rule` | `#E6E5E1` | Card borders, dividers (decorative) |
+| `rule-strong` | `#D4D3CE` | Timelines, secondary-button borders (decorative; the button text identifies it) |
+| `control` | `#858585` | Boundaries of inputs, selects and checkboxes (3:1 or more on every surface, WCAG 1.4.11) |
+| `ink` | `#262626` | Primary text |
+| `ink-muted` | `#5E5E5E` | Secondary text, labels |
+| `ink-faint` | `#737373` | Placeholders inside white inputs and decorative icons only |
+| `primary` / `primary-hover` | `#262626` / `#000000` | Black primary buttons; filled timeline markers |
+| `accent` | `#F28B53` | **Decorative only**: dots, active-navigation bar, next-step rule, day-strip "today", gradients |
+| `accent-display` | `#D9622A` | Large headline emphasis only (24px bold and up) |
+| `accent-strong` | `#A4471A` | Orange text and links at any size |
+| `info` / `info-tint` (= `primary-tint`) | `#A4471A` / `#FFF2E9` | Notices, "Calculated by PaySetu" labels |
+| `success` / `success-tint` | `#2B6E47` / `#E8F3EC` | Verified, met, settled |
+| `warning` / `warning-tint` | `#8A5710` / `#FBF1DF` | Warnings, pending legal review, demo and sample labels |
+| `danger` / `danger-tint` | `#B42318` / `#FCECEA` | Genuine errors, integrity failure |
+| `focus` | `#A4471A` | Focus ring (2px, offset 2px) |
 
-Theme "Oxford Blue + Stone" was adopted on 25 Oct 2026 and replaces the blue-and-white palette; the typeface is Geist Sans, with Geist Mono for hashes (Section 3.1).
+**Verified contrast (WCAG 2.2, relative-luminance formula; computed 25 Oct 2026 from `globals.css`):**
 
-Retired tokens: `paper`, `seal`, `seal-tint`, `simulated`, `simulated-tint`. Notices and legal explanations use `info-tint`; demo and simulated labels use `warning` (they are, in effect, a pending-review state).
-
-**Verified contrast (WCAG 2.2, relative-luminance formula; recomputed 25 Oct 2026 from the hex values in `frontend/src/app/globals.css`):**
-
-| Foreground | `surface` | `canvas` | `surface-subtle` | `surface-hover` | Own tint |
+| Foreground | `surface` | `canvas` | `surface-subtle` | `surface-hover` | `peach` |
 | --- | --- | --- | --- | --- | --- |
-| `ink` | 14.4 | 12.9 | 13.5 | 12.0 | 12.7–13.1 on every tint |
-| `ink-muted` | 6.5 | 5.8 | 6.1 | 5.4 | 5.7–5.9 on every tint |
-| `ink-faint` | 4.8 | 4.3 ✗ | 4.5 ✗ (4.47) | 4.0 ✗ | – |
-| `primary` | 11.7 | 10.4 | 10.9 | 9.7 | 10.3 on `info-tint` |
-| `info` | 6.9 | 6.2 | 6.5 | 5.8 | 6.1 |
-| `success` | 5.6 | 5.0 | 5.3 | 4.7 | 5.0 |
-| `warning` | 5.1 | 4.5 | 4.7 | 4.2 ✗ | 4.6 |
-| `danger` | 6.3 | 5.6 | 5.9 | 5.2 | 5.5 |
-| `brass` (decorative only) | 3.6 | 3.2 | 3.4 | 3.0 | – |
-| `control` (boundary) | 3.8 | 3.4 | 3.5 | 3.2 | – |
-| `rule-strong` (decorative) | 2.0 | 1.8 | – | – | – |
+| `ink` | 15.1 | 14.5 | 13.9 | 12.9 | 13.8 |
+| `ink-muted` | 6.5 | 6.2 | 5.9 | 5.5 | 5.9 |
+| `ink-faint` (placeholders only) | 4.7 | 4.5 | 4.3 ✗ | 4.1 ✗ | 4.3 ✗ |
+| `accent-strong` / `info` / `focus` | 6.0 | 5.8 | 5.5 | 5.1 | 5.5 |
+| `accent-display` (large text only) | 3.7 | 3.5 | – | – | 3.3 |
+| `accent` (decorative only) | 2.4 | 2.3 | 2.2 | 2.1 | 2.2 |
+| `control` (boundary) | 3.7 | 3.5 | 3.4 | 3.2 | 3.4 |
+| `success` / `warning` / `danger` | 6.1 / 6.1 / 6.6 | 5.9 / 5.8 / 6.3 | 5.6 / 5.6 / 6.0 | 5.2 / 5.2 / 5.6 | – |
 
-White on `primary` 11.7:1 and on `primary-hover` 14.4:1. ✗ = below 4.5:1 for normal text, so that pair is not used for text: `ink-faint` appears only as placeholder text inside white inputs and as a decorative breadcrumb chevron; `warning` text never sits on `surface-hover`. Fixes made in this review: input, select, upload-zone and secondary-button borders moved from `rule-strong` (2.0:1, below the 3:1 needed for control boundaries) to `control`; the landing page's step numbers moved from `brass` (3.6:1 as small text) to `ink-muted`.
+White on `primary` 15.1:1. Status colours on their own tints: success 5.4, warning 5.4, danger 5.7; `ink` 13.2+ and `ink-muted` 5.7+ on every tint. ✗ = below 4.5:1, so that pair is not used for text. `accent` (#F28B53) fails even the 3:1 large-text minimum on white, so it never carries text: orange words use `accent-display` (large) or `accent-strong` (any size).
+
+Retired: the v1.2 Oxford Blue and brass tokens (`brass` became `accent`).
 
 ### 2.2 Rules
 
@@ -100,7 +100,7 @@ White on `primary` 11.7:1 and on `primary-hover` 14.4:1. ✗ = below 4.5:1 for n
 
 | Role | Family | Why |
 | --- | --- | --- |
-| UI and body | **Geist Sans** (variable weight; 400, 500, 600 used) | Clear at small sizes, precise and neutral; loaded with `next/font/google` |
+| UI and body | **Geist Sans** (variable weight; 400, 500, 600 and 700 for marketing headlines) | Clear at small sizes, precise and neutral; loaded with `next/font/google` |
 | Hashes, references, code | **Geist Mono** | Distinguishes 0/O and 1/l; makes hashes readable |
 | Future Hindi | To be chosen (Geist has no Devanagari); a Devanagari face with matching metrics must be selected before Hindi ships | – |
 
@@ -113,7 +113,7 @@ Values are the `--text-*` tokens in `frontend/src/app/globals.css`.
 | Token | Size / line height | Weight | Use |
 | --- | --- | --- | --- |
 | `display` | 1.75 / 2.25 | 600 | Financial figures (28px); max one per card |
-| `h1` | 1.75 / 2.25 | 600 | Page title (28px) |
+| `h1` | 1.875 / 2.375 | 600 | Page title (30px); the landing hero uses 36–56px bold |
 | `h2` | 1.25 / 1.75 | 600 | Section title (20px) |
 | `h3` | 1 / 1.5 | 600 | Card title (16px) |
 | `body` | 0.9375 / 1.5 | 400 | Default text (15px) |

@@ -112,9 +112,7 @@ def detect_mime_type(path: Path) -> str:
         else:
             looks_like_email = _EMAIL_HEADER.match(data) and b"\nFrom: " in b"\n" + data
             return "message/rfc822" if looks_like_email else "text/plain"
-    raise UnsupportedFileType(
-        "Allowed types: PDF, JPEG, PNG, HEIC, email (.eml) and UTF-8 text."
-    )
+    raise UnsupportedFileType("Allowed types: PDF, JPEG, PNG, HEIC, email (.eml) and UTF-8 text.")
 
 
 def _safe_segment(value: str) -> str:

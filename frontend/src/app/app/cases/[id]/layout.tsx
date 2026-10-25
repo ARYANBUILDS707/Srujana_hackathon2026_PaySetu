@@ -59,7 +59,7 @@ function CaseHeader() {
                   aria-current={active ? "page" : undefined}
                   className={`block border-b-2 px-4 py-3 text-small font-medium transition-colors duration-150 ${
                     active
-                      ? "border-brass text-ink"
+                      ? "border-accent text-ink"
                       : "border-transparent text-ink-muted hover:border-rule-strong hover:text-ink"
                   }`}
                 >

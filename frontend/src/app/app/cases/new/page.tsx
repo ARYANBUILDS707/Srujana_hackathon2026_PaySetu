@@ -110,7 +110,7 @@ export default function NewDeliveryPage() {
           </Notice>
         ) : null}
 
-        <Card title="Buyer">
+        <Card title="1. Who did you deliver to?" description="Choose the buyer, or add a new one.">
           <div className="flex flex-col gap-4">
             {buyers.data.length > 0 ? (
               <Field label="Buyer" required error={fieldError("buyer_id")}>
@@ -185,7 +185,10 @@ export default function NewDeliveryPage() {
           </div>
         </Card>
 
-        <Card title="Invoice and delivery">
+        <Card
+          title="2. What did you deliver, and when?"
+          description="Use the dates on the invoice and the challan."
+        >
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Invoice number" required error={fieldError("invoice_number")}>
               {(control) => (
@@ -258,7 +261,10 @@ export default function NewDeliveryPage() {
           </div>
         </Card>
 
-        <Card title="Payment terms">
+        <Card
+          title="3. Were payment terms agreed in writing?"
+          description="This decides how the payment deadline is worked out."
+        >
           <fieldset className="flex flex-col gap-3">
             <legend className="sr-only">Deal type</legend>
             {(

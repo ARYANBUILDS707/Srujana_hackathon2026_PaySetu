@@ -54,6 +54,30 @@ export const appCopy = {
     "The bank rate used here has not been verified against an RBI notification. This figure is illustrative only.",
 };
 
+/** Plain-language meanings for the DeemedClock (PaySetu's reading; pending legal review). */
+export const clockGlossary = [
+  {
+    term: "Objection window",
+    meaning:
+      "The 15 days after delivery (the delivery day itself is not counted) in which the buyer can object in writing. Email, letters and chat messages count as writing; a phone call does not.",
+  },
+  {
+    term: "Acceptance",
+    meaning:
+      'If the buyer makes no written objection within those 15 days, the delivery day itself counts as the day of acceptance ("deemed acceptance"). If the buyer objects in writing in time, acceptance is the day the objection is removed.',
+  },
+  {
+    term: "Payment deadline",
+    meaning:
+      "Without a written agreement, payment is due within 15 days of acceptance. With a written agreement, by the agreed date, and never more than 45 days after acceptance.",
+  },
+  {
+    term: "Interest start",
+    meaning:
+      "If payment is late, interest can run from the day after the deadline. PaySetu shows it as an illustrative figure only.",
+  },
+];
+
 export const acceptanceStateLabel: Record<string, string> = {
   window_open: "Objection window open",
   objection_raised: "Objection raised",
@@ -192,10 +216,10 @@ export function nextActionCopy(next: CaseDetail["next_action"], caseId: string):
       };
     case "generate_pack":
       return {
-        title: "Prepare the Sealed Pack",
-        body: "Pack export is not available in this demo build yet.",
-        href: `${base}/checklist`,
-        cta: "Review Case Strength",
+        title: "Download the evidence pack",
+        body: "The required evidence is in place. Download the pack: PaySetu checks every file and the timeline before building it.",
+        href: `${base}#evidence-pack`,
+        cta: "Go to Evidence pack",
       };
     case "share_or_file":
       return {

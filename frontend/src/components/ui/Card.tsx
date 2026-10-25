@@ -18,7 +18,7 @@ export function Card({
   return (
     <section
       id={id}
-      className={`scroll-mt-20 rounded-lg border border-rule bg-surface p-4 md:p-6 ${className}`}
+      className={`scroll-mt-20 rounded-lg border border-rule bg-surface shadow-card p-4 md:p-6 ${className}`}
     >
       {title ? (
         <header className="mb-5 flex flex-wrap items-start justify-between gap-3">

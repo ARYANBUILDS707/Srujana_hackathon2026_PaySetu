@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { LoadingBlock } from "@/components/ui/Notice";
-import { api, SESSION_ENDED_EVENT } from "@/lib/api/client";
+import { ErrorState, LoadingBlock } from "@/components/ui/Notice";
+import { api, asApiError, SESSION_ENDED_EVENT, type ApiError } from "@/lib/api/client";
 import type { Me } from "@/lib/api/types";
 import { loginHref } from "./redirect";
 
@@ -31,6 +31,8 @@ export function useSession(): SessionValue {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
+  const [loadError, setLoadError] = useState<ApiError | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,13 +40,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .then((current) => {
         if (!cancelled) setMe(current);
       })
-      .catch(() => {
-        if (!cancelled) router.replace(loginHref(window.location.pathname));
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        const failure = asApiError(e);
+        // Only 401 means "not signed in". A rate limit, network or server error must not
+        // look like a sign-out: show it with a retry instead.
+        if (failure.status === 401) router.replace(loginHref(window.location.pathname));
+        else setLoadError(failure);
       });
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, attempt]);
 
   useEffect(() => {
     const onEnded = () => {
@@ -78,6 +85,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return current;
   }, []);
 
+  if (!me && loadError)
+    return (
+      <div className="mx-auto max-w-7xl p-4 lg:p-8">
+        <ErrorState
+          message={loadError.message}
+          requestId={loadError.requestId}
+          onRetry={() => {
+            setLoadError(null);
+            setAttempt((n) => n + 1);
+          }}
+        />
+      </div>
+    );
   if (!me)
     return (
       <div className="mx-auto max-w-7xl p-4 lg:p-8">

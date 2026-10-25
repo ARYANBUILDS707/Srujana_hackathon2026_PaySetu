@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Wordmark } from "@/components/ui/Wordmark";
 import type { ReactNode } from "react";
 import { landingCopy } from "@/content/landing";
 
@@ -8,18 +8,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-rule bg-surface">
         <div className="mx-auto flex h-16 max-w-7xl items-center px-4 md:px-8">
-          <Link href="/" className="flex items-center gap-2 text-h3 font-semibold text-primary">
-            <span
-              aria-hidden="true"
-              className="flex size-7 items-center justify-center rounded-md bg-primary text-small text-white"
-            >
-              P
-            </span>
-            {landingCopy.productName}
-          </Link>
+          <Wordmark href="/" />
         </div>
       </header>
-      <main className="flex flex-1 items-start justify-center px-4 py-10 md:py-16">
+      <main className="flex flex-1 items-start justify-center bg-[radial-gradient(60%_50%_at_50%_0%,var(--color-peach),transparent)] px-4 py-10 md:py-16">
         <div className="w-full max-w-md">{children}</div>
       </main>
       <footer className="border-t border-rule bg-surface py-6">
