@@ -5,8 +5,11 @@
 .env.*
 !.env.example
 
-# Runtime data: evidence, packs and databases (ARCHITECTURE.md Section 6)
-storage/
+# Runtime data: evidence, packs, outbox and databases (ARCHITECTURE.md Section 6).
+# Anchored to the runtime folders only: an unanchored `storage/` also matched the source
+# package backend/app/storage/, which was therefore never committed.
+/storage/
+/backend/storage/
 *.db
 *.db-journal
 *.db-wal
