@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from app.clock import Clock, get_clock
 from app.config import Settings
 from app.db import get_session
-from app.errors import Forbidden
 from app.security.rate_limit import RateLimitCategory, RateLimiter, client_ip
 from app.security.sessions import SESSION_COOKIE
 from app.services import auth as auth_service
@@ -55,17 +54,3 @@ def current_principal(
 
 
 PrincipalDep = Annotated[SupplierPrincipal, Depends(current_principal)]
-
-
-def verified_principal(principal: PrincipalDep) -> SupplierPrincipal:
-    """Phase 7A: the case workspace (cases, buyers, evidence, packs, supplier profile)
-    requires a verified email. 403 `email_not_verified` otherwise; account routes (me,
-    resend, change password, sign out) use `PrincipalDep` and stay available."""
-    if not principal.email_verified:
-        raise Forbidden(
-            "Confirm your email address to use the case workspace.", code="email_not_verified"
-        )
-    return principal
-
-
-VerifiedPrincipalDep = Annotated[SupplierPrincipal, Depends(verified_principal)]

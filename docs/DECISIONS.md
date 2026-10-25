@@ -533,7 +533,7 @@ Implements IMPLEMENTATION_PLAN T3.1 to T3.3 (signup, login, logout, me) under th
 | **Log fields** | The JSON log allow-list gains `kind`, `outcome`, `mode` and `user_id` (email delivery only) | Done |
 | **Not built** | Password history beyond the current password; breached-password checks; email verification at signup; per-account lockout beyond rate limits; a notification when "sign out everywhere" is used | Later security work |
 
-## 10. Phase 7A: Email Verification and Account Activation (25 Oct 2026, owner-directed)
+## 10. Phase 7A: Email Verification and Account Activation (25 Oct 2026, owner-directed; access requirement removed later, see Section 12)
 
 | Item | Decision / deviation | Resolve in |
 | --- | --- | --- |
@@ -566,4 +566,13 @@ Implements IMPLEMENTATION_PLAN T3.1 to T3.3 (signup, login, logout, me) under th
 | **Access** | Signed-in, email-verified supplier only (`VerifiedPrincipalDep`), own records only (another supplier's certificate answers 404). Mounted with the other supplier routes, so not in production during the evaluation build. The case workspace does **not** require business verification | Done |
 | **Validation messages** | Found while testing: messages from custom validators reached users with pydantic's "Value error, " prefix (also signup password messages since Phase 6). The central handler now strips it | Done |
 | **Phase 7C (not built)** | Reviewer role and authentication, review queue, NEEDS_INFORMATION / VERIFIED / REJECTED actions with reasons, dispute resolution for contested claims, any official Udyam check (only through a sanctioned API; never scraping or CAPTCHA bypass), notifying the supplier of decisions, linking a verified profile to eligibility, malware scanning of uploads | Phase 7C |
+
+## 12. Email verification removed as an access requirement (owner-directed, after the final redesign)
+
+| Item | Decision | Restore |
+| --- | --- | --- |
+| **What changed** | The owner asked for mandatory email verification to be removed so that signup and login open the dashboard directly. Removed: the `VerifiedPrincipalDep` gate (403 `email_not_verified`) on the case-workspace and onboarding routes, which now use the session principal (`PrincipalDep`) again; the verification email sent at signup; `POST /auth/verify-email` and `POST /auth/resend-verification`; the frontend confirmation screen, resend button, "I have confirmed my email", `/verify-email` page, verification badge and resend card in Settings, the "Confirm email" navigation; the `EMAIL_VERIFICATION_HOURS` setting, the three verification rate-limit categories, the verification email template, and `DEMO_ACCOUNT_VERIFIED` | Phase 7A is commit `578c865` |
+| **What is unchanged** | Signup, login, logout, sign out everywhere, forgot, reset and change password, Argon2id, sessions, CSRF, rate limits on auth, and **every ownership check** (another supplier's records still answer 404; `test_authorisation.py` passes unchanged in its assertions). Business onboarding, the five core modules and the design | – |
+| **Data kept** | No migration. The `email_verification_tokens` table and `users.email_verified_at` stay with all their rows. `user.email_verified` is still returned by signup, login and `/auth/me` as a recorded fact that gates nothing. A completed password reset still sets `email_verified_at` and revokes outstanding verification links, exactly as before (unchanged Phase 6.1/7A reset behaviour) | – |
+| **Consequence** | Anyone can create an account with an address they do not control. Acceptable for the local evaluation build; restore verification (or an equivalent control) before any real-user use | Before real users |
 

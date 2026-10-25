@@ -1,7 +1,6 @@
 """Supplier case endpoints of the evaluation build (API.md Sections 2.3–2.10, subset).
 
-Every route requires a signed-in supplier with a verified email (`VerifiedPrincipalDep`,
-Phase 6 and 7A) and passes the session's
+Every route requires a signed-in supplier (`PrincipalDep`, Phase 6) and passes the session's
 supplier ID to the services, which scope every query by it: another supplier's case, buyer,
 response or evidence answers 404. IDs in paths and bodies are never trusted for ownership.
 
@@ -18,7 +17,7 @@ from typing import IO, Annotated, BinaryIO
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from app.api.deps import ClockDep, LimiterDep, SessionDep, SettingsDep, VerifiedPrincipalDep
+from app.api.deps import ClockDep, LimiterDep, PrincipalDep, SessionDep, SettingsDep
 from app.domain.types import EvidenceKind
 from app.schemas import cases as schemas
 from app.security.rate_limit import RateLimitCategory
@@ -38,25 +37,25 @@ StoreDep = Annotated[EvidenceStore, Depends(_store)]
 
 
 @router.get("/supplier", response_model=schemas.SupplierOut)
-def get_supplier(principal: VerifiedPrincipalDep, session: SessionDep) -> schemas.SupplierOut:
+def get_supplier(principal: PrincipalDep, session: SessionDep) -> schemas.SupplierOut:
     return service.get_supplier(session, principal.supplier_id)
 
 
 @router.get("/buyers", response_model=list[schemas.BuyerOut])
-def list_buyers(principal: VerifiedPrincipalDep, session: SessionDep) -> list[schemas.BuyerOut]:
+def list_buyers(principal: PrincipalDep, session: SessionDep) -> list[schemas.BuyerOut]:
     return service.list_buyers(session, principal.supplier_id)
 
 
 @router.post("/buyers", response_model=schemas.BuyerOut, status_code=201)
 def create_buyer(
-    principal: VerifiedPrincipalDep, data: schemas.BuyerCreate, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep, data: schemas.BuyerCreate, session: SessionDep, clock: ClockDep
 ) -> schemas.BuyerOut:
     return service.create_buyer(session, principal.supplier_id, clock, data)
 
 
 @router.get("/cases", response_model=list[schemas.CaseSummaryOut])
 def list_cases(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     session: SessionDep,
     clock: ClockDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -66,28 +65,28 @@ def list_cases(
 
 @router.post("/cases", response_model=schemas.CaseOut, status_code=201)
 def create_case(
-    principal: VerifiedPrincipalDep, data: schemas.CaseCreate, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep, data: schemas.CaseCreate, session: SessionDep, clock: ClockDep
 ) -> schemas.CaseOut:
     return service.create_case(session, principal.supplier_id, clock, data)
 
 
 @router.get("/cases/{case_id}", response_model=schemas.CaseOut)
 def get_case(
-    principal: VerifiedPrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
 ) -> schemas.CaseOut:
     return service.get_case(session, principal.supplier_id, clock, case_id)
 
 
 @router.get("/cases/{case_id}/checklist", response_model=schemas.ChecklistOut)
 def get_checklist(
-    principal: VerifiedPrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
 ) -> schemas.ChecklistOut:
     return service.get_checklist(session, principal.supplier_id, clock, case_id)
 
 
 @router.get("/cases/{case_id}/interest", response_model=schemas.InterestOut)
 def get_interest(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     case_id: str,
     session: SessionDep,
     clock: ClockDep,
@@ -98,7 +97,7 @@ def get_interest(
 
 @router.get("/cases/{case_id}/responses", response_model=list[schemas.ResponseOut])
 def list_responses(
-    principal: VerifiedPrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
+    principal: PrincipalDep, case_id: str, session: SessionDep, clock: ClockDep
 ) -> list[schemas.ResponseOut]:
     return service.list_responses(session, principal.supplier_id, clock, case_id)
 
@@ -107,7 +106,7 @@ def list_responses(
     "/cases/{case_id}/responses", response_model=list[schemas.ResponseOut], status_code=201
 )
 def record_response(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     case_id: str,
     data: schemas.ResponseCreate,
     session: SessionDep,
@@ -121,7 +120,7 @@ def record_response(
     response_model=list[schemas.ResponseOut],
 )
 def remove_objection(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     case_id: str,
     response_id: str,
     data: schemas.ObjectionRemoval,
@@ -135,14 +134,14 @@ def remove_objection(
 
 @router.get("/cases/{case_id}/evidence", response_model=list[schemas.EvidenceOut])
 def list_evidence(
-    principal: VerifiedPrincipalDep, case_id: str, session: SessionDep
+    principal: PrincipalDep, case_id: str, session: SessionDep
 ) -> list[schemas.EvidenceOut]:
     return service.list_evidence(session, principal.supplier_id, case_id)
 
 
 @router.post("/cases/{case_id}/evidence", response_model=schemas.EvidenceOut, status_code=201)
 def upload_evidence(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     case_id: str,
     limiter: LimiterDep,
     session: SessionDep,
@@ -175,7 +174,7 @@ def _chunks(handle: BinaryIO) -> Iterator[bytes]:
 
 @router.get("/evidence/{evidence_id}/download")
 def download_evidence(
-    principal: VerifiedPrincipalDep, evidence_id: str, session: SessionDep, store: StoreDep
+    principal: PrincipalDep, evidence_id: str, session: SessionDep, store: StoreDep
 ) -> FileResponse:
     item, path = service.evidence_file(session, principal.supplier_id, store, evidence_id)
     return FileResponse(
@@ -188,7 +187,7 @@ def download_evidence(
 
 @router.post("/cases/{case_id}/integrity-check", response_model=schemas.IntegrityOut)
 def integrity_check(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     case_id: str,
     session: SessionDep,
     clock: ClockDep,
@@ -199,7 +198,7 @@ def integrity_check(
 
 @router.get("/cases/{case_id}/timeline", response_model=list[schemas.TimelineEventOut])
 def timeline(
-    principal: VerifiedPrincipalDep, case_id: str, session: SessionDep
+    principal: PrincipalDep, case_id: str, session: SessionDep
 ) -> list[schemas.TimelineEventOut]:
     return service.list_timeline(session, principal.supplier_id, case_id)
 
@@ -214,7 +213,7 @@ def _stream_and_close(handle: IO[bytes]) -> Iterator[bytes]:
 
 @router.get("/cases/{case_id}/evidence-pack")
 def download_evidence_pack(
-    principal: VerifiedPrincipalDep,
+    principal: PrincipalDep,
     case_id: str,
     limiter: LimiterDep,
     session: SessionDep,

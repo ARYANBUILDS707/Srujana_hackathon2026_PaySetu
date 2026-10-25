@@ -46,7 +46,6 @@ class SupplierPrincipal:
     user_id: str
     supplier_id: str
     session_id: str
-    email_verified: bool = False  # Phase 7A: gate for the case workspace (VerifiedPrincipalDep)
 
 
 @dataclass(frozen=True)
@@ -230,12 +229,7 @@ def resolve(
             raise Unauthenticated("Sign in to continue.", headers=clear)
         if (now - _parse(row.last_seen_at)).total_seconds() >= tokens.SLIDE_INTERVAL_SECONDS:
             row.last_seen_at = format_utc_timestamp(now)
-        return SupplierPrincipal(
-            user_id=user.id,
-            supplier_id=supplier.id,
-            session_id=row.id,
-            email_verified=user.email_verified_at is not None,
-        )
+        return SupplierPrincipal(user_id=user.id, supplier_id=supplier.id, session_id=row.id)
 
 
 def me(session: Session, principal: SupplierPrincipal) -> schemas.MeOut:
@@ -247,9 +241,7 @@ def me(session: Session, principal: SupplierPrincipal) -> schemas.MeOut:
         return _me(user, supplier)
 
 
-def create_demo_account(
-    session: Session, clock: Clock, email: str, password: str, *, verified: bool = False
-) -> str:
+def create_demo_account(session: Session, clock: Clock, email: str, password: str) -> str:
     """Give the seeded demo supplier a login (operator action; `make demo-account`).
 
     Explicit and narrow: it only ever assigns a supplier marked `is_demo` that has no owner,
@@ -281,9 +273,7 @@ def create_demo_account(
             terms_version=schemas.CURRENT_TERMS_VERSION,
             terms_accepted_at=now,
             is_active=True,
-            # Phase 7A: unverified unless the operator explicitly asks (non-production only;
-            # see seed/demo_account.py). Never true for any other account.
-            email_verified_at=now if verified else None,
+            email_verified_at=None,
             last_login_at=None,
             created_at=now,
             updated_at=now,
@@ -505,21 +495,10 @@ def logout_all(session: Session, clock: Clock, principal: SupplierPrincipal) -> 
         _revoke_all_sessions(session, principal.user_id, _now(clock))
 
 
-# ------------------------------------------------------------- Phase 7A: email verification
-
-INVALID_VERIFICATION_TOKEN = (
-    "This verification link is invalid, has expired or has already been used."
-)
-
-
-@dataclass(frozen=True)
-class PendingVerification:
-    """A verification token waiting to be emailed. Never store or log `token`."""
-
-    token_id: str
-    user_id: str
-    email: str
-    token: str
+# ------------------------------------------------- email verification (records kept only)
+# Email verification was removed as an access requirement (DECISIONS.md Section 12). The
+# table and `users.email_verified_at` are kept; a password reset still records the inbox as
+# verified and revokes any outstanding verification link, as before.
 
 
 def _revoke_verification_tokens(session: Session, user_id: str, now: str) -> None:
@@ -532,104 +511,3 @@ def _revoke_verification_tokens(session: Session, user_id: str, now: str) -> Non
         )
         .values(revoked_at=now)
     )
-
-
-def issue_email_verification(
-    session: Session, clock: Clock, settings: Settings, user_id: str
-) -> PendingVerification | None:
-    """A new verification token for an unverified user (earlier unused ones are revoked);
-    None if the email is already verified."""
-    with session.begin():
-        user = session.get(User, user_id)
-        if user is None or user.email_verified_at is not None:
-            return None
-        now = clock.now_utc()
-        _revoke_verification_tokens(session, user.id, format_utc_timestamp(now))
-        token = tokens.new_token()
-        row = EmailVerificationToken(
-            id=str(uuid.uuid4()),
-            user_id=user.id,
-            email=user.email,
-            token_hash=tokens.keyed_hash(settings, token),
-            created_at=format_utc_timestamp(now),
-            expires_at=format_utc_timestamp(
-                now + timedelta(hours=settings.email_verification_hours)
-            ),
-            used_at=None,
-            revoked_at=None,
-        )
-        session.add(row)
-        return PendingVerification(row.id, user.id, user.email, token)
-
-
-def verification_link(settings: Settings, token: str) -> str:
-    # Built from PUBLIC_BASE_URL (validated setting), never from the request's Host header.
-    # The token is in the fragment, which browsers never send to servers.
-    return f"{settings.public_base_url}/verify-email#token={token}"
-
-
-def deliver_email_verification(
-    database: Database,
-    sender: EmailSender,
-    settings: Settings,
-    clock: Clock,
-    pending: PendingVerification,
-) -> bool:
-    """Email the link; if delivery fails the token is revoked (no valid undelivered link)."""
-    message = templates.email_verification(
-        pending.email, verification_link(settings, pending.token), settings.email_verification_hours
-    )
-    if deliver(sender, message, pending.user_id):
-        return True
-    with database.session() as session, session.begin():
-        session.execute(
-            update(EmailVerificationToken)
-            .where(
-                EmailVerificationToken.id == pending.token_id,
-                EmailVerificationToken.used_at.is_(None),
-            )
-            .values(revoked_at=_now(clock))
-        )
-    return False
-
-
-def verify_email(session: Session, clock: Clock, settings: Settings, token: str) -> None:
-    """Consume the token and mark ITS user's email verified, in one transaction.
-
-    One conditional UPDATE consumes the token, so concurrent requests cannot both succeed.
-    The token verifies only the user it was issued to, and only while that user's email is
-    still the address the link was sent to. The caller's session (if any) is irrelevant:
-    no session is created, changed or upgraded, and no role or privilege is granted.
-    """
-    if len(token) > tokens.MAX_TOKEN_LENGTH:
-        raise BadRequest(INVALID_VERIFICATION_TOKEN, code="invalid_verification_token")
-    token_hash = tokens.keyed_hash(settings, token)
-    with session.begin():
-        now = _now(clock)
-        result = session.execute(
-            update(EmailVerificationToken)
-            .where(
-                EmailVerificationToken.token_hash == token_hash,
-                EmailVerificationToken.used_at.is_(None),
-                EmailVerificationToken.revoked_at.is_(None),
-                EmailVerificationToken.expires_at > now,
-            )
-            .values(used_at=now)
-            .execution_options(synchronize_session=False)
-        )
-        row = (
-            session.scalars(
-                select(EmailVerificationToken).where(
-                    EmailVerificationToken.token_hash == token_hash
-                )
-            ).first()
-            if cast(CursorResult[Any], result).rowcount == 1
-            else None
-        )
-        user = session.get(User, row.user_id) if row is not None else None
-        if row is None or user is None or not user.is_active or user.email != row.email:
-            raise BadRequest(INVALID_VERIFICATION_TOKEN, code="invalid_verification_token")
-        if user.email_verified_at is None:
-            user.email_verified_at = now
-            user.updated_at = now
-        _revoke_verification_tokens(session, user.id, now)

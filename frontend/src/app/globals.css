@@ -37,6 +37,11 @@
      accent-strong: orange text and links at any size (5.1:1+ on every surface). */
   --color-primary: #262626;
   --color-primary-hover: #000000;
+  /* Text on filled primary / success / danger backgrounds (buttons, markers). */
+  --color-on-primary: #ffffff;
+  --color-on-status: #ffffff;
+  /* Elapsed days on the DeemedClock strip (same as primary in light; softer in dark). */
+  --color-strip: #262626;
   --color-accent: #f28b53;
   --color-accent-display: #d9622a;
   --color-accent-strong: #a4471a;
@@ -95,6 +100,70 @@
   --breakpoint-xl: 80rem;
 
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/*
+ * Dark theme (DESIGN.md Section 2.3). The same semantic names, overridden when
+ * <html data-theme="dark"> (set before first paint by public/theme-init.js). Contrast for
+ * every text pair is AA or better; see the table in DESIGN.md.
+ */
+:root[data-theme="dark"] {
+  --color-canvas: #171717;
+  --color-surface: #2b2b2b;
+  --color-surface-subtle: #222222;
+  --color-surface-hover: #363636;
+  --color-surface-sunken: #363636;
+  --color-peach: #3a2a21;
+
+  --color-rule: #444444;
+  --color-rule-strong: #555555;
+  --color-control: #8a8a8a;
+
+  --color-ink: #faf8f5;
+  --color-ink-muted: #b8b8b8;
+  --color-ink-faint: #a3a3a3;
+
+  /* Primary actions invert to cream with dark text, keeping one clear primary. */
+  --color-primary: #faf8f5;
+  --color-primary-hover: #e8e4de;
+  --color-on-primary: #171717;
+  --color-on-status: #171717;
+  --color-strip: #9a9590;
+  --color-accent: #f28b53;
+  --color-accent-display: #f28b53;
+  --color-accent-strong: #f4a47a;
+
+  --color-success: #74c79a;
+  --color-success-tint: #1c3326;
+  --color-warning: #e5b566;
+  --color-warning-tint: #3b2f18;
+  --color-danger: #f2918a;
+  --color-danger-tint: #3d2321;
+  --color-info: #f4a47a;
+  --color-info-tint: #3a2a21;
+  --color-primary-tint: #3a2a21;
+  --color-focus: #f4a47a;
+
+  --shadow-float: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* A brief colour cross-fade while the theme changes (class added by ThemeProvider). */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition:
+    background-color 180ms var(--ease-standard),
+    border-color 180ms var(--ease-standard),
+    color 180ms var(--ease-standard),
+    fill 180ms var(--ease-standard) !important;
 }
 
 @layer base {

@@ -9,7 +9,7 @@ export function Wordmark({ href }: { href: string }) {
     >
       <span
         aria-hidden="true"
-        className="relative flex size-7 items-center justify-center rounded-md bg-primary text-small font-bold text-white"
+        className="relative flex size-7 items-center justify-center rounded-md bg-primary text-small font-bold text-on-primary"
       >
         P
         <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-surface bg-accent" />

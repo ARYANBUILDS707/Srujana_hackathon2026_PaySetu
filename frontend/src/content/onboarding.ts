@@ -8,8 +8,6 @@ export const onboardingCopy = {
     "Tell us about your enterprise and upload its Udyam certificate. Your details are submitted for review; nothing is verified automatically.",
   selfDeclared:
     "Everything here is self-declared. PaySetu has not checked it against the Udyam portal. The SHA-256 fingerprint records exactly which file you uploaded; it does not show that the certificate is genuine.",
-  separateFromCases:
-    "Your case workspace does not depend on this review: you can keep recording deliveries and evidence.",
   sections: {
     enterprise: "Enterprise",
     address: "Registered address",

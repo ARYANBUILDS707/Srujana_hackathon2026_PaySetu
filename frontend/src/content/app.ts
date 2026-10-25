@@ -6,12 +6,8 @@ import { formatDate } from "@/lib/format";
 
 export const appCopy = {
   productName: "PaySetu",
-  demoBanner: {
-    title: "Demo mode.",
-    body: "Evaluation build running locally. Do not enter real business or personal data.",
-  },
-  disclaimer:
-    "PaySetu prepares evidence. It is not legal advice. Dates and amounts are illustrative until reviewed by an advocate.",
+  // Dashboard only: a single short disclaimer.
+  shortDisclaimer: "PaySetu prepares evidence. It is not legal advice.",
   nav: [
     { href: "/app", label: "Dashboard", match: "exact", icon: "dashboard" as const },
     { href: "/app/cases", label: "Cases", match: "prefix", icon: "cases" as const },

@@ -108,7 +108,7 @@ erDiagram
 | `used_at` | ts | yes | Single use |
 | `created_at` | ts | no | |
 
-### 3.3a `email_verification_tokens` (Phase 7A, as built)
+### 3.3a `email_verification_tokens` (Phase 7A, as built; kept but no longer written except by revocation during a password reset, since verification stopped being required, DECISIONS.md Section 12)
 
 | Column | Type | Null | Constraints / notes |
 | --- | --- | --- | --- |

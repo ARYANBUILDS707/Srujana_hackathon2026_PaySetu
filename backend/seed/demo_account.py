@@ -5,12 +5,6 @@
 Reads DEMO_ACCOUNT_EMAIL (default `demo@paysetu.example`) and DEMO_ACCOUNT_PASSWORD from the
 process environment only; the password is never printed or logged. Refuses production.
 
-Email verification (Phase 7A): the demo login starts UNVERIFIED, like every account; verify it
-through the development outbox (`make email-outbox`). For automated local runs only,
-DEMO_ACCOUNT_VERIFIED=1 marks this one synthetic demo login verified at creation. That is the
-only verification shortcut in the code base: it needs an operator command, refuses
-production, and applies only to the new login of the unowned synthetic demo supplier.
-
 Only a supplier marked `is_demo` with no owner is ever assigned. Demo data created before
 accounts existed therefore stays unowned (unreachable through the API) until this command is
 run, and no other supplier row is touched.
@@ -34,21 +28,19 @@ def main() -> int:
         return 1
     email = os.environ.get("DEMO_ACCOUNT_EMAIL", DEFAULT_EMAIL)
     password = os.environ.get("DEMO_ACCOUNT_PASSWORD", "")
-    verified = os.environ.get("DEMO_ACCOUNT_VERIFIED", "") == "1"
     if not password:
         print("Set DEMO_ACCOUNT_PASSWORD (at least 10 characters).", file=sys.stderr)
         return 1
     database = Database(settings.database_url)
     try:
         with database.session() as session:
-            create_demo_account(session, SystemClock(), email, password, verified=verified)
+            create_demo_account(session, SystemClock(), email, password)
     except ValueError as exc:
         print(f"Demo account not created: {exc}", file=sys.stderr)
         return 1
     finally:
         database.dispose()
-    state = "verified (DEMO_ACCOUNT_VERIFIED=1)" if verified else "unverified: sign in to verify"
-    print(f"Demo account created for {email}; it owns the synthetic demo supplier; {state}.")
+    print(f"Demo account created for {email}; it owns the synthetic demo supplier.")
     return 0
 
 

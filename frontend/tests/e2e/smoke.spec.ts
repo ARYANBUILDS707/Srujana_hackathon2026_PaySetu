@@ -22,7 +22,7 @@ test("landing page opens the workspace for a signed-in supplier", async ({ page 
 
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(page.getByText("Demo mode.")).toBeVisible();
+  await expect(page.getByText("Demo mode.")).toHaveCount(0); // the banner was removed
 });
 
 test("keyboard focus is visible on interactive elements", async ({ page }, testInfo) => {
@@ -34,13 +34,21 @@ test("keyboard focus is visible on interactive elements", async ({ page }, testI
   // a click on the top-left padding, which is not a control, then Tab through the controls.
   await page.mouse.click(1, 1);
 
-  for (let step = 0; step < 4; step++) {
+  // Tab through every control until focus leaves the page (an empty dashboard on a phone has
+  // only a few); each one must show a visible 2px outline.
+  let checked = 0;
+  for (let step = 0; step < 8; step++) {
     await page.keyboard.press("Tab");
     const outline = await page.evaluate(() => {
-      const style = getComputedStyle(document.activeElement as Element);
+      const active = document.activeElement;
+      if (!active || active === document.body) return null;
+      const style = getComputedStyle(active);
       return { style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
     });
+    if (outline === null) break;
     expect(outline.style).not.toBe("none");
     expect(outline.width).toBeGreaterThanOrEqual(2);
+    checked += 1;
   }
+  expect(checked).toBeGreaterThanOrEqual(3);
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ResendVerification } from "@/components/account/ResendVerification";
 import { Badge } from "@/components/ui/Badge";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,6 +13,7 @@ import { api, asApiError, type ApiError } from "@/lib/api/client";
 import type { Onboarding, PasswordUpdated } from "@/lib/api/types";
 import { useApiGet } from "@/lib/hooks/useApiGet";
 import { useSession } from "@/lib/session/SessionContext";
+import { useTheme, type ThemePreference } from "@/lib/theme/ThemeProvider";
 
 const copy = authCopy.settings;
 const MIN_PASSWORD = 10;
@@ -193,8 +193,51 @@ function BusinessStatus() {
   );
 }
 
+const THEME_OPTIONS: { value: ThemePreference; label: string; hint: string }[] = [
+  { value: "light", label: "Light", hint: "Warm white surfaces." },
+  { value: "dark", label: "Dark", hint: "Dark surfaces, easier in low light." },
+  { value: "system", label: "System", hint: "Follow this device's setting." },
+];
+
+/** Theme choice for this device only (stored in the browser, never sent to PaySetu). */
+function ThemeSetting() {
+  const { preference, setPreference } = useTheme();
+  return (
+    <Card title="Theme" description="Saved on this device only.">
+      <fieldset>
+        <legend className="sr-only">Colour theme</legend>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {THEME_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors duration-150 ${
+                preference === option.value
+                  ? "border-ink bg-surface-subtle"
+                  : "border-rule-strong hover:bg-surface-subtle"
+              }`}
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={option.value}
+                checked={preference === option.value}
+                onChange={() => setPreference(option.value)}
+                className="mt-1 size-4 shrink-0 accent-primary"
+              />
+              <span>
+                <span className="block text-body font-medium text-ink">{option.label}</span>
+                <span className="block text-small text-ink-muted">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
-  const { me, refresh } = useSession();
+  const { me } = useSession();
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader title={copy.title} description={copy.description} />
@@ -203,24 +246,13 @@ export default function SettingsPage() {
           <dt className="text-small text-ink-muted">Name</dt>
           <dd className="break-words text-ink">{me.user.full_name}</dd>
           <dt className="text-small text-ink-muted">Email</dt>
-          <dd className="break-all text-ink">
-            {me.user.email}{" "}
-            <Badge tone={me.user.email_verified ? "success" : "warning"}>
-              {me.user.email_verified
-                ? authCopy.verify.settingsVerified
-                : authCopy.verify.settingsUnverified}
-            </Badge>
-          </dd>
+          <dd className="break-all text-ink">{me.user.email}</dd>
           <dt className="text-small text-ink-muted">Business</dt>
           <dd className="break-words text-ink">{me.supplier.legal_name}</dd>
         </dl>
       </Card>
-      {me.user.email_verified ? null : (
-        <Card title={authCopy.verify.requiredTitle} description={authCopy.verify.scope}>
-          <ResendVerification onAlreadyVerified={() => void refresh()} />
-        </Card>
-      )}
-      {me.user.email_verified ? <BusinessStatus /> : null}
+      <BusinessStatus />
+      <ThemeSetting />
       <ChangePassword email={me.user.email} />
       <SignOutEverywhere />
     </div>

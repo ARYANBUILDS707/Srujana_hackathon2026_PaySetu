@@ -83,9 +83,6 @@ export default function OnboardingPage() {
           </Badge>
         }
       />
-      <Notice tone="info">
-        {copy.selfDeclared} {copy.separateFromCases}
-      </Notice>
       {current.editable ? (
         <Editor key={current.submissions.length} data={current} onChange={setLatest} />
       ) : (

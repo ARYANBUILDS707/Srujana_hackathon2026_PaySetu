@@ -88,7 +88,7 @@ function ProductPreview() {
                 <li key={String(label)} className="flex items-center gap-2 text-ink">
                   <span
                     aria-hidden="true"
-                    className={`flex size-4 items-center justify-center rounded-full ${ok ? "bg-success text-white" : "border border-rule-strong"}`}
+                    className={`flex size-4 items-center justify-center rounded-full ${ok ? "bg-success text-on-status" : "border border-rule-strong"}`}
                   >
                     {ok ? <Icon name="check" className="size-3" /> : null}
                   </span>
@@ -140,7 +140,7 @@ function ClockIllustration() {
         {Array.from({ length: 16 }, (_, day) => (
           <span
             key={day}
-            className={`h-8 flex-1 rounded-sm ${day <= 9 ? "bg-primary" : day === 10 ? "bg-accent" : "bg-surface-hover"}`}
+            className={`h-8 flex-1 rounded-sm ${day <= 9 ? "bg-strip" : day === 10 ? "bg-accent" : "bg-surface-hover"}`}
           />
         ))}
       </div>
@@ -160,18 +160,6 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
           <Wordmark href="/" />
           <nav aria-label="Primary" className="flex items-center gap-1 md:gap-2">
-            <a
-              href="#how-it-works"
-              className="hidden rounded-md px-3 py-2 text-small font-medium text-ink-muted hover:text-ink md:inline"
-            >
-              How it works
-            </a>
-            <a
-              href="#features"
-              className="hidden rounded-md px-3 py-2 text-small font-medium text-ink-muted hover:text-ink md:inline"
-            >
-              Features
-            </a>
             <Link
               href="/login"
               className="rounded-md px-3 py-2 text-small font-medium text-ink hover:bg-surface-subtle"
@@ -189,27 +177,19 @@ export default function LandingPage() {
         <section className="bg-[radial-gradient(70%_60%_at_50%_0%,var(--color-peach),transparent)]">
           <div className="mx-auto max-w-6xl px-4 pb-16 pt-14 md:px-8 md:pt-20 lg:pb-24">
             <div className="mx-auto max-w-4xl text-center">
-              <p className="inline-flex items-center gap-2 rounded-md border border-rule bg-surface px-3 py-1 text-small text-ink-muted">
-                <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
-                {copy.eyebrow}
-              </p>
-              <h1 className="mx-auto mt-6 max-w-4xl text-[2.25rem] font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-[3.5rem]">
+              <h1 className="mx-auto max-w-4xl text-[2.25rem] font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-[3.5rem]">
                 <span className="block">
                   {copy.headlineLead}{" "}
                   <span className="text-accent-display">{copy.headlineAccent}</span>
                 </span>
                 <span className="block">{copy.headlineTail}</span>
               </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-h3 font-normal leading-relaxed text-ink-muted">
-                {copy.subheading}
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <ButtonLink href="/app">{copy.openDemo}</ButtonLink>
                 <ButtonLink href="#how-it-works" variant="secondary">
                   {copy.seeHow}
                 </ButtonLink>
               </div>
-              <p className="mx-auto mt-4 max-w-xl text-small text-ink-muted">{copy.demoNote}</p>
             </div>
             <div className="mx-auto mt-12 max-w-4xl lg:mt-16">
               <ProductPreview />

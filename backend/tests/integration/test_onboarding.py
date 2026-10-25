@@ -23,7 +23,7 @@ from app.schemas.onboarding import DraftIn, normalise_udyam
 from app.services import onboarding as service
 from app.storage.business_store import BusinessDocumentStore
 from seed.demo import seed
-from tests.auth_helpers import CSRF, sign_in_as_demo, signup, verify_email
+from tests.auth_helpers import CSRF, sign_in_as_demo, signup
 
 UDYAM = "UDYAM-MH-12-0001234"
 FULL_DRAFT: dict[str, Any] = {
@@ -67,21 +67,20 @@ def app(ob_settings: Settings, frozen_clock: FrozenClock) -> Any:
     return create_app(ob_settings, clock=frozen_clock)
 
 
-def _verified_client(app: Any, settings: Settings, email: str) -> TestClient:
+def _signed_in_client(app: Any, settings: Settings, email: str) -> TestClient:
     client = TestClient(app)
     assert signup(client, email).status_code == 201
-    verify_email(client, settings, email)
     return client
 
 
 @pytest.fixture
 def client(app: Any, ob_settings: Settings) -> TestClient:
-    return _verified_client(app, ob_settings, "owner@example.com")
+    return _signed_in_client(app, ob_settings, "owner@example.com")
 
 
 @pytest.fixture
 def other(app: Any, ob_settings: Settings) -> TestClient:
-    return _verified_client(app, ob_settings, "other@example.com")
+    return _signed_in_client(app, ob_settings, "other@example.com")
 
 
 @pytest.fixture
@@ -494,7 +493,7 @@ def test_a_second_claim_on_the_same_number_goes_to_review_as_contested(
 def test_concurrent_claims_on_one_number_leave_exactly_one_uncontested(
     app: Any, ob_settings: Settings, frozen_clock: FrozenClock, db: Database
 ) -> None:
-    clients = [_verified_client(app, ob_settings, f"racer{n}@example.com") for n in range(3)]
+    clients = [_signed_in_client(app, ob_settings, f"racer{n}@example.com") for n in range(3)]
     for n, racer in enumerate(clients):
         _ready(racer, f"racer{n}")
     with db.session() as session:
@@ -548,13 +547,13 @@ def test_suppliers_cannot_see_or_touch_each_others_onboarding(
     assert _get(client).json()["enterprise_name"] == "Sample Fasteners (TEST)"
 
 
-def test_onboarding_needs_a_session_and_a_verified_email(app: Any, ob_settings: Settings) -> None:
+def test_onboarding_needs_a_session(app: Any, ob_settings: Settings) -> None:
     with TestClient(app) as anonymous:
         assert anonymous.get("/api/v1/onboarding").status_code == 401
+        assert _upload(anonymous, pdf()).status_code == 401
+        # Email verification is no longer required (DECISIONS.md Section 12).
         assert signup(anonymous, "unverified@example.com").status_code == 201
-        response = anonymous.get("/api/v1/onboarding")
-        assert response.status_code == 403 and response.json()["code"] == "email_not_verified"
-        assert _upload(anonymous, pdf()).status_code == 403
+        assert anonymous.get("/api/v1/onboarding").json()["status"] == "NOT_STARTED"
 
 
 def test_writes_need_csrf_headers(client: TestClient) -> None:

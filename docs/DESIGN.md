@@ -92,6 +92,32 @@ Retired: the v1.2 Oxford Blue and brass tokens (`brass` became `accent`).
 - Tints are for backgrounds only. Text on a tint uses the matching strong token (e.g. `warning` text on `warning-tint`).
 - **Overdue** is shown as a `warning` badge with text, not a red headline (it is a status, not a system error). **Interest** figures use `ink` with an "Illustrative" label. Do not color interest green; it is not income yet.
 
+
+### 2.3 Dark theme and theme switching (25 Oct 2026)
+
+Light is the default design above. Dark mode overrides the **same semantic tokens** under `:root[data-theme="dark"]` in `globals.css`; components never branch on the theme.
+
+| Token | Dark value | Notes |
+| --- | --- | --- |
+| `canvas` | `#171717` | Page background (never pure black) |
+| `surface` | `#2B2B2B` | Cards, sidebar, header, inputs |
+| `surface-subtle` | `#222222` | Recessed panels inside cards |
+| `surface-hover` / `surface-sunken` | `#363636` | Hover, neutral badges, skeletons |
+| `peach` / `info-tint` / `primary-tint` | `#3A2A21` | Warm tint (notices, hero gradient) |
+| `rule` / `rule-strong` | `#444444` / `#555555` | Decorative borders |
+| `control` | `#8A8A8A` | Input boundaries (3.5:1 or more on every dark surface) |
+| `ink` / `ink-muted` / `ink-faint` | `#FAF8F5` / `#B8B8B8` / `#A3A3A3` | Text |
+| `primary` / `primary-hover` / `on-primary` | `#FAF8F5` / `#E8E4DE` / `#171717` | Primary buttons invert to cream with dark text |
+| `accent` / `accent-display` | `#F28B53` | Decorative accent and large headline emphasis |
+| `accent-strong` / `info` / `focus` | `#F4A47A` | Orange text and links (softer than the accent) |
+| `success` / `warning` / `danger` | `#74C79A` / `#E5B566` / `#F2918A` | On tints `#1C3326` / `#3B2F18` / `#3D2321` |
+| `on-status` | `#171717` | Text on filled success/danger |
+| `strip` | `#9A9590` | Elapsed days on the DeemedClock strip (light: `#262626`) |
+
+**Verified contrast (dark):** `ink` 13.4–16.9:1 and `ink-muted` 6.1–9.0:1 on every surface; `ink-faint` 4.8:1 or more; `accent-strong` 6.0–8.9:1; `accent` 5.0–7.3:1; `success` / `warning` / `danger` 6.0:1 or more on surfaces and 6.3–6.9:1 on their tints; `control` 3.5–5.2:1; dark text on cream primary 16.9:1. New tokens in both themes: `on-primary` and `on-status` (white in light) replace hard-coded `text-white`.
+
+**Switching.** Preference `light`, `dark` or `system` is stored in `localStorage` (`paysetu-theme`) on the device only; nothing is sent to the backend. `public/theme-init.js` runs synchronously in `<head>` and sets `data-theme` before the first paint (no flash, no inline script). `ThemeProvider` (`src/lib/theme/`) keeps it in sync, follows the device live while `system` is chosen and across tabs, and hydrates from a neutral server snapshot (no mismatch). Controls: a Sun/Moon toggle in the app's top bar (desktop and mobile) and a **Theme** card in Account settings. A 180 ms colour cross-fade runs only during a switch and is disabled by `prefers-reduced-motion`.
+
 ---
 
 ## 3. Typography

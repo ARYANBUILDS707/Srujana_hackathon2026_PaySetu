@@ -6,7 +6,7 @@ import { AcceptanceBadge, PaymentBadge } from "@/components/cases/StatusBadges";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { EmptyState, ErrorState, LoadingBlock, Notice, Skeleton } from "@/components/ui/Notice";
+import { EmptyState, ErrorState, LoadingBlock, Skeleton } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Progress } from "@/components/ui/Progress";
 import { eligibilityLabel, nextActionCopy } from "@/content/app";
@@ -80,13 +80,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Dashboard"
-        description={`${supplier.data.legal_name}. Your deliveries, the payment dates the MSMED Act counts from, and what each case needs next.`}
-        actions={
-          // Secondary here: the recommended next step below is the page's one primary action.
-          <ButtonLink href="/app/cases/new" variant="secondary">
-            Record delivery
-          </ButtonLink>
-        }
+        description="Track deliveries, evidence, and payment deadlines in one place."
       />
 
       {cases.error ? (
@@ -97,8 +91,8 @@ export default function DashboardPage() {
         />
       ) : list.length === 0 ? (
         <EmptyState
-          title="Record your first delivery"
-          body="PaySetu keeps the invoice, the proof of delivery and the buyer's replies together, and shows the dates the payment clock runs from. Start with one delivery."
+          title="No deliveries yet"
+          body="Record your first delivery to start building a clear payment trail."
           action={<ButtonLink href="/app/cases/new">Record delivery</ButtonLink>}
         />
       ) : (
@@ -192,10 +186,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-
-      <Notice tone="warning" title="Pending legal review">
-        Calculation rules are provisional until an advocate confirms them. Amounts are illustrative.
-      </Notice>
     </div>
   );
 }

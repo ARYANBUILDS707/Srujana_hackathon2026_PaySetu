@@ -7,11 +7,11 @@ const base =
   "inline-flex h-11 min-w-22 md:h-10 items-center justify-center gap-2 rounded-md px-4 text-body font-medium transition-[color,background-color,border-color,transform] duration-150 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-hover",
+  primary: "bg-primary text-on-primary hover:bg-primary-hover",
   secondary:
     "border border-rule-strong bg-surface text-ink hover:border-ink hover:bg-surface-subtle",
   ghost: "text-primary hover:bg-surface-hover",
-  danger: "bg-danger text-white hover:opacity-90",
+  danger: "bg-danger text-on-status hover:opacity-90",
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

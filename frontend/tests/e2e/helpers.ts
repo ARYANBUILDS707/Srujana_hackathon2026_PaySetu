@@ -32,7 +32,7 @@ export function csrfHeaders(testInfo: TestInfo): Record<string, string> {
 }
 
 /**
- * Sign up a fresh supplier through the real API, confirm its email (the browser context keeps the session
+ * Sign up a fresh supplier through the real API (the browser context keeps the session
  * cookie) and give it the sample buyer the delivery form expects. Each test gets its own
  * account, so tests never see each other's cases.
  */
@@ -50,13 +50,6 @@ export async function signUpWithSampleBuyer(page: Page, testInfo: TestInfo): Pro
     },
   });
   expect(signup.status(), await signup.text()).toBe(201);
-  // Phase 7A: confirm the email with the emailed link's token, as a user would.
-  const link = await verificationLinkFor(email);
-  const verify = await page.request.post("/api/v1/auth/verify-email", {
-    headers,
-    data: { token: link.split("#token=")[1] },
-  });
-  expect(verify.status(), await verify.text()).toBe(200);
   const buyer = await page.request.post("/api/v1/buyers", {
     headers,
     data: { legal_name: SAMPLE_BUYER },
@@ -135,9 +128,4 @@ export async function linkFor(email: string, kind: string, route: string): Promi
 /** Wait for a reset email and return the path + fragment of its link. */
 export async function resetLinkFor(email: string): Promise<string> {
   return linkFor(email, "password_reset", "reset-password");
-}
-
-/** Wait for a verification email and return the path + fragment of its link. */
-export async function verificationLinkFor(email: string): Promise<string> {
-  return linkFor(email, "email_verification", "verify-email");
 }

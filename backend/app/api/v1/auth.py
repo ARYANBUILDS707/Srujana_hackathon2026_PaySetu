@@ -11,10 +11,9 @@ from fastapi.responses import JSONResponse
 
 from app.api.deps import ClockDep, LimiterDep, PrincipalDep, SessionDep, SettingsDep, client_info
 from app.config import Settings
-from app.errors import Conflict
 from app.mail.senders import EmailSender
 from app.schemas import auth as schemas
-from app.security.rate_limit import RATE_LIMITS, RateLimitCategory, client_ip
+from app.security.rate_limit import RateLimitCategory, client_ip
 from app.security.sessions import SESSION_COOKIE, cookie_secure
 from app.services import auth as service
 
@@ -46,21 +45,9 @@ def signup(
     clock: ClockDep,
     settings: SettingsDep,
     limiter: LimiterDep,
-    background: BackgroundTasks,
 ) -> schemas.MeOut:
     limiter.hit(RateLimitCategory.SIGNUP, client_ip(request.scope))
     grant = service.signup(session, clock, settings, data, client_info(request))
-    # Phase 7A: the new account starts unverified; the link is emailed after the response.
-    pending = service.issue_email_verification(session, clock, settings, grant.me.user.id)
-    if pending is not None:
-        background.add_task(
-            service.deliver_email_verification,
-            request.app.state.database,
-            request.app.state.email_sender,
-            settings,
-            clock,
-            pending,
-        )
     _set_session_cookie(response, settings, grant.token)
     _no_store(response)
     return grant.me
@@ -207,58 +194,3 @@ def logout_all(
     response = Response(status_code=204)
     _clear_session_cookie(response, settings)
     return response
-
-
-# ------------------------------------------------------------- Phase 7A: email verification
-
-
-@router.post("/verify-email", response_model=schemas.VerifyEmailOut)
-def verify_email(
-    data: schemas.VerifyEmailIn,
-    request: Request,
-    response: Response,
-    session: SessionDep,
-    clock: ClockDep,
-    settings: SettingsDep,
-    limiter: LimiterDep,
-) -> schemas.VerifyEmailOut:
-    """Consume a verification token (no session needed: the link may be opened anywhere).
-
-    Marks only the token's own user as verified; never signs anyone in or changes a session.
-    """
-    limiter.hit(RateLimitCategory.VERIFY_EMAIL, client_ip(request.scope))
-    service.verify_email(session, clock, settings, data.token)
-    _no_store(response)
-    return schemas.VerifyEmailOut(email_verified=True)
-
-
-@router.post("/resend-verification", response_model=schemas.ResendVerificationOut)
-def resend_verification(
-    principal: PrincipalDep,
-    request: Request,
-    response: Response,
-    session: SessionDep,
-    clock: ClockDep,
-    settings: SettingsDep,
-    limiter: LimiterDep,
-) -> schemas.ResendVerificationOut:
-    """Send a new link to the signed-in user's own address (earlier links stop working).
-
-    Requires the session, so it can only ever email the caller's own address: there is no
-    email parameter and nothing to enumerate. One request per minute, five per hour.
-    """
-    if principal.email_verified:
-        raise Conflict("Your email address is already confirmed.", code="already_verified")
-    limiter.hit(RateLimitCategory.VERIFY_RESEND_COOLDOWN, principal.user_id)
-    limiter.hit(RateLimitCategory.VERIFY_RESEND, principal.user_id)
-    pending = service.issue_email_verification(session, clock, settings, principal.user_id)
-    if pending is None:  # pragma: no cover - verified between the session check and here
-        raise Conflict("Your email address is already confirmed.", code="already_verified")
-    sent = service.deliver_email_verification(
-        request.app.state.database, _sender(request), settings, clock, pending
-    )
-    _no_store(response)
-    return schemas.ResendVerificationOut(
-        notification="sent" if sent else "failed",
-        retry_after_seconds=RATE_LIMITS[RateLimitCategory.VERIFY_RESEND_COOLDOWN].window_seconds,
-    )

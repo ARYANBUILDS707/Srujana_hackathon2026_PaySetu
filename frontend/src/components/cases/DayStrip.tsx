@@ -36,7 +36,7 @@ export function DayStrip({
                   objectionDays.has(day)
                     ? "bg-warning-tint text-warning"
                     : elapsed
-                      ? "bg-primary text-white"
+                      ? "bg-strip text-on-primary"
                       : "bg-surface-sunken text-ink-muted"
                 } ${isToday ? "outline-2 outline-offset-2 outline-primary" : ""}`}
               >

@@ -3,18 +3,13 @@
 
 export const landingCopy = {
   productName: "PaySetu",
-  eyebrow: "For Indian micro and small suppliers",
   headlineLead: "Every payment has a",
   headlineAccent: "deadline.",
   headlineTail: "Every business deserves clarity.",
-  subheading:
-    "PaySetu keeps each delivery's documents, buyer replies and payment dates in one place, so you know where you stand before a delay becomes a dispute.",
   openDemo: "Open demo workspace",
   seeHow: "See how it works",
   signIn: "Sign in",
   createAccount: "Create account",
-  demoNote:
-    "Evaluation build running locally. Opening the workspace asks you to sign in or create an account. Do not enter real business or personal data.",
   previewLabel: "Sample content",
   previewNote: "An illustration of a case. Names, dates and amounts are not real.",
   stepsHeading: "How PaySetu works",

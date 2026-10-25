@@ -1,6 +1,6 @@
 # PaySetu: Project Handover
 
-Snapshot taken 25 Oct 2026, after the **final UI/UX redesign ("Warm Ledger")**, on top of Phase 7B (business onboarding), Phase 7A (email verification), Phase 6.1 (password reset, change and sessions) and Phase 6 (authentication and case-level authorisation). Verified against the workspace, not from memory. The previous handover's findings were audited in `docs/AUDIT_REPORT.md` (Section 9 records what was resolved).
+Snapshot taken 25 Oct 2026, after **removing the email-verification requirement** (Section 2b), on top of the final UI/UX redesign ("Warm Ledger") and Phase 7B (business onboarding), Phase 7A (email verification), Phase 6.1 (password reset, change and sessions) and Phase 6 (authentication and case-level authorisation). Verified against the workspace, not from memory. The previous handover's findings were audited in `docs/AUDIT_REPORT.md` (Section 9 records what was resolved).
 
 ## 1. Project overview
 
@@ -34,8 +34,6 @@ Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema
 | `/` landing | none (static; sample content labelled) | `smoke.spec`, `redesign.spec` |
 | `/signup` | `POST /auth/signup` (then verification email in the outbox) | `auth.spec` |
 | `/login` | `POST /auth/login` | `auth.spec`, `passwords.spec` |
-| `/verify-email` | `POST /auth/verify-email` | `auth.spec`, `verification.spec` |
-| Confirmation screen (unverified) | `POST /auth/resend-verification`, `GET /auth/me` | `verification.spec` |
 | `/forgot-password`, `/reset-password` | `POST /auth/forgot-password`, `POST /auth/reset-password` | `passwords.spec` |
 | `/app` dashboard | `GET /supplier`, `GET /cases`, `GET /onboarding`, `GET /cases/{id}` (focus case) | `redesign.spec`, `smoke.spec` |
 | `/app/cases` | `GET /cases` | screenshots, `demo-journey.spec` |
@@ -48,7 +46,7 @@ Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema
 | Timeline | `GET /cases/{id}/timeline` | `demo-journey.spec` |
 | Evidence Pack download | `GET /cases/{id}/evidence-pack` (refused on integrity failure) | `evidence-pack.spec` (ZIP and manifest checked; tamper refused) |
 | `/app/onboarding` | `GET /onboarding`, `PUT /onboarding/draft`, `POST /onboarding/certificate`, `GET /onboarding/certificates/{id}/download`, `POST /onboarding/submit` | `onboarding.spec` |
-| `/app/settings` | `GET /onboarding`, `POST /auth/change-password`, `POST /auth/logout-all`, `POST /auth/resend-verification` | `passwords.spec`, `verification.spec` |
+| `/app/settings` | `GET /onboarding`, `POST /auth/change-password`, `POST /auth/logout-all` | `passwords.spec` |
 | Sign out | `POST /auth/logout` | `auth.spec` |
 | Cross-user isolation | every case and onboarding route answers 404 for another supplier | `auth.spec`, `onboarding.spec`, backend `test_authorisation.py` |
 
@@ -56,7 +54,7 @@ Not available, and shown honestly: reviewer actions for business verification (s
 
 **Demo walkthrough (about 6 minutes).**
 1. `/`: the headline, the sample product preview and its label, the five steps, "What PaySetu is not".
-2. **Create account** → the "Confirm your email" screen → `make email-outbox` → open the link → **Confirm my email** → **Continue to PaySetu** (empty dashboard).
+2. **Create account** → the dashboard opens directly (empty).
 3. **Record delivery** (three guided questions; use a delivery date about 20 days ago and the inline **Add a buyer**) → case overview: DeemedClock timeline, **What these terms mean**, **Why this date?**, amounts with the unverified-rate warning.
 4. **Evidence** → upload an invoice PDF → its SHA-256 → **Verify integrity** → "Integrity check passed".
 5. **Case Strength** (what is met and missing) → **Interest** (worked example and assumptions) → **Timeline** (hash-chained events).
@@ -69,6 +67,19 @@ Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/min
 
 **Screenshots:** `docs/screenshots/` holds landing, dashboard, case overview, Evidence Vault and onboarding at 1440 px, and landing, dashboard and case overview at 360 px (real backend data from a test account; landing content is labelled sample). All 16 screens were also checked at 360, 390, 768, 1280 and 1440 px: no horizontal overflow, and every screen showed the intended page.
 
+## 2b. Email verification removed as a requirement (owner-directed)
+
+- **Base:** commit `d9717db` (redesign; tree was clean). Not committed.
+- **Removed:** the backend gate (403 `email_not_verified`) on all case-workspace and onboarding routes (they use the session principal again; ownership scoping untouched); the verification email at signup; `POST /auth/verify-email` and `POST /auth/resend-verification`; their schemas, template, rate-limit categories and the `EMAIL_VERIFICATION_HOURS` setting; `DEMO_ACCOUNT_VERIFIED`; the frontend confirmation screen, resend button, "I have confirmed my email", `/verify-email` page, Settings verification badge and resend card, and the "Confirm email" navigation.
+- **Kept:** the `email_verification_tokens` table, `users.email_verified_at` and all their rows (no migration); `user.email_verified` in auth responses (informational); password reset still records the inbox as verified, as before. Everything else (auth, sessions, CSRF, rate limits, ownership, onboarding, the five modules, the design) is unchanged.
+- **Tests changed (only those affected):** `test_verification.py` became `test_email_verification_removed.py` (8 tests: signup and login reach the workspace at once, existing unverified accounts and their records, endpoints gone, unauthenticated still 401, no route answers `email_not_verified`, password reset unchanged); the authorisation suite's second supplier and the onboarding suite's users no longer verify first (all 404/ownership assertions kept); onboarding's "needs a verified email" test now checks "needs a session"; the signup verification email was dropped from the password log test's expected deliveries; the rate-limit and config tests lost the removed entries. E2E: `verification.spec.ts` became `no-email-verification.spec.ts` (signup and login go straight to the dashboard; an unverified account uses its own APIs while anonymous requests get 401; `/verify-email` and its API answer 404; the demo account works); `auth.spec` signup now lands on the dashboard; the helper no longer verifies.
+- **Results:** `make lint`, `make typecheck` (mypy on 102 files, tsc) and `make build` pass; `make test` **574 passed** (300 integration, 274 unit), domain coverage 100%; Playwright **56/56 with `--workers=2`, twice in a row** (47 s and 42 s).
+- **Security note:** without verification, anyone can sign up with an address they do not control. Restore verification (commit `578c865`) or an equivalent control before any real-user use.
+
+## 2c. Light and dark themes (25 Oct 2026)
+
+Frontend-only. Dark mode overrides the existing semantic tokens (DESIGN.md 2.3); light mode is unchanged. Preference light / dark / system is saved per device (`localStorage`) and never sent to the backend; `public/theme-init.js` applies it before first paint. Controls: Sun/Moon toggle in the app top bar and a Theme card in Account settings. Tests: `frontend/tests/e2e/theme.spec.ts` (switching and persistence, system preference, no flash and no hydration warnings, and a 16-page dark sweep that fails on any white background or light-theme text colour).
+
 ## 3. Completed features
 
 **Backend (FastAPI 0.162, SQLite, SQLAlchemy 2.1.6, Alembic 1.20.1):**
@@ -76,7 +87,7 @@ Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/min
 - Supplier routes: buyers, cases, buyer responses, evidence upload and download, integrity check, timeline, checklist, interest, evidence-pack ZIP (Section 5).
 - **Phase 6, authentication:** signup (creates user, supplier and session together), login, logout, me. Argon2id password hashes (`argon2-cffi` 25.1.0), 10 to 128 characters, common passwords refused. 256-bit session tokens stored only as SHA-256, in an HttpOnly, SameSite=Lax cookie (Secure on https). Sessions expire after 7 idle days (sliding, refreshed at most hourly) or 30 days after login, and on logout. Login revokes any earlier session in the browser. Login and signup errors are generic, and an unknown email still costs one Argon2 check. Rate limits: login 5/min per IP+email and 20/hour per IP, signup 5/hour per IP, 300/min per user on other routes.
 - **Phase 6.1, passwords and sessions:** forgot password (always the same 202 answer; email sent after the response), reset password (single-use, 15-minute token stored only as HMAC; consumed atomically with the password change; every session revoked; no automatic sign-in), change password (current password required; reuse of the current one refused; every session revoked and this browser given a new one), sign out everywhere. Confirmation emails after every change, with an honest `sent`/`failed` result. Email through `app/mail/`: a development file outbox (`STORAGE_DIR/outbox/*.eml`, `make email-outbox`) or SMTP.
-- **Phase 7A, email verification:** new accounts start unverified (`users.email_verified_at` NULL) and receive a single-use link (`/verify-email#token=…`, 24 hours by default, HMAC-stored, consumed atomically, earlier links revoked on reissue). `POST /auth/verify-email` (token only, no session needed, verifies only the token's own user) and `POST /auth/resend-verification` (session, own address only, 1 per minute and 5 per hour, honest `sent`/`failed`). **Every case-workspace route requires a verified email** (403 `email_not_verified`, `VerifiedPrincipalDep`); account and recovery routes stay open. A completed password reset also verifies. Verification proves inbox control only, not business, Udyam or MSMED status.
+- **Phase 7A, email verification:** built, then **removed as an access requirement** at the owner's request (Section 2b; DECISIONS.md Section 12). Signup and login open the dashboard directly; ownership checks are unchanged.
 - **Phase 7B, business onboarding:** draft business profile (enterprise name, Udyam number normalised to `UDYAM-XX-00-0000000`, self-declared micro/small/medium, optional registration date, registered address, contact, representative and role, authorisation note and confirmation; no Aadhaar, PAN or bank data); private PDF certificate upload (5 MB, structural PDF checks, active content refused, SHA-256, separate `STORAGE_DIR/business/` store, owner-only attachment downloads, replacement keeps old files); submission to **PENDING_REVIEW** with an immutable snapshot; duplicate Udyam numbers recorded as **contested** claims for review instead of being rejected. No supplier route can set NEEDS_INFORMATION, VERIFIED or REJECTED. Business status is separate from case eligibility and is not required for the case workspace.
 - **Phase 6, authorisation:** one dependency resolves the cookie to `SupplierPrincipal(user_id, supplier_id)` on every supplier route. Services scope every query by that `supplier_id`, so another supplier's case, buyer, response, evidence file, download, timeline, interest, integrity check or pack answers 404, and writes leave the case untouched. Owner IDs in request bodies are rejected.
 
@@ -85,7 +96,7 @@ Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/min
 - **Phase 6:** `/login` and `/signup` pages with field-level errors and loading states. A session guard on `/app/*` sends signed-out visitors to `/login?next=…`, and back afterwards (only `/app` paths are accepted). A session that ends mid-use leads to `/login?reason=expired` with an explanation. The sidebar and mobile menu show the user and business and a **Sign out** button.
 - **Phase 6.1:** `/forgot-password` and `/reset-password` pages (the token is read from the URL fragment once, removed from the address bar and kept only in memory; missing, invalid and expired-link states). **Account settings** (`/app/settings`, new sidebar item): account details, Change password, and Sign out everywhere with a confirmation step. "Forgot password?" on the sign-in page.
 - **Phase 7B:** `/app/onboarding` (sidebar **Business profile**): sectioned form with Udyam format guidance and live normalisation preview, certificate upload with a progress bar, Save draft, Review & submit, submission confirmation and history (snapshot fingerprints, contested flag); Account settings show the business status.
-- **Phase 7A:** unverified users see a "Confirm your email address" screen instead of any workspace page (sidebar: Confirm email, Settings, Sign out), with **Send a new link** and a live cooldown and an "I have confirmed my email" re-check. `/verify-email` confirms on a button click (link scanners cannot consume the token), with success, incomplete, and invalid-or-expired states. Account settings show Confirmed / Not confirmed with a resend card.
+- **Phase 7A:** the confirmation screen, resend button and `/verify-email` page were removed with the requirement (Section 2b).
 - Accessibility (audit F3): a `control` token for input boundaries (3:1 or more on every surface); brass removed from small text; the contrast table is recomputed in DESIGN.md 2.1.
 
 **Domain engine (pure Python, `backend/app/domain/`, 100% line and branch coverage):** unchanged in Phase 6.
@@ -112,8 +123,6 @@ Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/min
 | POST | `/auth/reset-password` (10/hour per IP) | reset token in the body | always |
 | POST | `/auth/change-password` (5 per 15 min per user) | session | always |
 | POST | `/auth/logout-all` | session | always |
-| POST | `/auth/verify-email` (120/hour per IP) | verification token in the body | always |
-| POST | `/auth/resend-verification` (1/min, 5/hour per user) | session (unverified allowed) | always |
 | GET | `/onboarding`, `/onboarding/submissions` | verified session, own data | not in production |
 | PUT | `/onboarding/draft` | verified session; 409 once submitted | not in production |
 | POST | `/onboarding/certificate` (PDF ≤ 5 MB, 20/hour per user) | verified session | not in production |
@@ -129,7 +138,7 @@ Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/min
 | POST | `/cases/{id}/integrity-check` | session, owner only | not in production |
 | GET | `/cases/{id}/evidence-pack` (5/hour per supplier and case) | session, owner only | not in production |
 
-All supplier routes above also require a **verified email** (403 `email_not_verified`). All writes need `Origin` equal to `PUBLIC_BASE_URL` and `X-PaySetu-Client: web`. The supplier routes stay unmounted in production while the legal rules await review (DECISIONS.md Section 8).
+All supplier routes above need a session and are owner-scoped (no email-verification requirement). All writes need `Origin` equal to `PUBLIC_BASE_URL` and `X-PaySetu-Client: web`. The supplier routes stay unmounted in production while the legal rules await review (DECISIONS.md Section 8).
 
 ## 6. Database and migrations
 
@@ -162,7 +171,6 @@ make dev                   # API :8000 + web :3000; sign up or sign in at http:/
 make lint | make typecheck | make test | make build | make e2e
 make api-types             # regenerate frontend types after any API change
 make email-outbox          # newest development emails: verification and reset links (refuses production)
-DEMO_ACCOUNT_PASSWORD='…' DEMO_ACCOUNT_VERIFIED=1 make demo-account   # demo login created verified (local only)
 ```
 
 Local email testing (forgot and reset password): README.md, "Local email testing".

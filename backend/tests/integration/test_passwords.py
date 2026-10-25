@@ -586,7 +586,6 @@ def test_no_token_password_or_address_reaches_the_logs(
         if json.loads(line).get("event") == "email_delivery"
     ]
     assert deliveries == [
-        ("email_verification", "sent"),  # Phase 7A: sent at signup
         ("password_reset", "sent"),
         ("password_changed", "sent"),  # reset notice
         ("password_changed", "sent"),  # change notice

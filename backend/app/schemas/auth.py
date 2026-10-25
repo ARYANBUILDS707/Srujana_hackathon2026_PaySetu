@@ -69,7 +69,8 @@ class UserOut(BaseModel):
     id: str
     email: str
     full_name: str
-    # Phase 7A: whether the user has proved control of `email`. Nothing more.
+    # Whether the user has proved control of `email` (recorded by a password reset, or by
+    # the retired verification links). Informational only: it gates nothing.
     email_verified: bool
 
 
@@ -120,18 +121,3 @@ class ForgotPasswordOut(BaseModel):
 class PasswordUpdatedOut(BaseModel):
     # Whether the confirmation email was accepted for delivery. Never claimed when it failed.
     notification: Literal["sent", "failed"]
-
-
-class VerifyEmailIn(_In):
-    token: str = Field(min_length=1, max_length=128)
-
-
-class VerifyEmailOut(BaseModel):
-    email_verified: Literal[True]
-
-
-class ResendVerificationOut(BaseModel):
-    # Whether the new link was accepted for delivery; never "sent" when delivery failed.
-    notification: Literal["sent", "failed"]
-    # Seconds before another link may be requested (the resend cooldown).
-    retry_after_seconds: int

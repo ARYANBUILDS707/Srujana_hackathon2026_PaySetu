@@ -50,8 +50,6 @@ export default defineConfig({
         AUTH_SIGNUP_LIMIT_PER_HOUR: "200",
         DEMO_ACCOUNT_EMAIL: "demo@paysetu.example",
         DEMO_ACCOUNT_PASSWORD: "e2e-only-demo-passphrase",
-        // Phase 7A: the explicit, non-production demo shortcut (seed/demo_account.py).
-        DEMO_ACCOUNT_VERIFIED: "1",
       },
     },
     {
