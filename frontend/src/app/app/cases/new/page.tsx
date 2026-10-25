@@ -89,7 +89,7 @@ export default function NewDeliveryPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
-        <h1 className="text-h1 text-ink">Log a delivery</h1>
+        <h1 className="text-h1 text-ink">Record delivery</h1>
         <p className="mt-1 text-small text-ink-muted">
           PaySetu starts the 15-day objection window from the delivery date and works out the dates
           from the rules.

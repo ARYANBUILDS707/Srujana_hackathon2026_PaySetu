@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Design tokens from docs/DESIGN.md Sections 2–4 (blue-and-white palette, approved 25 Oct 2026).
- * Tailwind's default palette, radii, shadows and breakpoints are cleared so components can
- * only use PaySetu tokens. Light theme only in MVP (ADR-017).
+ * Design tokens: "Oxford Blue + Stone" (docs/DESIGN.md Sections 2-4). Components use these
+ * semantic names only; raw hex values live here and nowhere else. Tailwind's default palette,
+ * radii, shadows and breakpoints are cleared so components can only use PaySetu tokens.
+ * Light theme only (ADR-017).
  */
 @theme {
   --color-*: initial;
@@ -11,43 +12,61 @@
   --color-transparent: transparent;
   --color-current: currentColor;
 
-  --color-canvas: #f3f6f8;
+  /* Surfaces */
+  --color-canvas: #f3f2ee;
   --color-surface: #ffffff;
-  --color-surface-sunken: #e9eef3;
-  --color-rule: #dce6f1;
-  --color-rule-strong: #7a8794;
-  --color-ink: #1d2226;
-  --color-ink-muted: #666666;
-  --color-ink-faint: #6b6b6b;
-  --color-primary: #0a66c2;
-  --color-primary-hover: #004182;
-  --color-primary-tint: #e8f1fa;
-  --color-success: #057642;
-  --color-success-tint: #e3f4ea;
-  --color-warning: #8a5a00;
-  --color-warning-tint: #fdf1d8;
-  --color-danger: #b42318;
-  --color-danger-tint: #fce9e7;
-  --color-focus: #0a66c2;
+  --color-surface-subtle: #f8f7f4;
+  --color-surface-hover: #e9ebe8;
+  --color-surface-sunken: #e9ebe8;
 
-  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /* Borders */
+  --color-rule: #d7d8d4;
+  --color-rule-strong: #aeb8bc;
 
-  --text-display: 1.875rem;
+  /* Text. ink-faint is for placeholders and metadata on white only (4.8:1 on white). */
+  --color-ink: #172b40;
+  --color-ink-muted: #52606a;
+  --color-ink-faint: #69747b;
+
+  /* Brand. Brass is decorative emphasis only, never a status colour. */
+  --color-primary: #223a53;
+  --color-primary-hover: #172b40;
+  --color-brass: #b17b46;
+
+  /* Semantic states (always paired with text or an icon) */
+  --color-success: #287456;
+  --color-success-tint: #eaf4ee;
+  --color-warning: #95651b;
+  --color-warning-tint: #fbf3e4;
+  --color-danger: #a43f39;
+  --color-danger-tint: #fbedec;
+  --color-info: #315d86;
+  --color-info-tint: #eaf1f7;
+  --color-primary-tint: #eaf1f7;
+  --color-focus: #223a53;
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Financial figures */
+  --text-display: 1.75rem;
   --text-display--line-height: 2.25rem;
   --text-display--font-weight: 600;
-  --text-h1: 1.5rem;
-  --text-h1--line-height: 2rem;
+  /* Page headings */
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 2.25rem;
   --text-h1--font-weight: 600;
+  /* Section headings */
   --text-h2: 1.25rem;
   --text-h2--line-height: 1.75rem;
   --text-h2--font-weight: 600;
-  --text-h3: 1.125rem;
+  /* Card headings */
+  --text-h3: 1rem;
   --text-h3--line-height: 1.5rem;
   --text-h3--font-weight: 600;
-  --text-body: 1rem;
+  --text-body: 0.9375rem;
   --text-body--line-height: 1.5rem;
-  --text-small: 0.875rem;
+  --text-small: 0.8125rem;
   --text-small--line-height: 1.25rem;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
@@ -59,7 +78,7 @@
   --radius-full: 9999px;
 
   --shadow-*: initial;
-  --shadow-float: 0 4px 16px rgba(29, 34, 38, 0.12);
+  --shadow-float: 0 4px 16px rgba(23, 43, 64, 0.12);
 
   --breakpoint-*: initial;
   --breakpoint-md: 40rem;
@@ -74,6 +93,19 @@
     background-color: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: 100%;
+  }
+
+  body {
+    font-variant-numeric: normal;
+  }
+
+  /* Dates, amounts and references align in columns (DESIGN.md 3.3). */
+  .tabular,
+  time,
+  td,
+  dd {
+    font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {

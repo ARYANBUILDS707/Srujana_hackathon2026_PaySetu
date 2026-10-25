@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { HashChip } from "@/components/ui/HashChip";
 import { Notice } from "@/components/ui/Notice";
 import { appCopy } from "@/content/app";
@@ -37,19 +38,21 @@ export function EvidencePackCard({ caseId }: { caseId: string }) {
   }
 
   return (
-    <Card title="Evidence pack" description={appCopy.evidencePack.description}>
-      <ul className="list-disc pl-5 text-small text-ink">
+    <Card title="Evidence pack" description={appCopy.evidencePack.description} id="evidence-pack">
+      <p className="text-small font-medium text-ink">The ZIP contains</p>
+      <ul className="mt-1 list-disc pl-5 text-small text-ink-muted">
         {appCopy.evidencePack.contents.map((line) => (
           <li key={line}>{line}</li>
         ))}
       </ul>
       <div className="mt-3">
-        <Notice tone="warning" title="Demo export">
+        <Notice tone="warning" title="Demo export, not a certified document">
           {appCopy.evidencePack.notice}
         </Notice>
       </div>
       <div className="mt-4">
         <Button onClick={download} loading={busy}>
+          <Icon name="download" className="size-4" />
           Download Evidence Pack
         </Button>
       </div>

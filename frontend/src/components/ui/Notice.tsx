@@ -4,7 +4,7 @@ import { Button } from "./Button";
 type NoticeTone = "info" | "success" | "warning" | "danger";
 
 const tones: Record<NoticeTone, string> = {
-  info: "border-primary bg-primary-tint text-ink",
+  info: "border-info bg-info-tint text-ink",
   success: "border-success bg-success-tint text-ink",
   warning: "border-warning bg-warning-tint text-ink",
   danger: "border-danger bg-danger-tint text-ink",
@@ -22,7 +22,7 @@ export function Notice({
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
-      className={`rounded-md border-l-4 p-4 text-small ${tones[tone]}`}
+      className={`rounded-md border-l-4 p-3 md:p-4 text-small ${tones[tone]}`}
     >
       {title ? <p className="font-semibold text-ink">{title}</p> : null}
       {children ? <div className={title ? "mt-1" : ""}>{children}</div> : null}

@@ -5,9 +5,11 @@ import { CaseRows } from "@/components/cases/CaseRows";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState, ErrorState, LoadingBlock, Notice } from "@/components/ui/Notice";
 import { eligibilityLabel } from "@/content/app";
 import type { CaseSummary, Supplier } from "@/lib/api/types";
+import { formatMoney, sumMoney } from "@/lib/format";
 import { useApiGet } from "@/lib/hooks/useApiGet";
 
 export default function DashboardPage() {
@@ -34,37 +36,98 @@ export default function DashboardPage() {
     (c) => c.acceptance_state === "objection_raised" || c.payment_state === "overdue",
   );
   const windowOpen = list.filter((c) => c.acceptance_state === "window_open").length;
+  const objections = list.filter((c) => c.acceptance_state === "objection_raised").length;
   const overdue = list.filter((c) => c.payment_state === "overdue").length;
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-h1 text-ink">Dashboard</h1>
-          <p className="mt-1 text-small text-ink-muted">{supplier.data.legal_name}</p>
-        </div>
-        <ButtonLink href="/app/cases/new">Log a delivery</ButtonLink>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description={`${supplier.data.legal_name}. Your deliveries, the payment dates the MSMED Act counts from, and what each case needs next.`}
+        actions={<ButtonLink href="/app/cases/new">Record delivery</ButtonLink>}
+      />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Stat label="Cases" value={list.length} />
-        <Stat label="Objection window open" value={windowOpen} />
-        <Stat label="Payment overdue" value={overdue} />
-      </div>
+      {list.length === 0 && !cases.error ? (
+        <EmptyState
+          title="Record your first delivery"
+          body="PaySetu keeps the invoice, the proof of delivery and the buyer's replies together, and shows the dates the payment clock runs from. Start with one delivery."
+          action={<ButtonLink href="/app/cases/new">Record delivery</ButtonLink>}
+        />
+      ) : (
+        <section
+          aria-label="Financial overview"
+          className="rounded-lg border border-rule bg-surface"
+        >
+          <dl className="grid divide-y divide-rule md:grid-cols-3 md:divide-x md:divide-y-0">
+            <Stat
+              label="Tracked invoice principal"
+              value={formatMoney(sumMoney(list.map((c) => c.invoice_amount)), 2)}
+              hint="Sum of invoice amounts across all cases"
+            />
+            <Stat
+              label="Cases"
+              value={String(list.length)}
+              hint={`${windowOpen} with the objection window open`}
+            />
+            <Stat
+              label="Needs attention"
+              value={String(attention.length)}
+              hint={`${overdue} overdue · ${objections} with an objection raised`}
+            />
+          </dl>
+        </section>
+      )}
 
-      <Card title="Needs attention" description="Overdue payments and open objections.">
-        {cases.error ? (
-          <ErrorState
-            message={cases.error.message}
-            requestId={cases.error.requestId}
-            onRetry={cases.reload}
-          />
-        ) : attention.length === 0 ? (
-          <p className="text-small text-ink-muted">Nothing needs attention today.</p>
-        ) : (
-          <CaseRows cases={attention} />
-        )}
-      </Card>
+      {list.length > 0 || cases.error ? (
+        <Card
+          title="What to do next"
+          description="Overdue payments and open objections. Open a case to see its next step."
+        >
+          {cases.error ? (
+            <ErrorState
+              message={cases.error.message}
+              requestId={cases.error.requestId}
+              onRetry={cases.reload}
+            />
+          ) : attention.length === 0 ? (
+            <p className="text-small text-ink-muted">Nothing needs attention today.</p>
+          ) : (
+            <>
+              <ul className="mb-4 flex flex-col gap-1 text-small text-ink">
+                {objections > 0 ? (
+                  <li>
+                    {objections} {objections === 1 ? "case has" : "cases have"} a written objection.
+                    Record when it is removed to fix the acceptance date.
+                  </li>
+                ) : null}
+                {overdue > 0 ? (
+                  <li>
+                    {overdue} {overdue === 1 ? "case is" : "cases are"} past the payment due date.
+                    Check the evidence is complete before the buyer is contacted.
+                  </li>
+                ) : null}
+              </ul>
+              <CaseRows cases={attention} />
+            </>
+          )}
+        </Card>
+      ) : null}
+
+      {list.length > 0 ? (
+        <Card
+          title="Recent cases"
+          actions={
+            <Link
+              href="/app/cases"
+              className="text-small font-medium text-info hover:text-primary hover:underline"
+            >
+              View all cases
+            </Link>
+          }
+        >
+          <CaseRows cases={list.slice(0, 5)} />
+        </Card>
+      ) : null}
 
       <Card
         title="Supplier eligibility"
@@ -99,27 +162,6 @@ export default function DashboardPage() {
         </ul>
       </Card>
 
-      {list.length === 0 && !cases.error ? (
-        <EmptyState
-          title="No deliveries yet"
-          body="Log your first delivery to start the 15-day objection window and see the dates the MSMED Act counts from."
-          action={<ButtonLink href="/app/cases/new">Log a delivery</ButtonLink>}
-        />
-      ) : (
-        <Card
-          title="Recent cases"
-          actions={
-            <Link
-              href="/app/cases"
-              className="text-small font-medium text-primary hover:text-primary-hover"
-            >
-              View all
-            </Link>
-          }
-        >
-          <CaseRows cases={list.slice(0, 5)} />
-        </Card>
-      )}
       <Notice tone="warning" title="Pending legal review">
         Calculation rules are provisional until an advocate confirms them. Amounts are illustrative.
       </Notice>
@@ -127,11 +169,12 @@ export default function DashboardPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-lg border border-rule bg-surface p-5">
-      <p className="text-small text-ink-muted">{label}</p>
-      <p className="mt-1 text-display tabular-nums text-ink">{value}</p>
+    <div className="p-4 md:p-6">
+      <dt className="text-small font-medium text-ink-muted">{label}</dt>
+      <dd className="mt-1 whitespace-nowrap text-display tabular-nums text-ink">{value}</dd>
+      <p className="mt-1 text-small text-ink-muted">{hint}</p>
     </div>
   );
 }

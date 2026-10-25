@@ -16,7 +16,7 @@ test("landing page loads with PaySetu content and no horizontal scroll", async (
 
 test("landing page opens the demo workspace", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Open the demo workspace" }).click();
+  await page.getByRole("link", { name: "Open demo workspace" }).click();
 
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

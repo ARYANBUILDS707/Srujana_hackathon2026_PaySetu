@@ -67,3 +67,18 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/**
+ * Adds decimal-string amounts exactly (in paise, with BigInt) for display totals such as the
+ * principal tracked across cases. Not a legal calculation: it only totals what the API returned.
+ */
+export function sumMoney(values: string[]): string {
+  let paise = BigInt(0);
+  for (const value of values) {
+    const [whole, fraction = ""] = value.split(".");
+    const cents = BigInt(`${whole}${fraction.padEnd(2, "0").slice(0, 2)}`);
+    paise += cents;
+  }
+  const text = paise.toString().padStart(3, "0");
+  return `${text.slice(0, -2)}.${text.slice(-2)}`;
+}

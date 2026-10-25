@@ -3,7 +3,9 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
+import { useCase } from "@/components/cases/CaseContext";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { controlClass, Field } from "@/components/ui/Fields";
 import { ErrorState, LoadingBlock, Notice } from "@/components/ui/Notice";
 import { appCopy } from "@/content/app";
@@ -13,6 +15,7 @@ import { useApiGet } from "@/lib/hooks/useApiGet";
 
 export default function InterestPage() {
   const params = useParams<{ id: string }>();
+  const { caseData } = useCase();
   const [asOf, setAsOf] = useState("");
   const query = asOf ? `?as_of=${asOf}` : "";
   const { data, error, loading, reload } = useApiGet<Interest>(
@@ -21,6 +24,10 @@ export default function InterestPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Interest"
+        description="An illustrative interest figure from the backend interest engine. It is not a demand, and no Buyer Cost Page or simulator exists in this build."
+      />
       <Card
         title="Interest calculator"
         description="Illustrative interest under MSMED Act s.16, worked out by PaySetu's interest engine from the recorded bank rates."
@@ -47,9 +54,13 @@ export default function InterestPage() {
         <LoadingBlock label="Calculating interest" />
       ) : (
         <>
-          <Card title="Result">
+          <Card title="Result" actions={<Badge tone="warning">Illustrative</Badge>}>
             <dl className="divide-y divide-rule">
-              <Row label="As of" value={formatDate(data.as_of)} />
+              <Row label="Calculated as of" value={formatDate(data.as_of)} />
+              <Row
+                label="Payment due"
+                value={caseData.due_date ? formatDate(caseData.due_date) : "Not fixed yet"}
+              />
               <Row
                 label="Interest starts"
                 value={data.interest_start ? formatDate(data.interest_start) : "Not fixed yet"}
@@ -87,8 +98,8 @@ export default function InterestPage() {
 
           {data.periods.length > 0 ? (
             <Card
-              title="How it was calculated"
-              description="One row per monthly rest. Interest is capitalised at each rest."
+              title="Rate assumptions and workings"
+              description="One row per monthly rest. Interest is capitalised at each rest. A rate marked Unverified has not been checked against an RBI notification."
             >
               <div className="overflow-x-auto">
                 <table className="w-full min-w-160 text-left text-small">
@@ -163,7 +174,7 @@ function Row({
       <dt className="text-small text-ink-muted">{label}</dt>
       <dd
         data-testid={testId}
-        className={`tabular-nums text-ink ${strong ? "text-h3" : "text-body font-medium"}`}
+        className={`whitespace-nowrap tabular-nums text-ink ${strong ? "text-display" : "text-body font-medium"}`}
       >
         {value}
       </dd>

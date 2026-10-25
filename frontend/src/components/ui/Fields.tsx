@@ -40,7 +40,7 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
 }
 
 export const controlClass =
-  "h-11 w-full rounded-md border border-rule-strong bg-surface px-3 text-body text-ink placeholder:text-ink-faint aria-[invalid=true]:border-danger disabled:bg-surface-sunken";
+  "h-11 w-full rounded-md border border-rule-strong bg-surface px-3 text-body text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-ink-muted aria-[invalid=true]:border-danger disabled:bg-surface-subtle";
 
 export const textareaClass =
-  "min-h-24 w-full rounded-md border border-rule-strong bg-surface px-3 py-2 text-body text-ink placeholder:text-ink-faint aria-[invalid=true]:border-danger";
+  "min-h-24 w-full rounded-md border border-rule-strong bg-surface px-3 py-2 text-body text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-ink-muted aria-[invalid=true]:border-danger";

@@ -45,24 +45,23 @@ All colors are referenced by token name, never by raw hex in components. The MVP
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `canvas` | `#F3F6F8` | Page background (secondary background) |
-| `surface` | `#FFFFFF` | Cards, panels, inputs, header, sidebar (main background) |
-| `surface-sunken` | `#E9EEF3` | Table headers, hash wells, day-strip track |
-| `rule` | `#DCE6F1` | Card borders, dividers |
-| `rule-strong` | `#7A8794` | Input and control borders (3:1 minimum against white) |
-| `ink` | `#1D2226` | Primary text |
-| `ink-muted` | `#666666` | Secondary text, labels |
-| `ink-faint` | `#6B6B6B` | Placeholder text (still 4.5:1; never lighter) |
-| `primary` | `#0A66C2` | Primary buttons, links, selected navigation, progress, today marker |
-| `primary-hover` | `#004182` | Hover/pressed state of primary |
-| `primary-tint` | `#E8F1FA` | Selected navigation, active tab, notices |
-| `success` | `#057642` | Verified, met checklist items, settled |
-| `success-tint` | `#E3F4EA` | |
-| `warning` | `#8A5A00` | Warnings, pending legal review, window closing, objection raised |
-| `warning-tint` | `#FDF1D8` | |
-| `danger` | `#B42318` | Genuine errors, integrity failure, destructive actions |
-| `danger-tint` | `#FCE9E7` | |
-| `focus` | `#0A66C2` | Focus ring (2px, offset 2px) |
+| `canvas` | `#F3F2EE` | Page background |
+| `surface` | `#FFFFFF` | Cards, panels, inputs, header, sidebar |
+| `surface-subtle` | `#F8F7F4` | Upload zones, quiet panels |
+| `surface-hover` / `surface-sunken` | `#E9EBE8` | Hover, selected navigation, hash wells, skeletons |
+| `rule` | `#D7D8D4` | Card borders, dividers |
+| `rule-strong` | `#AEB8BC` | Input and control borders |
+| `ink` | `#172B40` | Primary text |
+| `ink-muted` | `#52606A` | Secondary text, labels |
+| `ink-faint` | `#69747B` | Placeholders and metadata on white only (4.8:1 on white; below 4.5:1 on `canvas`) |
+| `primary` / `primary-hover` | `#223A53` / `#172B40` | Buttons, links, focus ring |
+| `brass` | `#B17B46` | Decorative accent only (active-nav marker, rules); never a status colour |
+| `success` / `success-tint` | `#287456` / `#EAF4EE` | Verified, met, settled |
+| `warning` / `warning-tint` | `#95651B` / `#FBF3E4` | Warnings, pending legal review, demo labels |
+| `danger` / `danger-tint` | `#A43F39` / `#FBEDEC` | Genuine errors, integrity failure |
+| `info` / `info-tint` (= `primary-tint`) | `#315D86` / `#EAF1F7` | Notices, calculated-by-PaySetu labels |
+
+Theme "Oxford Blue + Stone" (26 Oct 2026) replaces the blue-and-white palette; font is Geist Sans (Geist Mono for hashes) instead of IBM Plex. The contrast ratios below were computed for the previous palette and must be re-verified for these pairs.
 
 Retired tokens: `paper`, `seal`, `seal-tint`, `info`, `info-tint`, `simulated`, `simulated-tint`. Notices and legal explanations use `primary-tint`; demo and simulated labels use `warning` (they are, in effect, a pending-review state).
 

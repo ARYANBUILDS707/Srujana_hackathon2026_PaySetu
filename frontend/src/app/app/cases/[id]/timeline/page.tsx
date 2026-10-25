@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { HashChip } from "@/components/ui/HashChip";
 import { ErrorState, LoadingBlock } from "@/components/ui/Notice";
 import { eventTypeLabel } from "@/content/app";
@@ -20,29 +21,35 @@ export default function TimelinePage() {
   if (loading || !data) return <LoadingBlock label="Loading timeline" />;
 
   return (
-    <Card
-      title="Timeline"
-      description="Every action is recorded in order. Each entry carries a hash that includes the entry before it, so a later change to history can be detected."
-    >
-      <ol className="divide-y divide-rule" data-testid="timeline-list">
-        {[...data].reverse().map((event) => (
-          <li
-            key={event.seq}
-            className="flex flex-col gap-2 py-4 md:flex-row md:items-start md:justify-between"
-          >
-            <div>
-              <p className="text-body font-medium text-ink">
-                #{event.seq} · {eventTypeLabel[event.event_type] ?? event.event_type}
-              </p>
-              <p className="text-small text-ink-muted">
-                {formatTimestamp(event.recorded_at)} · {event.actor_type.replace("_", " ")}
-                {event.occurred_on ? ` · refers to ${formatDate(event.occurred_on)}` : ""}
-              </p>
-            </div>
-            <HashChip hash={event.event_hash} label="Event" />
-          </li>
-        ))}
-      </ol>
-    </Card>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Timeline"
+        description="The tamper-evident record of what was done on this case, in order."
+      />
+      <Card
+        title="Audit trail"
+        description="Every action is recorded in order. Each entry carries a hash that includes the entry before it, so a later change to history can be detected."
+      >
+        <ol className="divide-y divide-rule" data-testid="timeline-list">
+          {[...data].reverse().map((event) => (
+            <li
+              key={event.seq}
+              className="flex flex-col gap-2 py-4 md:flex-row md:items-start md:justify-between"
+            >
+              <div>
+                <p className="text-body font-medium text-ink">
+                  #{event.seq} · {eventTypeLabel[event.event_type] ?? event.event_type}
+                </p>
+                <p className="text-small text-ink-muted">
+                  {formatTimestamp(event.recorded_at)} · {event.actor_type.replace("_", " ")}
+                  {event.occurred_on ? ` · refers to ${formatDate(event.occurred_on)}` : ""}
+                </p>
+              </div>
+              <HashChip hash={event.event_hash} label="Event" />
+            </li>
+          ))}
+        </ol>
+      </Card>
+    </div>
   );
 }

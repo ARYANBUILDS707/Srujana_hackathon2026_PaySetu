@@ -2,29 +2,41 @@
 
 export const landingCopy = {
   productName: "PaySetu",
-  tagline: "Evidence-first delayed-payment protection for Indian micro and small enterprises.",
-  intro:
-    "PaySetu helps you record each delivery, track the 15-day window for buyer objections, keep tamper-evident proof, and prepare a claim pack if the buyer pays late.",
-  stepsHeading: "What PaySetu does",
+  headline: "Every delivery deserves a clear payment trail.",
+  subheading:
+    "Track payment timelines, protect important documents, and prepare your records before payment disputes escalate.",
+  openDemo: "Open demo workspace",
+  seeHow: "See how it works",
+  demoNote:
+    "Evaluation build: synthetic supplier data, no login, running locally. Sign-up arrives in a later release.",
+  previewLabel: "Sample content",
+  previewNote: "An illustration of a case workspace. Dates and names here are not real.",
+  stepsHeading: "How PaySetu works",
+  stepsIntro: "One case per delivery, from the first record to a pack you can hand to a reviewer.",
   steps: [
     {
-      title: "Record the delivery",
-      body: "Log the invoice and a photo of the signed challan, and see the dates the MSMED Act counts from.",
+      title: "Record a delivery",
+      body: "Log the invoice, the buyer and the delivery date. The case starts with a reference and a first timeline entry.",
     },
     {
-      title: "Keep sealed proof",
-      body: "Every file gets a SHA-256 fingerprint and a time, so any later change can be detected.",
+      title: "Understand the payment timeline",
+      body: "See the dates the MSMED Act counts from, calculated by the backend rules engine, with a short reason for each date.",
     },
     {
-      title: "Check your case",
-      body: "See what is missing from your file, and an illustrative interest figure from the recorded bank rates.",
+      title: "Preserve and verify evidence",
+      body: "Every uploaded file is stored unchanged with a SHA-256 fingerprint, so a later change can be detected.",
+    },
+    {
+      title: "Track objections",
+      body: "Record each buyer reply, note when a written objection is removed, and watch how the dates respond.",
+    },
+    {
+      title: "Prepare an evidence pack",
+      body: "Download a ZIP with the case summary, timeline, your original files and a hash manifest, after an integrity check.",
     },
   ],
   notHeading: "What PaySetu is not",
   notBody:
     "PaySetu is not a law firm, collection agency, lawyer marketplace or government portal. It prepares and organises evidence; the ODR portal, Facilitation Councils and courts decide disputes.",
-  openDemo: "Open the demo workspace",
-  demoNote:
-    "Evaluation build: synthetic supplier data, no login, running locally. Sign-up arrives in a later release.",
   disclaimer: "PaySetu prepares evidence. It is not legal advice.",
 } as const;

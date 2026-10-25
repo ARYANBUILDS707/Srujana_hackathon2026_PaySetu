@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CaseRows } from "@/components/cases/CaseRows";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { controlClass, Field } from "@/components/ui/Fields";
 import { EmptyState, ErrorState, LoadingBlock } from "@/components/ui/Notice";
 import type { CaseSummary } from "@/lib/api/types";
@@ -24,10 +25,11 @@ export default function CasesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-h1 text-ink">Cases</h1>
-        <ButtonLink href="/app/cases/new">Log a delivery</ButtonLink>
-      </div>
+      <PageHeader
+        title="Cases"
+        description="One case per delivery. Open a case to see its dates, evidence and next step."
+        actions={<ButtonLink href="/app/cases/new">Record delivery</ButtonLink>}
+      />
 
       {error ? (
         <ErrorState message={error.message} requestId={error.requestId} onRetry={reload} />
@@ -36,8 +38,8 @@ export default function CasesPage() {
       ) : (data ?? []).length === 0 ? (
         <EmptyState
           title="No deliveries yet"
-          body="Log your first delivery to start the 15-day objection window."
-          action={<ButtonLink href="/app/cases/new">Log a delivery</ButtonLink>}
+          body="Record your first delivery to start the 15-day objection window."
+          action={<ButtonLink href="/app/cases/new">Record delivery</ButtonLink>}
         />
       ) : (
         <Card>

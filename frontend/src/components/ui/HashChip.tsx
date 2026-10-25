@@ -25,7 +25,7 @@ export function HashChip({ hash, label = "SHA-256" }: { hash: string; label?: st
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={`${label} hash, starts ${hash.slice(0, 8)}, ends ${hash.slice(-4)}`}
-        className="inline-flex w-fit items-center gap-1 rounded-md bg-surface-sunken px-2 py-1 font-mono text-caption text-ink hover:bg-primary-tint"
+        className="inline-flex w-fit items-center gap-1 rounded-md bg-surface-subtle px-2 py-1 font-mono text-caption text-ink ring-1 ring-rule hover:bg-surface-hover"
       >
         {shortHash(hash)}
       </button>

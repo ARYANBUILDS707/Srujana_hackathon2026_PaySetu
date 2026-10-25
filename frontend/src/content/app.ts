@@ -13,10 +13,10 @@ export const appCopy = {
   disclaimer:
     "PaySetu prepares evidence. It is not legal advice. Dates and amounts are illustrative until reviewed by an advocate.",
   nav: [
-    { href: "/app", label: "Dashboard", match: "exact" },
-    { href: "/app/cases", label: "Cases", match: "prefix" },
-    { href: "/app/cases/new", label: "New delivery", match: "exact" },
+    { href: "/app", label: "Dashboard", match: "exact", icon: "dashboard" as const },
+    { href: "/app/cases", label: "Cases", match: "prefix", icon: "cases" as const },
   ],
+  primaryAction: { href: "/app/cases/new", label: "Record delivery" },
   caseTabs: [
     { slug: "", label: "Overview" },
     { slug: "evidence", label: "Evidence" },
@@ -25,16 +25,19 @@ export const appCopy = {
     { slug: "interest", label: "Interest" },
     { slug: "timeline", label: "Timeline" },
   ],
+  shaExplainer:
+    "SHA-256 checks whether stored file contents match their recorded fingerprints. It does not independently establish document authenticity.",
   evidencePack: {
     description: "A ZIP of the case file with a SHA-256 manifest, built from the stored evidence.",
     contents: [
       "Case summary, DeemedClock dates, interest and the rules relied on",
-      "Timeline, Case Strength checklist and a verification report",
+      "Timeline (readable and as JSON) and the Case Strength checklist",
+      "A verification report",
       "Your original evidence files, unchanged",
-      "manifest.json with a SHA-256 for every file",
+      "manifest.json: a SHA-256 hash for every file",
     ],
     notice:
-      "Synthetic demo data, not legally certified. No Section 63 certificate is included. The export is refused if any file or the timeline fails verification.",
+      "This export is prepared for review and is not a court-certified document or an official filing. It holds synthetic demo data, and no Section 63 certificate is included. The export is refused if any file or the timeline fails verification.",
   },
   pendingReview: {
     title: "Pending legal review",
@@ -70,6 +73,21 @@ export const evidenceKindLabel: Record<EvidenceKind, string> = {
   payment_proof: "Payment proof",
   communication_proof: "Communication proof",
   other: "Other",
+};
+
+/** One line under the evidence type picker: what that kind of file is for. */
+export const evidenceKindGuidance: Partial<Record<EvidenceKind, string>> = {
+  invoice: "The invoice issued to the buyer. It is a required item.",
+  delivery_challan: "A signed or stamped challan is proof of delivery.",
+  delivery_photo: "A photo of the goods or of the buyer's receipt.",
+  purchase_order: "The buyer's order, if there was one.",
+  written_terms: "Any document that shows the agreed payment period.",
+  email: "Save the message as an .eml file so its headers are kept.",
+  chat_export: "Export the chat as text. Screenshots are weaker than the export.",
+  tracking_record: "Courier or transporter tracking showing delivery.",
+  buyer_response: "A reply from the buyer, such as a written objection.",
+  payment_proof: "A bank entry or receipt for any part-payment.",
+  other: "Anything else that helps explain the delivery.",
 };
 
 export const uploadKinds: EvidenceKind[] = [

@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Progress } from "@/components/ui/Progress";
 import { ErrorState, LoadingBlock, Notice } from "@/components/ui/Notice";
 import { checklistStatusLabel } from "@/content/app";
 import type { Checklist, ChecklistItem } from "@/lib/api/types";
@@ -25,22 +27,36 @@ export default function ChecklistPage() {
 
   const required = data.items.filter((i) => i.level === "required");
   const recommended = data.items.filter((i) => i.level === "recommended");
+  const todo = data.items.filter((i) => i.status === "missing" || i.status === "warning");
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <PageHeader
+        title="Case Strength"
+        description="What is in your file and what is still missing. Readiness measures available information; it does not predict legal success."
+      />
+
+      <Card>
         <h2 className="text-h2 text-ink" data-testid="checklist-heading">
           {data.required_met} of {data.required_total} required items complete
         </h2>
-        <p className="mt-1 text-small text-ink-muted">
-          A readiness list of what is in your file. It does not score the case or predict any
-          outcome.
+        <div className="mt-3 max-w-xl">
+          <Progress
+            value={data.required_met}
+            max={data.required_total}
+            label="Required checklist items complete"
+          />
+        </div>
+        <p className="mt-3 text-small text-ink-muted">
+          {todo.length === 0
+            ? "Nothing is missing from the checklist."
+            : `${todo.length} ${todo.length === 1 ? "item needs" : "items need"} action. Each one says what to add.`}
         </p>
-      </div>
-      <Card title="Required">
+      </Card>
+      <Card title="Required" description="Items the case cannot be put together without.">
         <ItemList items={required} />
       </Card>
-      <Card title="Recommended">
+      <Card title="Recommended" description="Items that make the file easier to review.">
         <ItemList items={recommended} />
       </Card>
       {data.unconfirmed_rules.length > 0 ? (
@@ -53,10 +69,13 @@ export default function ChecklistPage() {
   );
 }
 
+const open = (status: string) => status === "missing" || status === "warning";
+
 function ItemList({ items }: { items: ChecklistItem[] }) {
+  const ordered = [...items].sort((a, b) => Number(open(b.status)) - Number(open(a.status)));
   return (
     <ul className="divide-y divide-rule">
-      {items.map((item) => (
+      {ordered.map((item) => (
         <li
           key={item.item_id}
           className="flex flex-col gap-1 py-3 md:flex-row md:items-start md:justify-between md:gap-4"
@@ -67,7 +86,11 @@ function ItemList({ items }: { items: ChecklistItem[] }) {
               <span className="mr-2 font-mono text-caption text-ink-muted">{item.item_id}</span>
               {item.title}
             </p>
-            {item.action ? <p className="mt-1 text-small text-ink-muted">{item.action}</p> : null}
+            {item.action && open(item.status) ? (
+              <p className="mt-1 text-small text-ink-muted">
+                <span className="font-medium text-ink">Next step:</span> {item.action}
+              </p>
+            ) : null}
           </div>
           <Badge tone={tone[item.status] ?? "neutral"}>
             {checklistStatusLabel[item.status] ?? item.status}

@@ -4,12 +4,13 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 const base =
-  "inline-flex h-11 min-w-22 items-center justify-center gap-2 rounded-md px-4 text-body font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-11 min-w-22 md:h-10 items-center justify-center gap-2 rounded-md px-4 text-body font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60";
 
 const variants: Record<Variant, string> = {
   primary: "bg-primary text-white hover:bg-primary-hover",
-  secondary: "border border-primary bg-surface text-primary hover:bg-primary-tint",
-  ghost: "text-primary hover:bg-primary-tint",
+  secondary:
+    "border border-rule-strong bg-surface text-ink hover:border-primary hover:bg-surface-subtle",
+  ghost: "text-primary hover:bg-surface-hover",
   danger: "bg-danger text-white hover:opacity-90",
 };
 
