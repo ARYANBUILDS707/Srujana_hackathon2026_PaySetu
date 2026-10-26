@@ -4,10 +4,14 @@ Uploads are streamed to a temp file while their SHA-256 is computed, checked aga
 limit and a type allow-list (magic bytes, never the client's filename or MIME type), then moved
 to `evidence/{supplier_id}/{sha[0:2]}/{sha}`. Stored bytes are never modified or overwritten:
 identical content maps to the same key. Directories are 0700 and files 0600.
+
+Where the finished bytes live is a `BlobBackend` (`app/storage/blobs.py`): files under
+STORAGE_DIR by default, or a private Supabase Storage bucket for hosted deployments, with the
+same keys. Temp files always stay local.
 """
 
 import hashlib
-import os
+import posixpath
 import re
 import uuid
 from collections.abc import Iterable
@@ -15,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.errors import PayloadTooLarge, UnsupportedFileType
+from app.storage.blobs import BlobBackend, LocalBlobs
 
 ALLOWED_TYPES = (
     "application/pdf",
@@ -37,8 +42,9 @@ class StoredFile:
 
 
 class EvidenceStore:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, blobs: BlobBackend | None = None) -> None:
         self.root = root.resolve()
+        self.blobs: BlobBackend = blobs or LocalBlobs(self.root)
 
     def save(self, supplier_id: str, chunks: Iterable[bytes], *, max_bytes: int) -> StoredFile:
         tmp_dir = self._ensure_dir(self.root / "tmp")
@@ -58,33 +64,25 @@ class EvidenceStore:
             mime_type = detect_mime_type(tmp_path)
             sha256 = digest.hexdigest()
             key = f"evidence/{_safe_segment(supplier_id)}/{sha256[:2]}/{sha256}"
-            final = self.root / key
-            self._ensure_dir(final.parent)
-            if final.exists():
-                tmp_path.unlink()  # same content already stored; never overwrite
-            else:
-                os.chmod(tmp_path, 0o600)
-                os.replace(tmp_path, final)
+            self.blobs.put(key, tmp_path)  # same content already stored: never overwritten
             return StoredFile(key, sha256, size, mime_type)
         finally:
             tmp_path.unlink(missing_ok=True)
 
     def path_for(self, storage_key: str) -> Path:
-        path = (self.root / storage_key).resolve()
-        if not path.is_relative_to(self.root / "evidence"):
-            raise ValueError("Storage key is outside the evidence store.")
-        return path
+        """The local file for a key (local backend only; used by tests and tamper checks)."""
+        if not isinstance(self.blobs, LocalBlobs):
+            raise ValueError("Stored files are not on the local disk.")
+        return self.blobs.path(_checked_key(storage_key, "evidence"))
+
+    def read(self, storage_key: str) -> bytes | None:
+        """The exact stored bytes, or None if the file is missing."""
+        return self.blobs.read(_checked_key(storage_key, "evidence"))
 
     def current_sha256(self, storage_key: str) -> str | None:
         """Re-hash stored bytes; None if the file is missing."""
-        path = self.path_for(storage_key)
-        if not path.is_file():
-            return None
-        digest = hashlib.sha256()
-        with open(path, "rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        return digest.hexdigest()
+        content = self.read(storage_key)
+        return None if content is None else hashlib.sha256(content).hexdigest()
 
     @staticmethod
     def _ensure_dir(path: Path) -> Path:
@@ -113,6 +111,14 @@ def detect_mime_type(path: Path) -> str:
             looks_like_email = _EMAIL_HEADER.match(data) and b"\nFrom: " in b"\n" + data
             return "message/rfc822" if looks_like_email else "text/plain"
     raise UnsupportedFileType("Allowed types: PDF, JPEG, PNG, HEIC, email (.eml) and UTF-8 text.")
+
+
+def _checked_key(storage_key: str, prefix: str) -> str:
+    """`storage_key` if it stays inside `prefix/` (no absolute paths, no `..`)."""
+    normalised = posixpath.normpath(storage_key)
+    if storage_key.startswith("/") or not normalised.startswith(f"{prefix}/"):
+        raise ValueError("Storage key is outside the store.")
+    return normalised
 
 
 def _safe_segment(value: str) -> str:

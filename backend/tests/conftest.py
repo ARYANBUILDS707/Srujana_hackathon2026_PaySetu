@@ -1,3 +1,5 @@
+import os
+import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -5,6 +7,8 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 
 from app.clock import FrozenClock
 from app.config import Settings, load_settings
@@ -58,12 +62,36 @@ def settings(isolated_env: None, tmp_path: Path) -> Settings:
     )
 
 
+# Opt-in: run the suite against PostgreSQL (the hosted database) instead of SQLite files, e.g.
+# PAYSETU_TEST_POSTGRES_URL=postgresql+psycopg://user:pw@localhost:55432/postgres. Each test
+# gets its own freshly migrated database, dropped afterwards. Unset (the default): SQLite.
+POSTGRES_TEST_URL = os.environ.get("PAYSETU_TEST_POSTGRES_URL")
+
+
 @pytest.fixture
-def migrated_database_url(tmp_path: Path) -> str:
-    """A fresh SQLite file per test, built with `alembic upgrade head` (DATABASE.md 8)."""
+def migrated_database_url(tmp_path: Path) -> Iterator[str]:
+    """A fresh database per test, built with `alembic upgrade head` (DATABASE.md 8)."""
+    if POSTGRES_TEST_URL:
+        yield from _fresh_postgres_database(POSTGRES_TEST_URL)
+        return
     url = f"sqlite:///{tmp_path / 'paysetu-test.db'}"
     command.upgrade(alembic_config(url), "head")
-    return url
+    yield url
+
+
+def _fresh_postgres_database(admin_url: str) -> Iterator[str]:
+    name = f"paysetu_test_{uuid.uuid4().hex[:16]}"
+    admin = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        with admin.connect() as connection:
+            connection.execute(text(f'CREATE DATABASE "{name}"'))
+        url = make_url(admin_url).set(database=name).render_as_string(hide_password=False)
+        command.upgrade(alembic_config(url), "head")
+        yield url
+    finally:
+        with admin.connect() as connection:
+            connection.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        admin.dispose()
 
 
 @pytest.fixture

@@ -330,7 +330,8 @@ def _display_filename(filename: str) -> str:
 
 def certificate_file(
     session: Session, store: BusinessDocumentStore, supplier_id: str, certificate_id: str
-) -> tuple[BusinessCertificate, str]:
+) -> tuple[BusinessCertificate, bytes]:
+    """The owner's certificate row and its exact stored bytes."""
     with session.begin():
         row = session.scalars(
             select(BusinessCertificate).where(
@@ -340,7 +341,10 @@ def certificate_file(
         ).first()
         if row is None:
             raise NotFound("Certificate not found or you don't have access.")
-        return row, str(store.path_for(row.storage_key))
+    content = store.read(row.storage_key)
+    if content is None:
+        raise IntegrityFailed("The stored certificate is missing.", code="integrity_failed")
+    return row, content
 
 
 def _claim(session: Session, supplier_id: str, udyam_number: str, now: str) -> bool:

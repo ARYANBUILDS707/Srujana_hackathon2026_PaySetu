@@ -20,6 +20,7 @@ from app.security.rate_limit import (
     RateLimiter,
     RateLimitRule,
 )
+from app.storage.blobs import build_remote_blobs
 from app.storage.business_store import BusinessDocumentStore
 from app.storage.evidence_store import EvidenceStore
 
@@ -66,11 +67,15 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
             RateLimitCategory.LOGIN_IP: RateLimitRule(resolved.login_ip_limit_per_hour, 3600),
         },
     )
-    app.state.evidence_store = EvidenceStore(resolved.storage_dir)
+    # Uploaded bytes: files under STORAGE_DIR, or a private Supabase bucket when hosted.
+    remote = build_remote_blobs(resolved)
+    app.state.evidence_store = EvidenceStore(resolved.storage_dir, blobs=remote)
     # Outbound email (Phase 6.1): file outbox when EMAIL_MODE=simulated, SMTP otherwise.
     app.state.email_sender = build_sender(resolved, app.state.clock)
     # Business documents (Phase 7B): a private store separate from the Evidence Vault.
-    app.state.business_store = BusinessDocumentStore(resolved.storage_dir)
+    app.state.business_store = BusinessDocumentStore(
+        resolved.storage_dir, blobs=remote, name_prefix="business/" if remote else ""
+    )
     app.include_router(api_router, prefix=API_PREFIX)
     # Case routes of the evaluation build: authenticated and supplier-scoped (Phase 6), but
     # still never mounted in production while the legal rules await review.

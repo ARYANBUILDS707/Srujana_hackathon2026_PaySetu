@@ -5,7 +5,10 @@ Nothing here connects at import time. `Database` is built from validated setting
 
 SQLite connections get the pragmas from ARCHITECTURE.md Section 7 on every connect:
 `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`, `synchronous=NORMAL`.
-PostgreSQL URLs are accepted (ADR-005 upgrade path) but no PostgreSQL driver is installed yet.
+PostgreSQL (hosted deployment on Supabase) uses the psycopg 3 driver: a plain `postgresql://` or
+`postgres://` URL, as Supabase shows it, is mapped to `postgresql+psycopg://`. Server-side
+prepared statements are off, so the URL may point at either Supabase pooler mode, and the pool
+is kept small for the free tier's connection limit.
 
 Sessions: one per request via `get_session`; services own transactions with
 `with session.begin():`. Routers never commit.
@@ -18,10 +21,12 @@ from typing import Any
 
 from fastapi import Request
 from sqlalchemy import Engine, create_engine, event
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 SQLITE_BUSY_TIMEOUT_MS = 5000
+POSTGRES_POOL_SIZE = 5
+POSTGRES_MAX_OVERFLOW = 5
 SQLITE_PRAGMAS = (
     "PRAGMA journal_mode=WAL",
     "PRAGMA foreign_keys=ON",
@@ -34,11 +39,28 @@ def is_sqlite_url(database_url: str) -> bool:
     return make_url(database_url).get_backend_name() == "sqlite"
 
 
+def normalise_database_url(database_url: str) -> URL:
+    """The URL SQLAlchemy should use: `postgres://` and `postgresql://` mean psycopg 3."""
+    if database_url.startswith("postgres://"):
+        database_url = "postgresql://" + database_url.removeprefix("postgres://")
+    url = make_url(database_url)
+    if url.drivername == "postgresql":
+        url = url.set(drivername="postgresql+psycopg")
+    return url
+
+
 def create_db_engine(database_url: str) -> Engine:
     """Create an engine; SQLite files get their parent directory and connection pragmas."""
-    url = make_url(database_url)
+    url = normalise_database_url(database_url)
     if url.get_backend_name() != "sqlite":
-        return create_engine(url, pool_pre_ping=True)
+        return create_engine(
+            url,
+            pool_pre_ping=True,
+            pool_size=POSTGRES_POOL_SIZE,
+            max_overflow=POSTGRES_MAX_OVERFLOW,
+            # Transaction-mode poolers (Supabase port 6543) cannot keep prepared statements.
+            connect_args={"prepare_threshold": None},
+        )
 
     if url.database and url.database != ":memory:":
         Path(url.database).expanduser().parent.mkdir(parents=True, exist_ok=True)

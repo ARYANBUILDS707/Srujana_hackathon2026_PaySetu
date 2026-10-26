@@ -9,10 +9,10 @@ build lasts).
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Query, Request, Response
 
 from app.api.deps import ClockDep, LimiterDep, ReviewerDep, SessionDep
+from app.api.downloads import attachment
 from app.schemas import review as schemas
 from app.security.rate_limit import RateLimitCategory
 from app.services import review as service
@@ -60,11 +60,11 @@ def detail(
 @router.get("/submissions/{submission_id}/certificate")
 def download_certificate(
     submission_id: str, reviewer: ReviewerDep, session: SessionDep, store: StoreDep
-) -> FileResponse:
+) -> Response:
     """The submission's certificate, as an attachment (never rendered inline)."""
-    row, path = service.certificate_file(session, store, submission_id)
-    return FileResponse(
-        path,
+    row, content = service.certificate_file(session, store, submission_id)
+    return attachment(
+        content,
         media_type="application/pdf",
         filename=row.original_filename,
         headers={

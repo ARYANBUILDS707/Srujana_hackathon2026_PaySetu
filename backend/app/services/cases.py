@@ -53,7 +53,7 @@ from app.domain.types import (
     ResponseKind,
     UdyamVerificationStatus,
 )
-from app.errors import Conflict, NotFound, PayloadTooLarge
+from app.errors import Conflict, IntegrityFailed, NotFound, PayloadTooLarge
 from app.models import Buyer, BuyerResponse, Case, EvidenceItem, Supplier, TimelineEventRow
 from app.repositories import cases as repo
 from app.rules.loader import CURRENT_RULE_SET_VERSION, load_rule_set
@@ -868,12 +868,16 @@ def list_evidence(session: Session, supplier_id: str, case_id: str) -> list[out.
 
 def evidence_file(
     session: Session, supplier_id: str, store: EvidenceStore, evidence_id: str
-) -> tuple[EvidenceItem, str]:
+) -> tuple[EvidenceItem, bytes]:
+    """The evidence row and its exact stored bytes (read after the transaction closes)."""
     with session.begin():
         item = repo.get_evidence(session, _supplier(session, supplier_id).id, evidence_id)
         if item is None:
             raise NotFound("Evidence not found or you don't have access.")
-        return item, str(store.path_for(item.storage_key))
+    content = store.read(item.storage_key)
+    if content is None:
+        raise IntegrityFailed("The stored file is missing.", code="integrity_failed")
+    return item, content
 
 
 @dataclass(frozen=True)

@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session
 
 import app.db as db_module
 from app.config import Settings
-from app.db import SQLITE_BUSY_TIMEOUT_MS, Database, create_db_engine, get_session, is_sqlite_url
+from app.db import (
+    SQLITE_BUSY_TIMEOUT_MS,
+    Database,
+    create_db_engine,
+    get_session,
+    is_sqlite_url,
+    normalise_database_url,
+)
 from app.main import create_app
 
 
@@ -96,7 +103,7 @@ def test_in_memory_sqlite_url_is_supported() -> None:
 
 
 def test_postgresql_urls_skip_sqlite_options(monkeypatch: pytest.MonkeyPatch) -> None:
-    # No PostgreSQL driver is installed (ADR-005 future path); inspect the engine arguments.
+    # Inspect the engine arguments without connecting (no database needed).
     calls: list[dict[str, Any]] = []
 
     def fake_create_engine(url: Any, **kwargs: Any) -> str:
@@ -105,9 +112,30 @@ def test_postgresql_urls_skip_sqlite_options(monkeypatch: pytest.MonkeyPatch) ->
 
     monkeypatch.setattr(db_module, "create_engine", fake_create_engine)
     assert create_db_engine("postgresql+psycopg://user@db.example/paysetu") == "engine"  # type: ignore[comparison-overlap]
-    assert calls[0]["pool_pre_ping"] is True and "connect_args" not in calls[0]
+    assert calls[0]["pool_pre_ping"] is True
+    # No SQLite option leaks in; prepared statements are off for Supabase's poolers.
+    assert calls[0]["connect_args"] == {"prepare_threshold": None}
+    assert (calls[0]["pool_size"], calls[0]["max_overflow"]) == (5, 5)
     assert not is_sqlite_url("postgresql://user@db.example/paysetu")
     assert is_sqlite_url("sqlite:///./storage/paysetu.db")
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "postgresql://user:pw@db.example:5432/paysetu",
+        "postgres://user:pw@db.example:5432/paysetu",
+        "postgresql+psycopg://user:pw@db.example:5432/paysetu",
+    ],
+)
+def test_supabase_style_urls_use_psycopg_3(raw: str) -> None:
+    url = normalise_database_url(raw)
+    assert url.drivername == "postgresql+psycopg"
+    assert (url.host, url.port, url.database) == ("db.example", 5432, "paysetu")
+
+
+def test_sqlite_urls_are_left_alone() -> None:
+    assert normalise_database_url("sqlite:///./storage/paysetu.db").drivername == "sqlite"
 
 
 def test_get_session_dependency_yields_and_closes_a_session(settings: Settings) -> None:

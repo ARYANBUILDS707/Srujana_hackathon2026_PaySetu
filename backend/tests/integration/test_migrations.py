@@ -21,7 +21,8 @@ ACCOUNTS = "099b88746350"  # accounts and ownership (Phase 6)
 RESET_TOKENS = "d71bd50903a9"  # password reset tokens (Phase 6.1)
 EMAIL_VERIFICATION = "5c2e8a41f0b7"  # email verification (Phase 7A)
 ONBOARDING = "8e1f3c9a2b64"  # business onboarding (Phase 7B)
-HEAD = "3d7a9c1e5b20"  # business review (Phase 7C)
+REVIEW = "3d7a9c1e5b20"  # business review (Phase 7C)
+HEAD = "6b0d2f4a8c31"  # PostgreSQL append-only triggers and RLS (no-op on SQLite)
 DEMO_TABLES = {
     "alembic_version",
     "users",
@@ -72,6 +73,7 @@ def test_single_linear_history_starting_at_the_baseline() -> None:
     assert script.get_base() == BASELINE
     assert [r.revision for r in script.walk_revisions()] == [
         HEAD,
+        REVIEW,
         ONBOARDING,
         EMAIL_VERIFICATION,
         RESET_TOKENS,

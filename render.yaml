@@ -1,0 +1,40 @@
+# Render Blueprint: PaySetu API (FastAPI) on the Free plan. Secrets are set in the Render
+# dashboard (sync: false), never in this file. Database: Supabase PostgreSQL (session pooler).
+services:
+  - type: web
+    name: paysetu-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Migrations run on every start (idempotent at head), then uvicorn binds Render's $PORT.
+    # --proxy-headers: rate limits use the real client IP forwarded by Render/Vercel.
+    startCommand: alembic upgrade head && uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      # Evaluation build: the case, onboarding and review routes are mounted only outside
+      # production (legal review pending). Production-grade values are set explicitly below.
+      - key: APP_ENV
+        value: development
+      - key: PUBLIC_BASE_URL
+        sync: false # https://<your-project>.vercel.app
+      - key: DATABASE_URL
+        sync: false # Supabase session pooler URI, with ?sslmode=require
+      - key: TOKEN_HASH_KEY
+        generateValue: true
+      - key: STORAGE_DIR
+        value: /tmp/paysetu
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false # https://<project-ref>.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: paysetu-private
+      - key: EMAIL_MODE
+        value: simulated
+      - key: LOG_LEVEL
+        value: INFO

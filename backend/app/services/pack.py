@@ -10,7 +10,6 @@ import hashlib
 import re
 import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 from typing import IO
 
 from sqlalchemy.orm import Session
@@ -82,8 +81,7 @@ def export_pack(
     )
 
     def read_evidence(item: out.EvidenceOut) -> bytes:
-        _, path = cases_service.evidence_file(session, supplier_id, store, item.id)
-        content = Path(path).read_bytes()
+        _, content = cases_service.evidence_file(session, supplier_id, store, item.id)
         if _sha256(content) != item.sha256:
             raise IntegrityFailed(
                 "A stored file changed while the pack was being built, so no pack was created.",

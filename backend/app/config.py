@@ -23,7 +23,7 @@ MIN_TOKEN_HASH_KEY_BYTES = 32
 DEFAULT_SIGNUP_LIMIT_PER_HOUR = 5
 DEFAULT_LOGIN_IP_LIMIT_PER_HOUR = 20  # API.md Section 5: POST /auth/login, 20/hour per IP
 _EXAMPLE_TOKEN_HASH_KEY = "replace-with-32-plus-random-bytes"
-_DATABASE_SCHEMES = ("sqlite://", "postgresql://", "postgresql+")
+_DATABASE_SCHEMES = ("sqlite://", "postgresql://", "postgresql+", "postgres://")
 
 
 class ConfigError(RuntimeError):
@@ -39,6 +39,11 @@ class AppEnv(StrEnum):
 class EmailMode(StrEnum):
     SMTP = "smtp"
     SIMULATED = "simulated"
+
+
+class StorageBackend(StrEnum):
+    LOCAL = "local"  # files under STORAGE_DIR (default; local development and tests)
+    SUPABASE = "supabase"  # a private Supabase Storage bucket (hosted deployment)
 
 
 class VerificationMode(StrEnum):
@@ -87,6 +92,15 @@ class Settings(BaseSettings):
     cashfree_client_secret: SecretStr | None = None
     cashfree_base_url: str | None = None
 
+    # Hosted deployment: where uploaded evidence and certificates are kept. The service-role
+    # key stays on the server (never NEXT_PUBLIC_, never logged); the bucket must be private.
+    storage_backend: StorageBackend = StorageBackend.LOCAL
+    supabase_url: str | None = None
+    supabase_service_role_key: SecretStr | None = None
+    supabase_storage_bucket: str = Field(
+        default="paysetu-private", pattern=r"^[a-z0-9][a-z0-9_.-]{2,62}$"
+    )
+
     allow_nonlive_verified: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
@@ -96,6 +110,7 @@ class Settings(BaseSettings):
         "email_from",
         "cashfree_client_id",
         "cashfree_base_url",
+        "supabase_url",
         mode="before",
     )
     @classmethod
@@ -103,7 +118,9 @@ class Settings(BaseSettings):
         # `.env.example` lists optional variables with empty values.
         return None if isinstance(value, str) and not value.strip() else value
 
-    @field_validator("smtp_password", "cashfree_client_secret", mode="before")
+    @field_validator(
+        "smtp_password", "cashfree_client_secret", "supabase_service_role_key", mode="before"
+    )
     @classmethod
     def _blank_secret_to_none(cls, value: object) -> object:
         return None if isinstance(value, str) and not value.strip() else value
@@ -156,6 +173,15 @@ class Settings(BaseSettings):
             problems.append(
                 f"AUTH_LOGIN_IP_LIMIT_PER_HOUR may exceed {DEFAULT_LOGIN_IP_LIMIT_PER_HOUR} "
                 "only with APP_ENV=test"
+            )
+        if self.storage_backend is StorageBackend.SUPABASE and not (
+            self.supabase_url
+            and self.supabase_url.startswith("https://")
+            and self.supabase_service_role_key
+        ):
+            problems.append(
+                "STORAGE_BACKEND=supabase requires SUPABASE_URL (https) and "
+                "SUPABASE_SERVICE_ROLE_KEY"
             )
         if self.app_env is AppEnv.PRODUCTION:
             problems.extend(self._production_problems())

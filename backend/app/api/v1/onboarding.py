@@ -10,10 +10,10 @@ production while the evaluation build lasts).
 from collections.abc import Iterator
 from typing import Annotated, BinaryIO
 
-from fastapi import APIRouter, Depends, File, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 
 from app.api.deps import ClockDep, LimiterDep, PrincipalDep, SessionDep, SettingsDep
+from app.api.downloads import attachment
 from app.schemas import onboarding as schemas
 from app.security.body_limit import MIB
 from app.security.rate_limit import RateLimitCategory
@@ -77,11 +77,11 @@ def _chunks(handle: BinaryIO) -> Iterator[bytes]:
 @router.get("/certificates/{certificate_id}/download")
 def download_certificate(
     certificate_id: str, principal: PrincipalDep, session: SessionDep, store: StoreDep
-) -> FileResponse:
+) -> Response:
     """The original certificate bytes, as an attachment, to its owner only."""
-    row, path = service.certificate_file(session, store, principal.supplier_id, certificate_id)
-    return FileResponse(
-        path,
+    row, content = service.certificate_file(session, store, principal.supplier_id, certificate_id)
+    return attachment(
+        content,
         media_type="application/pdf",
         filename=row.original_filename,
         headers={

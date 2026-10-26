@@ -14,10 +14,11 @@ from collections.abc import Iterator
 from datetime import date
 from typing import IO, Annotated, BinaryIO
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import ClockDep, LimiterDep, PrincipalDep, SessionDep, SettingsDep
+from app.api.downloads import attachment
 from app.domain.types import EvidenceKind
 from app.schemas import cases as schemas
 from app.security.rate_limit import RateLimitCategory
@@ -175,10 +176,10 @@ def _chunks(handle: BinaryIO) -> Iterator[bytes]:
 @router.get("/evidence/{evidence_id}/download")
 def download_evidence(
     principal: PrincipalDep, evidence_id: str, session: SessionDep, store: StoreDep
-) -> FileResponse:
-    item, path = service.evidence_file(session, principal.supplier_id, store, evidence_id)
-    return FileResponse(
-        path,
+) -> Response:
+    item, content = service.evidence_file(session, principal.supplier_id, store, evidence_id)
+    return attachment(
+        content,
         media_type=item.mime_type,
         filename=item.original_filename,
         headers={"Cache-Control": "private, no-store"},

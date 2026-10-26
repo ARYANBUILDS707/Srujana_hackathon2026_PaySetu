@@ -39,7 +39,15 @@ from app.domain.business_review import (
     allowed_transitions,
     evidence_level,
 )
-from app.errors import BadRequest, Conflict, FieldError, Forbidden, NotFound, ValidationFailed
+from app.errors import (
+    BadRequest,
+    Conflict,
+    FieldError,
+    Forbidden,
+    IntegrityFailed,
+    NotFound,
+    ValidationFailed,
+)
 from app.models import (
     BusinessCertificate,
     BusinessCheck,
@@ -411,13 +419,16 @@ def detail(
 
 def certificate_file(
     session: Session, store: BusinessDocumentStore, submission_id: str
-) -> tuple[BusinessCertificate, str]:
+) -> tuple[BusinessCertificate, bytes]:
     """The certificate frozen in a submission (any reviewer may read it, including their own)."""
     with session.begin():
         row = _submission(session, submission_id)
         certificate = session.get(BusinessCertificate, row.certificate_id)
         assert certificate is not None  # foreign key
-        return certificate, str(store.path_for(certificate.storage_key))
+    content = store.read(certificate.storage_key)
+    if content is None:
+        raise IntegrityFailed("The stored certificate is missing.", code="integrity_failed")
+    return certificate, content
 
 
 # ------------------------------------------------------------------------ writes

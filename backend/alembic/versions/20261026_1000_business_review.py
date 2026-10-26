@@ -125,9 +125,9 @@ def _set_statuses(statuses: Sequence[str]) -> None:
         ):
             pass
         return
-    op.drop_constraint("ck_business_profiles_status", "business_profiles", type_="check")
+    op.drop_constraint(op.f("ck_business_profiles_status"), "business_profiles", type_="check")
     op.create_check_constraint(
-        "ck_business_profiles_status", "business_profiles", f"status IN ({_in(statuses)})"
+        op.f("ck_business_profiles_status"), "business_profiles", f"status IN ({_in(statuses)})"
     )
 
 
