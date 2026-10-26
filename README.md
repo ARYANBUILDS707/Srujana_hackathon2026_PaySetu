@@ -16,11 +16,25 @@ PaySetu is a LegalTech prototype designed to help Indian Micro and Small Enterpr
 
 **Evidence-first delayed-payment protection for Indian micro and small enterprises.**
 
-PaySetu helps a micro or small supplier record and prove the date of acceptance. The MSMED Act's payment protections depend on that date. With it, the supplier can track statutory payment deadlines, preserve tamper-evident evidence and prepare a structured claim pack for legal review or dispute resolution.
+PaySetu helps a micro or small supplier record and prove the date of acceptance. The MSMED Act's payment protections depend on that date. With it, the supplier can track statutory payment deadlines, preserve tamper-evident evidence and export a structured evidence pack for legal review or dispute resolution.
 
-> **Status:** Documentation-first planning phase. This repository has no application code yet. Everything in this README marked *proposed* or *planned* is a design intent, not something that has been built.
+## Live demo
+
+| | URL |
+| --- | --- |
+| Web app (Vercel) | https://srujana-hackathon2026-pay-setu.vercel.app |
+| API (Render) | https://srujana-hackathon2026-paysetu.onrender.com |
+| API health check | https://srujana-hackathon2026-paysetu.onrender.com/api/v1/health (returns `{"status":"ok"}`) |
+
+**Try it:** open the web app, choose **Create account**, then **Record delivery** (use a delivery date about 20 days ago and add a buyer inline). The case page shows the DeemedClock dates, the interest calculation and the Evidence Vault; upload a file, run **Verify integrity** and **Download Evidence Pack**. **Business profile** in the sidebar takes you through Udyam certificate onboarding.
+
+> **Before you try the live demo**
 >
-> **Not legal advice:** PaySetu prepares and organises evidence. It is not a law firm, collection agency, lawyer marketplace or official government filing portal. Every legal rule described here must be checked against official sources and reviewed by a qualified advocate before real-world use.
+> - **Use synthetic data only.** This is a hackathon evaluation build. Do not enter real business, personal or financial data.
+> - **The API sleeps when idle.** It runs on Render's free plan: the first request after about 15 idle minutes can take about 50 seconds. Open the health check URL first if the app seems slow.
+> - **Known issue at the time of writing (26 Oct 2026):** the web app's `/api/*` proxy answered 404 while the API itself was healthy. Sign-in on the live site works only once `API_ORIGIN` is set in the Vercel project and the frontend is rebuilt ([Section 15](#15-deployment)).
+>
+> **Not legal advice.** PaySetu prepares and organises evidence. It is not a law firm, collection agency, lawyer marketplace or official government filing portal. Every legal rule described here must be checked against official sources and reviewed by a qualified advocate before real-world use.
 
 ---
 
@@ -30,18 +44,15 @@ PaySetu helps a micro or small supplier record and prove the date of acceptance.
 | --- | --- | --- |
 | README | [README.md](README.md) | Project overview (this file) |
 | Agent rules | [AGENTS.md](AGENTS.md) | Mandatory rules for coding agents and contributors. **Read before changing anything** |
-| Product requirements | [docs/PRD.md](docs/PRD.md) | Source of truth for scope, journeys, requirements and legal rules (tiers S, I and C) |
-| Decision register | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decisions (ADR-xxx) and legal review items (LR-xx), with status |
-| Design system | [docs/DESIGN.md](docs/DESIGN.md) | Visual design, components, UX states and accessibility |
-| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Tech stack, layers, security boundaries, deployment |
-| Database | [docs/DATABASE.md](docs/DATABASE.md) | Data model, constraints, append-only triggers, backups |
-| API | [docs/API.md](docs/API.md) | Endpoints, formats, errors, rate limits, integrations |
-| Implementation plan | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | Phased build plan and the first milestone |
-
-**Suggested reading order:**
-
-- New contributors: README → PRD → DECISIONS → ARCHITECTURE.
-- Coding agents: AGENTS → IMPLEMENTATION_PLAN → the documents their task touches.
+| Product requirements | [docs/PRD.md](docs/PRD.md) | Scope, journeys, requirements and legal rules (tiers S, I and C) |
+| Decision register | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decisions (ADR-xxx), legal review items (LR-xx) and per-phase decisions, with status |
+| Handover | [docs/HANDOVER.md](docs/HANDOVER.md) | Current state, test results, known issues and next tasks |
+| Design system | [docs/DESIGN.md](docs/DESIGN.md) | Visual design ("Warm Ledger"), light and dark themes, components, accessibility |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack, layers, security boundaries, environment variables |
+| Database | [docs/DATABASE.md](docs/DATABASE.md) | Data model, constraints, append-only triggers |
+| API | [docs/API.md](docs/API.md) | Endpoints, formats, errors, rate limits |
+| Implementation plan | [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | The original phased build plan |
+| Audit report | [docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md) | Earlier code and documentation audit |
 
 **Precedence:** accepted entries in DECISIONS.md > PRD > ARCHITECTURE > DATABASE > API > DESIGN > this README.
 
@@ -52,23 +63,26 @@ PaySetu helps a micro or small supplier record and prove the date of acceptance.
 1. [Project Overview](#1-project-overview)
 2. [Problem Statement](#2-problem-statement)
 3. [Why This Problem Matters](#3-why-this-problem-matters)
-4. [Proposed Solution](#4-proposed-solution)
-5. [Core Features and Modules](#5-core-features-and-modules)
+4. [Solution and Modules](#4-solution-and-modules)
+5. [Feature Status](#5-feature-status)
 6. [How PaySetu Works](#6-how-paysetu-works)
 7. [Target Users](#7-target-users)
-8. [Proposed Technology Stack](#8-proposed-technology-stack)
-9. [System Architecture Overview](#9-system-architecture-overview)
+8. [Technology Stack](#8-technology-stack)
+9. [Deployment Architecture](#9-deployment-architecture)
 10. [Project Folder Structure](#10-project-folder-structure)
-11. [Development Roadmap](#11-development-roadmap)
-12. [Current Implementation Status](#12-current-implementation-status)
-13. [Installation and Local Development](#13-installation-and-local-development)
-14. [Testing Strategy](#14-testing-strategy)
-15. [Security, Privacy and Evidence Integrity](#15-security-privacy-and-evidence-integrity)
-16. [Important Legal and Compliance Limitations](#16-important-legal-and-compliance-limitations)
-17. [Future Enhancements](#17-future-enhancements)
-18. [Glossary](#18-glossary)
-19. [Team and Contributions](#19-team-and-contributions)
-20. [License](#20-license)
+11. [Database and Migrations](#11-database-and-migrations)
+12. [API Overview](#12-api-overview)
+13. [Development Phases](#13-development-phases)
+14. [Installation and Local Development](#14-installation-and-local-development)
+15. [Deployment](#15-deployment)
+16. [Testing](#16-testing)
+17. [Security, Privacy and Evidence Integrity](#17-security-privacy-and-evidence-integrity)
+18. [Important Legal and Compliance Limitations](#18-important-legal-and-compliance-limitations)
+19. [Known Demo Limitations](#19-known-demo-limitations)
+20. [Future Enhancements](#20-future-enhancements)
+21. [Glossary](#21-glossary)
+22. [Team and Contributions](#22-team-and-contributions)
+23. [License](#23-license)
 
 ---
 
@@ -83,10 +97,11 @@ PaySetu helps a micro or small supplier record and prove the date of acceptance.
 | Domain | LegalTech: MSME delayed-payment protection |
 | Primary user | Udyam-registered micro and small suppliers in India |
 | Source document | *LS03_Final_Ideathon_Document* (24 October 2026), based on ideation document v12 |
+| Status | Working evaluation build, deployed on Vercel (web), Render (API) and Supabase (PostgreSQL and private file storage) |
 
-PaySetu works on the supplier's side, from delivery onwards. It records each delivery, opens a visible 15-day window in which the buyer can object, seals each piece of evidence with a SHA-256 hash and shows the due date and the interest owed. When a claim is needed, it exports a sealed evidence pack. The supplier can file that pack on the MSME ODR portal or share it with an advocate they choose.
+PaySetu works on the supplier's side, from delivery onwards. In the current build a supplier records a delivery and the buyer's responses; PaySetu computes the 15-day objection window, the day of acceptance, the payment due date and illustrative interest from a versioned rule set, seals each uploaded evidence file with a SHA-256 hash, keeps a hash-chained case timeline, shows a readiness checklist and exports an Evidence Pack ZIP with a hash manifest. Suppliers can also submit their Udyam details and certificate for a **manual** review by a PaySetu reviewer.
 
-PaySetu does not decide disputes. The ODR portal, the MSE Facilitation Council and the courts decide them. PaySetu's job is to make sure the supplier arrives with organised, verifiable evidence.
+PaySetu does not decide disputes. The ODR portal, the MSE Facilitation Council and the courts decide them. PaySetu's job is to help the supplier arrive with organised, verifiable evidence.
 
 ---
 
@@ -141,70 +156,65 @@ Among the tools reviewed, none turns delivery proof into evidence tied to the MS
 
 ---
 
-## 4. Proposed Solution
+## 4. Solution and Modules
 
-PaySetu builds the evidence while the delivery happens, instead of rebuilding it once a dispute starts. Five gaps are mapped to five modules:
+PaySetu builds the evidence while the delivery happens, instead of rebuilding it once a dispute starts. The design maps five gaps to five modules; three are built, one is built in a reduced form, and one is not built yet.
 
-| # | Gap | PaySetu module |
-| --- | --- | --- |
-| G1 | Informal suppliers lack a provable date of acceptance and do not use the 15-day objection window | **DeemedClock** |
-| G2 | Delivery proof is not turned into hash-sealed electronic evidence | **Evidence Vault** |
-| G3 | Suppliers do not know what is missing from their file before filing | **Case Strength** |
-| G4 | Buyers rarely see the cost of continued delay | **Buyer Cost Page** |
-| G5 | No single pack works across the ODR portal, the Council and an advocate, with logged consent | **Sealed Pack** |
-
----
-
-## 5. Core Features and Modules
-
-### 5.1 DeemedClock (core module)
-
-Tracks the date the whole claim depends on.
-
-- Record delivery details: invoice, date, challan photo, delivery location. The requirement is 60 seconds or less on a phone; the ideation aspiration is about 20 seconds.
-- Generate a buyer **delivery intimation** draft. It is sent only after the supplier approves it.
-- Run a visible 15-day objection window from delivery.
-- Record buyer replies and tag them as *objection*, *acknowledgement* or *other*.
-- Work out the day of acceptance, the payment due date and the date interest starts from **configurable, legally reviewed rules**. The rules are not hard-coded legal conclusions.
-- When the buyer raises a written objection, stop the clock and flag the objection for review.
+| # | Gap | Module | Status |
+| --- | --- | --- | --- |
+| G1 | Informal suppliers lack a provable date of acceptance and do not use the 15-day objection window | **DeemedClock** | Built (no buyer intimation is sent; see [Section 5](#5-feature-status)) |
+| G2 | Delivery proof is not turned into hash-sealed electronic evidence | **Evidence Vault** | Built |
+| G3 | Suppliers do not know what is missing from their file before filing | **Case Strength** | Built |
+| G4 | Buyers rarely see the cost of continued delay | **Buyer Cost Page** | Not built |
+| G5 | No single pack works across the ODR portal, the Council and an advocate, with logged consent | **Sealed Pack** | Partly built as the **Evidence Pack** ZIP download; no share links, no advocate view, no s.63 certificate |
 
 > **Reading adopted (day counting is interpretation LR-01, counsel to confirm):** For a verbal deal where the buyer stays silent, the delivery day is the day of acceptance (statute text). Payment is due by Day 15 after delivery, and interest runs from Day 16, the "appointed day" under s.2(b). This replaces the "15 days after deemed acceptance" wording in ideation doc v12. See [PRD Section 4](docs/PRD.md#4-legal-rules-the-product-encodes) for every rule, its tier and a worked example.
 
-### 5.2 Evidence Vault
+---
 
-Preserves evidence in a tamper-evident way.
+## 5. Feature Status
 
-- Store invoices, delivery challans, photographs, email records (`.eml`), chat exports and tracking records.
-- Compute a **SHA-256** hash and capture a timestamp for each file when it is uploaded.
-- Keep a **hash-chained audit timeline**: each event references the hash of the event before it.
-- Detect changes to preserved evidence by re-hashing the files.
-- Planned: grade inbound email by DKIM signature. Under consideration: RFC 3161 trusted timestamps.
+Status is taken from the source code and tests in this repository, not from the plan.
 
-### 5.3 Case Strength
+### 5.1 Implemented
 
-A rule-based readiness checklist. It does not predict outcomes.
+| Area | What works | Where |
+| --- | --- | --- |
+| **Accounts and sessions** | Signup (creates the user, their supplier and a session), login, logout, sign out everywhere, forgot and reset password (single-use 15-minute link), change password, Account settings. Argon2id password hashes; server-side sessions stored as SHA-256 hashes in an HttpOnly, SameSite=Lax cookie (`Secure` on https); CSRF checks on every write; per-IP and per-account rate limits. Email verification is not required (it was built, then removed at the owner's request; DECISIONS.md Section 12) | `backend/app/services/auth.py`, `app/security/`, `frontend/src/app/(auth)/` |
+| **Ownership** | Every supplier query is scoped to the signed-in supplier; another supplier's records answer 404 | `backend/tests/integration/test_authorisation.py` |
+| **Cases and DeemedClock** | Record a delivery (buyer, invoice, amount, dates, deal type), record buyer responses (objection, acknowledgement, other) and remove an objection. The 15-day objection window, day of acceptance, due date, interest start date and next action are **computed** from the rule set `backend/app/rules/msmed-v1.toml` (rule IDs R1–R5 and others), never stored | `backend/app/domain/deemed_clock.py`, `app/services/cases.py` |
+| **Interest calculator** | Compound interest with monthly rests at three times the bank rate, exact `Decimal` arithmetic, assumptions shown (provisional defaults D3–D5, see [Section 18](#18-important-legal-and-compliance-limitations)) | `backend/app/domain/interest.py` |
+| **Evidence Vault** | Upload PDF, JPEG, PNG, HEIC, `.eml` and UTF-8 text (type checked by magic bytes; 15 MB limit); SHA-256 computed on the server over the original bytes; content-addressed, never overwritten; download as an attachment; **Verify integrity** re-hashes every file and re-walks the hash-chained timeline | `backend/app/storage/evidence_store.py`, `app/domain/integrity.py` |
+| **Case timeline** | Append-only, hash-chained events for every case action | `backend/app/domain/integrity.py` |
+| **Case Strength** | Rule-based readiness checklist with a one-line suggested action per missing item; never predicts outcomes | `backend/app/domain/checklist.py` |
+| **Evidence Pack** | ZIP download: case summary, DeemedClock and interest, timeline (Markdown and JSON), checklist, verification report, the original evidence files unchanged and `manifest.json` with a SHA-256 for every file. Refused if any file or the timeline fails verification | `backend/app/services/pack.py`, `app/documents/pack.py` |
+| **Business onboarding** | Supplier enters enterprise details and uploads the Udyam certificate PDF (structural PDF checks, active content refused, 5 MB limit); Udyam numbers are normalised to `UDYAM-XX-00-0000000` and format-checked; draft, review and submit; each submission is an immutable snapshot with its own SHA-256; duplicate Udyam numbers across accounts are flagged as contested claims | `backend/app/services/onboarding.py`, `frontend/src/app/app/onboarding/` |
+| **Manual reviewer workflow** | Reviewer role granted only with the operator CLI (`make reviewer`); review queue; submission detail with snapshot and certificate integrity; certificate download; manual checks that record the source consulted, what was compared, the result and the date; decisions (approve, reject, request information) with reasons; final, append-only review history; resubmission after a request for information; self-review is refused | `backend/app/services/review.py`, `tools/reviewer.py`, `frontend/src/app/app/review/` |
+| **Interface** | Responsive web app (tested at 360×800 and 1280×800), light, dark and system themes, loading, empty and error states | `frontend/src/` |
+| **Hosted deployment** | Next.js on Vercel, FastAPI on Render, PostgreSQL on Supabase, uploaded files in a private Supabase Storage bucket reached only from the server | `render.yaml`, [Section 9](#9-deployment-architecture) |
 
-- Check for: Udyam registration, enterprise class, proof of delivery, intimation sent, objection status, written payment terms, invoice details, demand served, buyer acknowledgement, and the limitation window.
-- Give each missing item a one-line suggested action.
-- **Never** predict a tribunal or court outcome or guarantee recovery.
+### 5.2 Simulated or demo-only
 
-### 5.4 Buyer Cost Page
+| Item | What is real and what is not |
+| --- | --- |
+| Email | `EMAIL_MODE=simulated` writes each message to a local outbox file instead of sending it. The hosted demo runs in this mode, so **password-reset emails are not delivered** there. An SMTP sender exists in the code (`EMAIL_MODE=smtp`) but is not configured in the deployment |
+| Bank rate | The only rate on record is an **unverified** 5.75% from 7 Oct 2026 (from the ideation document), inserted by the demo seed and labelled unverified in the UI. Without the seed, interest reports "rate data unavailable" |
+| Demo data | `make seed` creates one synthetic supplier, one sample buyer and the unverified rate; `make demo-account` gives that supplier a login |
+| Udyam details | Everything a supplier submits is self-declared. A reviewer's approval records that a person checked it by hand; it is **not** a government verification |
 
-A buyer-facing summary, shared only when the supplier explicitly approves.
+### 5.3 Partially implemented
 
-- Outstanding principal and an illustrative interest calculation to date.
-- A plain-language explanation of the relevant provisions: s.16 interest, the s.19 pre-deposit of 75% of an award before a court challenge, and Income-tax Act s.43B(h). Each comes with a stated limitation.
-- Shown to the buyer only through a link that the supplier has approved.
+| Item | Built | Not built |
+| --- | --- | --- |
+| Sealed Pack | Evidence Pack ZIP with hash manifest | Persistent sealed packs, share links, advocate view, BSA s.63 certificate draft |
+| DeemedClock | Clock, responses, objections | Buyer delivery intimation and demand letters (C11 and C13 in the checklist always show as missing) |
+| Payments | Interest computed on the full invoice amount | Recording part payments (the paid amount is zero) |
+| Udyam verification | Format checks, certificate storage, manual review | Any official Udyam lookup or provider API |
+| Eligibility | Shown from the supplier profile (self-declared) | Using an approved business profile to update eligibility |
 
-### 5.5 Sealed Pack
+### 5.4 Not built (future)
 
-A structured export for the claim.
-
-- Order proof, invoice details, delivery evidence and a chronological timeline.
-- A hash manifest covering every included file.
-- A **draft** certificate under Bharatiya Sakshya Adhiniyam (BSA) 2023 s.63, for review by a qualified person.
-- A list of open questions for counsel.
-- The supplier files the pack themselves, or shares it with an advocate they choose through a link that is consent-based, time-limited (proposed: 30 days), revocable and access-logged.
+Buyer Cost Page; outbound communications (intimations, demands) with an approval gate; share links and an advocate read-only view; BSA s.63 certificate drafts; eSign or DSC signing; official Udyam or GSTIN verification; WhatsApp intake; DKIM grading of emails; RFC 3161 timestamps; account deletion. See [Section 20](#20-future-enhancements).
 
 ---
 
@@ -212,33 +222,33 @@ A structured export for the claim.
 
 ```mermaid
 flowchart TD
-    A[1. Delivery logged<br/>invoice, date, challan photo] --> B[2. DeemedClock starts<br/>supplier approves delivery intimation]
-    B --> C{Written objection<br/>within 15 days?}
+    A[1. Delivery logged<br/>buyer, invoice, amount, delivery date] --> B[2. DeemedClock runs<br/>15-day objection window shown]
+    B --> C{Written objection<br/>recorded within 15 days?}
     C -- Yes --> D[Objection stored and tagged<br/>clock stops, checklist flags it]
-    C -- No --> E[3. Acceptance date determined<br/>due date and interest start shown]
+    C -- No --> E[3. Acceptance date computed<br/>due date and interest start shown]
     E --> F[4. Case Strength checklist<br/>missing items get a suggested fix]
-    F --> G[5. Buyer Cost Page<br/>shared only with supplier approval]
-    G --> H[6. Sealed Pack exported<br/>hash manifest, timeline, draft s.63 certificate]
-    H --> I[Supplier files on ODR portal<br/>or shares with a chosen advocate]
+    F --> G[5. Evidence Pack ZIP<br/>original files, timeline, SHA-256 manifest]
+    G --> H[Supplier files on the ODR portal<br/>or takes it to an advocate, outside PaySetu]
 
     V[(Evidence Vault<br/>SHA-256 hashes + hash-chained timeline)]
     A -.-> V
     B -.-> V
     D -.-> V
     E -.-> V
-    V -.-> H
+    V -.-> G
 ```
+
+Not shown because not built: buyer intimations and demands, the Buyer Cost Page and in-app sharing with an advocate.
 
 ### Example journey (illustrative)
 
 Ravi runs a small fastener unit. He delivers goods worth Rs 5,00,000 on a verbal order.
 
-1. **At the gate:** Ravi photographs the signed challan and enters the invoice.
-2. **Intimation:** He approves a delivery intimation to the buyer's accounts team. The 15-day window is visible.
-3. **Silence:** No written objection arrives. PaySetu shows the acceptance date and the due date under the configured rule.
-4. **Missed payment:** PaySetu shows illustrative interest accrued. The checklist flags "demand served: missing".
-5. **Demand:** Ravi reviews and approves a demand that links to the Buyer Cost Page.
-6. **Still unpaid:** Ravi downloads the Sealed Pack. He files it on the ODR portal himself or shares it with an advocate he chooses.
+1. **Record delivery:** Ravi enters the invoice and delivery date and uploads the signed challan photo. Its SHA-256 is recorded.
+2. **Window:** the 15-day objection window is visible on the case page.
+3. **Silence:** no written objection is recorded. PaySetu shows the acceptance date and the due date under the configured rule.
+4. **Missed payment:** PaySetu shows illustrative interest accrued and what is still missing from the file.
+5. **Still unpaid:** Ravi verifies integrity and downloads the Evidence Pack. He files it on the ODR portal himself or takes it to an advocate he chooses.
 
 ---
 
@@ -246,262 +256,189 @@ Ravi runs a small fastener unit. He delivers goods worth Rs 5,00,000 on a verbal
 
 | User | Role in PaySetu |
 | --- | --- |
-| Micro and small suppliers (Udyam-registered) | Primary users: log deliveries, approve communications, export packs |
+| Micro and small suppliers (Udyam-registered) | Primary users: record deliveries and responses, keep evidence, export the Evidence Pack, submit business details for review |
+| PaySetu reviewers (staff) | Manually review submitted business details and certificates; accounts are created only by an operator |
 | Chartered accountants and accounting firms | Possible channel: help supplier clients keep records (hypothesis, not validated) |
-| Advocates chosen by the supplier | Read-only access to a shared pack, with consent and time limits |
-| Buyers' finance teams | Receive intimations and the Buyer Cost Page only when the supplier approves |
+| Advocates chosen by the supplier | Receive the exported pack from the supplier (in-app sharing is not built) |
+| Buyers' finance teams | Planned recipients of intimations and the Buyer Cost Page (not built) |
 
 Possible distribution channels named in the ideation document are industry associations, CA firms, banks and MSME facilitation centres. None of these has been validated, and no pricing or demand data has been collected.
 
 ---
 
-## 8. Proposed Technology Stack
+## 8. Technology Stack
 
-> These are **proposed** technologies. None is installed or configured in this repository yet. The full stack, with reasoning (including SQLAlchemy, Alembic, Caddy and the toolchain versions), is in [docs/ARCHITECTURE.md Section 2](docs/ARCHITECTURE.md#2-recommended-tech-stack) and [docs/DECISIONS.md](docs/DECISIONS.md).
+Versions are the exact pins in `frontend/package.json` and `backend/requirements.txt`.
 
-| Layer | Proposed technology | Purpose |
+| Layer | Technology | Purpose |
 | --- | --- | --- |
-| Frontend | Next.js, React, TypeScript | Supplier web app, mobile-friendly delivery capture |
-| Styling | Tailwind CSS | UI styling |
-| Backend | Python, FastAPI | REST API, rules engine, evidence processing |
-| Database | SQLite (prototype); PostgreSQL (possible production upgrade) | Cases, deliveries, events, evidence metadata |
-| Evidence integrity | SHA-256 (Python `hashlib`) | File hashing and hash-chained timeline |
-| Documents | ReportLab | PDF generation (intimations, demand drafts, s.63 drafts, manifests) |
-| Calculations | Python `decimal` | Exact interest and amount arithmetic, with no floating-point error |
-| Backend testing | pytest | Unit and integration tests |
-| End-to-end testing | Playwright | Browser-level workflow tests |
-| Version control | Git and GitHub | Source control (the folder is not a Git repository yet) |
-
-The ideation document also names pyHanko (PDF signing), DSC and Aadhaar eSign providers, email (SMTP and inbound webhooks), and optional WhatsApp intake. These are candidate integrations. None is part of the initial scope until it is confirmed.
+| Frontend | Next.js 16.4.3, React 19.3.0, TypeScript 5.9.3 | Supplier and reviewer web app |
+| Styling | Tailwind CSS 4.3.3, Geist typeface | "Warm Ledger" design system with light and dark themes (docs/DESIGN.md) |
+| API types | openapi-typescript 7.13.0 | Frontend types generated from the backend OpenAPI schema |
+| Backend | Python 3.12, FastAPI 0.162.0, Uvicorn 0.54.0, pydantic-settings 2.16.1 | REST API, rules engine, evidence processing |
+| Database access | SQLAlchemy 2.1.6, Alembic 1.20.1 | Models and migrations |
+| Databases | SQLite (local development and tests); PostgreSQL via psycopg 3.3.6 (hosted, on Supabase) | Cases, evidence metadata, timeline, accounts, reviews |
+| File storage | Local disk (development); private Supabase Storage bucket (hosted), over HTTPS with Python's standard library | Original evidence files and certificates |
+| Passwords | argon2-cffi 25.1.0 (Argon2id) | Password hashing |
+| Evidence integrity | SHA-256 (Python `hashlib`) | File hashes, hash-chained timeline, snapshot hashes |
+| Calculations | Python `decimal` | Exact interest arithmetic |
+| Exports | Python `zipfile`, Markdown and JSON | Evidence Pack (no PDF generation library is used) |
+| Testing | pytest, pytest-cov, Playwright 1.64.1 | Unit, integration and browser tests |
+| Code quality | Ruff, mypy (strict on `app/domain`), ESLint 9, Prettier 3 | Lint, format, type checks |
+| Hosting | Vercel (web), Render Free (API), Supabase Free (PostgreSQL and Storage) | Public deployment |
 
 ---
 
-## 9. System Architecture Overview
+## 9. Deployment Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Client["Frontend (proposed: Next.js + React + TS)"]
-        UI1[Supplier dashboard]
-        UI2[Mobile delivery capture]
-        UI3[Buyer Cost Page<br/>approved-share view]
-        UI4[Advocate read-only view]
-    end
-
-    subgraph API["Backend (proposed: FastAPI)"]
-        M1[DeemedClock<br/>rules engine]
-        M2[Evidence Vault<br/>hashing + hash chain]
-        M3[Case Strength<br/>checklist rules]
-        M4[Interest and<br/>due-date calculator]
-        M5[Sealed Pack<br/>export builder]
-        M6[Consent and<br/>sharing service]
-        M7[Approval gate<br/>for outbound messages]
-    end
-
-    subgraph Storage["Storage (proposed)"]
-        DB[(SQLite / PostgreSQL<br/>cases, events, metadata)]
-        FS[(Evidence file store)]
-        CFG[(Legal rule configuration<br/>reviewed by counsel)]
-    end
-
-    subgraph External["External services (future, optional)"]
-        X1[Email SMTP / inbound]
-        X2[Udyam / GSTIN verification]
-        X3[eSign / DSC provider]
-    end
-
-    Client --> API
-    M1 --> CFG
-    M4 --> CFG
-    M1 --> DB
-    M2 --> DB
-    M2 --> FS
-    M3 --> DB
-    M5 --> FS
-    M6 --> DB
-    M7 --> X1
-    API -.-> X2
-    API -.-> X3
+    U[Browser] -->|"https, same origin"| V["Vercel<br/>Next.js web app<br/>/api/* rewrite (server side)"]
+    V -->|"/api/* proxied"| R["Render<br/>FastAPI + Uvicorn<br/>migrations on start"]
+    R -->|"SQL over TLS<br/>(session pooler)"| P[("Supabase PostgreSQL<br/>append-only triggers,<br/>row-level security on")]
+    R -->|"HTTPS, service-role key<br/>(server side only)"| S[("Supabase Storage<br/>private bucket<br/>paysetu-private")]
 ```
 
-**Design principles:**
-
-- **Rules as configuration.** Statutory periods, interest multipliers, RBI bank-rate history and the day-count method live in versioned configuration that counsel reviews. They are not scattered through the code.
-- **Append-only evidence.** Evidence records and timeline events are never edited in place. A correction is a new event.
-- **Human approval gate.** Nothing is sent to a buyer, and nothing is shared, without the supplier explicitly approving it.
-- **Honest labelling.** Data from mock or sandbox integrations is labelled "simulated" and cannot be presented as live.
+- **One origin for the browser.** The browser only talks to the Vercel site; Next.js rewrites `/api/*` to the Render API (`API_ORIGIN`). The session cookie therefore belongs to the Vercel domain and is `Secure`, HttpOnly and SameSite=Lax.
+- **Startup migrations.** Render runs `alembic upgrade head` before starting Uvicorn on `$PORT` (`render.yaml`).
+- **Private files.** Evidence and certificates are stored in a private bucket and reach users only through PaySetu's authenticated, owner-checked download routes. The Supabase service-role key exists only in Render's environment.
+- **Database hardening.** On PostgreSQL, migration `6b0d2f4a8c31` creates the append-only triggers (the SQLite equivalents already existed) and enables row-level security on every table, with no policies, so Supabase's public REST roles cannot read PaySetu's tables.
+- **Evaluation mode.** The hosted API runs with `APP_ENV=development`, because the case, onboarding and review routes are mounted only outside `production` while the legal rules await review (DECISIONS.md Section 7). The https origin, a generated `TOKEN_HASH_KEY` and the secrets are set explicitly.
 
 ---
 
 ## 10. Project Folder Structure
 
-**Current state (25 Oct 2026, after Phase 6):**
-
 ```
 PaySetu/
-├── README.md, AGENTS.md, CLAUDE.md, Makefile, .gitignore, .nvmrc
-├── docs/                  # PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN, HANDOVER, AUDIT_REPORT
+├── README.md, AGENTS.md, CLAUDE.md, Makefile, render.yaml, .gitignore, .nvmrc
+├── docs/                    # PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API,
+│                            # IMPLEMENTATION_PLAN, HANDOVER, AUDIT_REPORT
 ├── backend/
-│   ├── app/main.py        # app factory, /api/v1 prefix, middleware order
-│   ├── app/api/deps.py    # session, clock and the supplier principal (auth dependency)
-│   ├── app/api/v1/        # health, auth, supplier case routes (demo_cases.py)
-│   ├── app/domain/        # pure legal and evidence engine (100% branch coverage)
-│   ├── app/services/      # auth, cases, evidence pack
-│   ├── app/security/      # CSRF, headers, body limit, rate limits, passwords, sessions
-│   ├── app/models/, app/schemas/, app/repositories/, app/documents/, app/storage/, app/rules/
-│   ├── alembic/versions/  # baseline, demo case core, accounts and ownership
-│   ├── seed/              # demo.py (synthetic data), demo_account.py (demo login)
-│   ├── tests/             # unit/ and integration/
-│   └── requirements.txt, requirements-dev.txt, .env.example, pyproject.toml
+│   ├── app/main.py          # app factory, /api/v1 prefix, middleware order, storage wiring
+│   ├── app/api/             # deps.py (session, supplier, reviewer principals), downloads.py
+│   ├── app/api/v1/          # health, auth, demo_cases (case workspace), onboarding, review
+│   ├── app/domain/          # pure legal and evidence engine (100% branch coverage)
+│   ├── app/services/        # auth, cases, pack, onboarding, review, reviewers
+│   ├── app/storage/         # evidence_store, business_store, blobs (local disk or Supabase)
+│   ├── app/security/        # CSRF, headers, body limit, rate limits, passwords, sessions
+│   ├── app/mail/            # simulated outbox and SMTP senders, templates
+│   ├── app/rules/           # msmed-v1.toml (versioned legal rule set) and its loader
+│   ├── app/models/, app/schemas/, app/repositories/, app/documents/
+│   ├── alembic/versions/    # 8 migrations (Section 11)
+│   ├── seed/                # demo.py (synthetic data), demo_account.py (demo login)
+│   ├── tools/               # reviewer.py (provision reviewers), outbox.py, export_openapi.py
+│   ├── tests/               # unit/ (incl. domain/), integration/, fixtures/legal/
+│   └── requirements.txt, requirements-dev.txt, .env.example, pyproject.toml, alembic.ini
 └── frontend/
-    ├── src/app/           # landing, (auth)/login and signup, app/ workspace, globals.css (tokens)
-    ├── src/components/    # ui/, layout/, cases/
-    ├── src/content/       # UI copy catalogue
-    ├── src/lib/           # api/ (typed client), session/ (session guard), format/, hooks/
-    ├── tests/e2e/         # Playwright specs against the real backend
-    └── next.config.ts, playwright.config.ts, package.json
-```
-
-**Planned structure** (the files above exist; everything else is planned). The authoritative version is [docs/ARCHITECTURE.md Section 6](docs/ARCHITECTURE.md#6-folder-structure).
-
-```
-PaySetu/
-├── README.md              # (exists)
-├── AGENTS.md              # (exists)
-├── docs/                  # (exists) detailed documentation
-├── frontend/              # (planned) Next.js + React + TypeScript + Tailwind
-│   ├── src/app/           # (planned) routes: (public), (app), b/[token], a/[token]
-│   ├── src/components/    # (planned) ui/ primitives + domain components
-│   ├── src/lib/           # (planned) api client, formatters, hooks
-│   └── tests/e2e/         # (planned) Playwright
-├── backend/               # (planned) FastAPI
-│   ├── app/
-│   │   ├── api/v1/        # (planned) routers
-│   │   ├── services/      # (planned) use cases + transactions
-│   │   ├── domain/        # (planned) pure logic: deemed_clock, interest, checklist, integrity
-│   │   ├── rules/         # (planned) msmed-v1.toml
-│   │   ├── repositories/ models/ schemas/ documents/ integrations/ storage/ security/
-│   ├── alembic/           # (planned) migrations
-│   ├── seed/              # (planned) bank rates, demo data
-│   └── tests/             # (planned) unit, integration, legal fixtures
-├── deploy/                # (planned) Caddyfile, systemd units
-├── storage/               # (planned, gitignored) evidence, packs
-└── Makefile               # (planned) dev, lint, typecheck, test, e2e, migrate, seed
+    ├── src/app/             # landing, (auth)/ login, signup, forgot and reset password,
+    │                        # app/ dashboard, cases, onboarding, review, settings
+    ├── src/components/      # ui/, layout/, cases/
+    ├── src/content/         # UI copy (app, auth, landing, onboarding, review)
+    ├── src/lib/             # api/ (typed client), session/, theme/, format/, hooks/
+    ├── public/theme-init.js # applies the saved theme before first paint
+    ├── tests/e2e/           # Playwright specs against the real backend
+    └── next.config.ts, playwright.config.ts, package.json, openapi.json, .env.example
 ```
 
 ---
 
-## 11. Development Roadmap
+## 11. Database and Migrations
 
-Documentation (complete as draft v1.x) is followed by these build phases:
+The schema is managed only by Alembic. The same migrations build SQLite (local) and PostgreSQL (hosted).
 
-| Phase | Focus |
+| Revision | File | Adds |
+| --- | --- | --- |
+| `bf48eb38df15` | `20261024_2248_baseline.py` | Version tracking only |
+| `7f9909eb7e4c` | `20261024_2326_demo_case_core.py` | Suppliers, buyers, cases, evidence items, timeline events, buyer responses, bank rates; SQLite append-only triggers |
+| `099b88746350` | `20261025_1039_accounts_and_ownership.py` | Users, sessions, `suppliers.owner_user_id` |
+| `d71bd50903a9` | `20261025_1305_password_reset_tokens.py` | Password reset tokens |
+| `5c2e8a41f0b7` | `20261025_1400_email_verification.py` | `users.email_verified_at`, email verification tokens (kept; no longer required) |
+| `8e1f3c9a2b64` | `20261025_1410_business_onboarding.py` | Business profiles, certificates, immutable submissions, Udyam claims |
+| `3d7a9c1e5b20` | `20261026_1000_business_review.py` | Reviewer grants, manual checks, check items, review decisions; `VERIFIED` status renamed `APPROVED` |
+| `6b0d2f4a8c31` | `20261026_1200_postgresql_append_only.py` | PostgreSQL append-only triggers and row-level security (no-op on SQLite) |
+
+Append-only data (timeline events, evidence, submissions, certificates, checks, decisions, reviewer grants) is protected by database triggers on both databases. Legal state (acceptance date, due date, interest, checklist) is computed, never stored. Details: [docs/DATABASE.md](docs/DATABASE.md).
+
+---
+
+## 12. API Overview
+
+All routes are under `/api/v1`. Writes need `Origin` matching `PUBLIC_BASE_URL` and the header `X-PaySetu-Client: web` (CSRF). Errors use `application/problem+json`. Full reference: [docs/API.md](docs/API.md).
+
+| Group | Endpoints |
 | --- | --- |
-| 0 | Repository and tooling setup |
-| 1 | Backend foundation (config, DB, errors, security middleware, storage) |
-| 2 | Legal and integrity domain core (DeemedClock, interest, checklist, hash chain); pure logic |
-| 3 | Authentication and supplier profile |
-| 4 | Buyers, cases and timeline |
-| 5 | Evidence Vault |
-| 6 | Responses, payments, clock and interest API |
-| 7 | Frontend foundation and design system |
-| 8 | Frontend core case flows |
-| 9 | Communications (intimation and demand) |
-| 10 | Sealed Pack, share links, Buyer Cost Page, advocate view |
-| 11 | Demo readiness, QA and hardening |
-| 12 | Deployment, monitoring and final audit |
-| 13 | P1 enhancements |
+| Health | `GET /health` |
+| Auth | `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` (includes `roles`), `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/change-password`, `POST /auth/logout-all` |
+| Supplier and buyers | `GET /supplier`, `GET|POST /buyers` |
+| Cases | `GET|POST /cases`, `GET /cases/{id}`, `GET /cases/{id}/checklist`, `GET /cases/{id}/interest`, `GET /cases/{id}/timeline` |
+| Buyer responses | `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection` |
+| Evidence | `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/evidence-pack` |
+| Business onboarding | `GET /onboarding`, `PUT /onboarding/draft`, `POST /onboarding/certificate`, `GET /onboarding/certificates/{id}/download`, `POST /onboarding/submit`, `GET /onboarding/submissions` |
+| Business review (reviewers only) | `GET /review/submissions`, `GET /review/submissions/{id}`, `GET /review/submissions/{id}/certificate`, `POST /review/submissions/{id}/checks`, `POST /review/submissions/{id}/decision` |
 
-The task-level plan, with completion criteria and the first milestone, is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md). MVP scope is defined in [docs/PRD.md Section 14](docs/PRD.md#14-mvp-scope-and-out-of-scope). Advocate review of the legal register runs in parallel and is required before any non-demo use.
+Interactive API documentation is served at `/api/v1/docs` outside production.
 
 ---
 
-## 12. Current Implementation Status
+## 13. Development Phases
 
-| Area | Status in this repository |
+The original plan ([docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)) was followed by an owner-directed vertical slice and then these phases. Each has its own section in [docs/DECISIONS.md](docs/DECISIONS.md).
+
+| Phase | Delivered |
 | --- | --- |
-| Documentation | Complete set (README, AGENTS, PRD, DECISIONS, DESIGN, ARCHITECTURE, DATABASE, API, IMPLEMENTATION_PLAN) plus `docs/HANDOVER.md` (current state) and `docs/AUDIT_REPORT.md`. Open items are tracked in [docs/DECISIONS.md](docs/DECISIONS.md) |
-| Frontend | Next.js 16.4.3 workspace in the "Oxford Blue + Stone" design system (Geist typeface; docs/DESIGN.md): landing page, sign-up and sign-in, dashboard, cases, Record delivery, and the case workspace (Overview with the DeemedClock timeline and **Download Evidence Pack**, Evidence Vault, Buyer responses, Case Strength, Interest, Timeline). The workspace requires a session; sign-out is in the sidebar and the mobile menu. Phase 6.1 adds forgot-password and reset-password pages and Account settings (change password, sign out everywhere) |
-| Backend | FastAPI 0.162.0. Settings with a production gate, database and migrations, problem+json errors, JSON logs, injectable clock, CSRF, security headers, body limits and rate limits. Supplier routes for buyers, cases, buyer responses, evidence upload and download, integrity check, timeline, checklist, interest and the evidence-pack ZIP. **Phase 6:** signup, login, logout and me with Argon2id passwords and revocable server-side sessions; every supplier route requires a session and is scoped to the caller's supplier (another supplier's records answer 404). **Phase 6.1:** forgot and reset password (single-use 15-minute emailed link), change password, sign out everywhere; email through a development file outbox or SMTP. **Phase 7A:** email verification (built, then removed as an access requirement at the owner's request; signup and login open the dashboard directly; DECISIONS.md Section 12). **Phase 7B:** business onboarding (draft, Udyam number checks, private PDF certificate upload, immutable submission to Pending review, duplicate claims flagged for review). **Phase 7C:** reviewer role granted only by the operator CLI (`make reviewer`), review queue, manual checks with source and date, approve / reject / request information with reasons, append-only review history, duplicate-claim resolution and self-review prevention; no official Udyam check exists and approvals are never shown as government verification. Supplier routes are still mounted only outside production (legal review pending) |
-| Database | SQLite via SQLAlchemy 2.1.6 and Alembic 1.20.1: baseline `bf48eb38df15`, demo case core `7f9909eb7e4c`, accounts and ownership `099b88746350` (users, sessions, `suppliers.owner_user_id`), password reset tokens `d71bd50903a9`, email verification `5c2e8a41f0b7`, business onboarding `8e1f3c9a2b64`, business review `3d7a9c1e5b20`. Append-only triggers on timeline events and evidence |
-| Tests | Backend: 574 pytest tests (300 integration, 274 unit, including 24 counsel-readable legal fixtures); **100% line and branch coverage** of `backend/app/domain/` enforced by `make test`. Frontend: 28 Playwright tests × 2 viewports (360×800, 1280×800) = 56, against the real backend (nothing mocked). Results and caveats: [docs/HANDOVER.md](docs/HANDOVER.md) |
-| External integrations (email, eSign, Udyam/GSTIN, WhatsApp) | Not started; none is live |
-| Legal review of rules and templates | Not done. Interest defaults D3–D5 are owner-approved provisional simulation defaults only. The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25) |
+| Foundations and domain core | Settings, database, errors, security middleware; pure DeemedClock, interest, checklist and integrity engine with legal fixtures |
+| Vertical slice | Buyers, cases, responses, evidence upload and integrity, timeline, checklist, interest, Evidence Pack; first frontend |
+| 6 | Accounts, Argon2id passwords, server-side sessions, case ownership |
+| 6.1 | Forgot, reset and change password; sign out everywhere; email outbox and SMTP sender |
+| 7A | Email verification (later removed as a requirement; data kept) |
+| 7B | Business onboarding and Udyam certificate upload |
+| Redesign | "Warm Ledger" design, then light and dark themes |
+| 7C | Secure manual business review |
+| 7D | Test-only login rate limit and browser-test stability |
+| Deployment | PostgreSQL support, private Supabase Storage, Render and Vercel configuration |
 
-**About earlier work:** The ideation document says that earlier prototype modules were built and passed 68 tests against local simulations. Those modules covered calculation, notice PDFs, signing, evidence hashing, postal parsing and advocate links. **That code is not in this workspace.** Its test results cannot be verified here, so this repository does not claim them. If the code is brought in later, this section will be updated.
+Not built from the original plan: communications (intimation and demand), share links, the Buyer Cost Page, the advocate view and persistent sealed packs (plan phases 9 and 10), and the P1 enhancements.
 
 ---
 
-## 13. Installation and Local Development
-
-Every command below was run successfully on macOS (Apple Silicon) on 25 Oct 2026.
+## 14. Installation and Local Development
 
 ### Prerequisites
 
 | Tool | Version | Notes |
 | --- | --- | --- |
-| Python | 3.12 (tested 3.12.13) | If `python3.12` is not on your PATH, pass its path: `make setup PYTHON=/path/to/python3.12` |
-| Node.js | 22 LTS (tested 22.23.4); 20.9+ also allowed | `.nvmrc` pins 22, so `fnm` and `nvm` select it automatically |
-| npm | Bundled with Node (tested 10.9.9) | |
+| Python | 3.12 | If `python3.12` is not on your PATH, pass its path: `make setup PYTHON=/path/to/python3.12` |
+| Node.js | 22 LTS (20.9+ also allowed) | `.nvmrc` pins 22 |
+| npm | Bundled with Node | |
 | GNU Make | Any | All commands go through the root `Makefile` |
 
 ### First-time setup
 
 ```bash
-make setup          # backend venv + pinned pip packages; frontend npm ci + Playwright Chromium
+make setup                                  # backend venv + pinned packages; frontend npm ci + Playwright Chromium
+cp backend/.env.example backend/.env        # local values only; never commit .env
+make migrate                                # SQLite schema at DATABASE_URL (default backend/storage/paysetu.db)
+make seed                                   # synthetic demo supplier, sample buyer, UNVERIFIED bank rate
+DEMO_ACCOUNT_PASSWORD='choose-a-local-passphrase' make demo-account   # optional login for the demo supplier
+make dev                                    # API on :8000 and web app on :3000
 ```
 
-**Required:** create the backend configuration with `cp backend/.env.example backend/.env`. The API validates it at startup and refuses to start with a message naming any missing or invalid variable. The example values work for local development only. Optional: copy `frontend/.env.example` to `frontend/.env.local` to override the API proxy target.
-
-Create the local database schema (SQLite file at `DATABASE_URL`, default `backend/storage/paysetu.db`):
-
-```bash
-make migrate         # alembic upgrade head, using DATABASE_URL from backend/.env
-make migrate-status  # current revision and head revision
-```
-
-**Evaluation build (local only; do not enter real business or personal data):**
-
-```bash
-make migrate && make seed   # schema + one synthetic demo supplier, a sample buyer, one UNVERIFIED bank rate
-DEMO_ACCOUNT_PASSWORD='choose-a-local-passphrase' make demo-account   # optional: a login for the demo supplier
-make dev                    # API on :8000 and the web app on :3000 together
-# open http://localhost:3000, then "Open demo workspace": sign in, or create an account
-```
-
-The demo account's email is `demo@paysetu.example` unless `DEMO_ACCOUNT_EMAIL` is set; the password is the one you passed and is never printed. A new account starts empty: add a buyer in the Record delivery form. Seeded demo data stays unreachable until `make demo-account` gives it a login.
-
-Auth endpoints: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` (session cookie `ps_session`, HttpOnly); Phase 6.1 adds `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/change-password` and `POST /auth/logout-all`. Case-workspace endpoints need a session; email verification is not required. Business onboarding (Phase 7B): `GET /onboarding`, `PUT /onboarding/draft`, `POST /onboarding/certificate`, `GET /onboarding/certificates/{id}/download`, `POST /onboarding/submit`, `GET /onboarding/submissions` (nothing is ever approved automatically). Business review (Phase 7C, reviewers only): `GET /review/submissions`, `GET /review/submissions/{id}`, `GET /review/submissions/{id}/certificate`, `POST /review/submissions/{id}/checks`, `POST /review/submissions/{id}/decision`; `GET /auth/me` returns `roles`. Supplier endpoints (session required, scoped to the signed-in supplier): `GET /supplier`, `GET|POST /buyers`, `GET|POST /cases`, `GET /cases/{id}`, `/cases/{id}/checklist`, `/cases/{id}/interest`, `GET|POST /cases/{id}/responses`, `POST /cases/{id}/responses/{rid}/remove-objection`, `GET|POST /cases/{id}/evidence`, `GET /evidence/{id}/download`, `POST /cases/{id}/integrity-check`, `GET /cases/{id}/timeline`. `GET /cases/{id}/evidence-pack` downloads a ZIP (summary, DeemedClock and interest, timeline, checklist, verification report, original evidence, SHA-256 manifest); it is refused if integrity verification fails and carries no Section 63 certificate. Writes need `Origin: http://localhost:3000` and `X-PaySetu-Client: web` (CSRF). Deviations are listed in [docs/DECISIONS.md Section 7](docs/DECISIONS.md#7-hackathon-demo-vertical-slice-25-oct-2026-owner-directed).
-
-Other migration commands, run from `backend/`:
-
-```bash
-.venv/bin/alembic revision -m "short description"   # new empty migration (hand-write it; see DATABASE.md Section 8)
-.venv/bin/alembic downgrade -1                       # step back one revision (development only)
-.venv/bin/alembic upgrade head --sql                 # print the SQL without touching a database
-```
+Open http://localhost:3000 and create an account (or sign in as `demo@paysetu.example` with the password you chose). The API validates its configuration at startup and names any missing or invalid variable. Locally, files are stored under `STORAGE_DIR` (`STORAGE_BACKEND=local`, the default).
 
 ### Local email testing (password reset)
 
-With `EMAIL_MODE=simulated` (the default in `backend/.env.example`) nothing is sent. Every email is written as an `.eml` file to `STORAGE_DIR/outbox/` (default `backend/storage/outbox/`).
-
-**Email verification** is no longer required (DECISIONS.md Section 12): signup and login open the dashboard directly.
-
-**Reset a password.**
+With `EMAIL_MODE=simulated` nothing is sent; every email is written to `STORAGE_DIR/outbox/`.
 
 1. Open http://localhost:3000/login, choose **Forgot password?** and enter the account's email.
-2. Run `make email-outbox`. It lists the newest messages and prints the newest one, including the reset link (`http://localhost:3000/reset-password#token=…`). It refuses to run with `APP_ENV=production`.
-3. Open the link within 15 minutes and choose a new password. Every device is signed out; sign in again. A "password changed" notice appears in the outbox.
+2. Run `make email-outbox` to print the newest message, including the reset link. It refuses to run with `APP_ENV=production`.
+3. Open the link within 15 minutes and choose a new password. Every device is signed out.
 
-To send real email, set `EMAIL_MODE=smtp` with `SMTP_HOST`, `SMTP_PORT`, `SMTP_STARTTLS`, `EMAIL_FROM` and, if the provider needs them, `SMTP_USERNAME` and `SMTP_PASSWORD` in `backend/.env` (never commit them).
+### Business onboarding and review
 
-### Business onboarding (Phase 7B)
+Open **Business profile** (`/app/onboarding`), fill in the details, upload the certificate PDF (up to 5 MB), **Save draft**, then **Review & submit**. The status becomes **Pending review** and the details are locked. Nothing is approved automatically.
 
-Sign in with a verified account and open **Business profile** in the sidebar (`/app/onboarding`). Fill in the details (the Udyam number is accepted in any spacing or case and saved as `UDYAM-XX-00-0000000`), upload the certificate PDF (up to 5 MB, `BUSINESS_CERTIFICATE_MAX_MB`), **Save draft**, then **Review & submit**. The status becomes **Pending review** and the details are locked. Nothing is approved automatically and no official Udyam check is made. A reviewer then checks the submission by hand (below); the outcome and any reason appear on this page, and if more information is requested you can correct the details and submit again. Certificates are stored privately under `STORAGE_DIR/business/`, separate from case evidence, and download only to their owner. The case workspace does not depend on this status.
-
-
-### Business review (Phase 7C)
-
-Reviewer accounts are created only from the command line, with direct database access (no signup option or API can grant the role):
+Reviewer accounts are created only from the command line, with direct database access:
 
 ```bash
 make reviewer ARGS='create --email reviewer@example.com --name "A Reviewer"'   # prompts twice for the password
@@ -510,111 +447,147 @@ make reviewer ARGS='revoke --email reviewer@example.com'   # takes effect on the
 make reviewer ARGS='list'
 ```
 
-Sign in as the reviewer: the sidebar shows **Review queue** (`/app/review`). Open a submission, download the certificate, record a manual check (the source you consulted, exactly what, the date, and for each field what you saw and whether it matched), then approve, reject or request information with a reason. Approval needs at least one check. Decisions are final and recorded with your account; you cannot review a business you own or submitted.
-
-### Run the apps
-
-```bash
-make dev-api        # FastAPI on http://localhost:8000  (health: /api/v1/health, docs: /api/v1/docs)
-make dev-web        # Next.js on http://localhost:3000  (proxies /api/* to port 8000)
-make dev            # both together
-```
-
-The two apps run independently. The frontend does not need the API to render the landing page.
+A reviewer sees **Review queue** (`/app/review`): open a submission, download the certificate, record a manual check, then approve, reject or request information with a reason. Approval needs at least one recorded check. Decisions are final, and nobody can review a business they own or submitted.
 
 ### Checks
 
 ```bash
-make lint           # ruff check + ruff format --check; eslint + prettier --check
-make typecheck      # mypy (strict) on backend/app and backend/tests; next typegen + tsc --noEmit
-make test           # pytest + 100% branch-coverage gate on backend/app/domain
+make lint           # ruff check + format check; eslint + prettier --check
+make typecheck      # mypy on backend app, tests, alembic, seed, tools; next typegen + tsc
+make test           # pytest + 100% line and branch coverage gate on backend/app/domain
 make build          # next build (production)
-make e2e            # Playwright journeys at 360×800 and 1280×800 against a fresh real backend (needs `make setup`)
-make api-types      # regenerate frontend API types after any backend API change
+make e2e            # Playwright at 360×800 and 1280×800 against a fresh real backend
+make api-types      # regenerate frontend API types after a backend API change
 make help           # list all targets
 ```
 
+On a busy machine run the browser tests with two workers: `cd frontend && npx playwright test --workers=2`. To run the backend tests against PostgreSQL instead of SQLite, set `PAYSETU_TEST_POSTGRES_URL` to a PostgreSQL URL the tests may create databases on.
+
 ---
 
-## 14. Testing Strategy
+## 15. Deployment
 
-| Level | Tool (proposed) | Focus |
+The repository contains `render.yaml` (Render Blueprint). Set secrets in each provider's dashboard; never commit them.
+
+**Supabase:** create a project and a **private** Storage bucket named `paysetu-private`. Use the database's **Session pooler** connection string with `?sslmode=require`.
+
+**Render (API):** create the service from `render.yaml` (root directory `backend`). Build: `pip install -r requirements.txt`. Start: `alembic upgrade head && uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'`. Health check: `/api/v1/health`.
+
+| Variable | Set to |
+| --- | --- |
+| `APP_ENV` | `development` (evaluation build; see [Section 9](#9-deployment-architecture)) |
+| `PUBLIC_BASE_URL` | The Vercel URL, exactly (used for the CSRF origin check and `Secure` cookies) |
+| `DATABASE_URL` | Supabase Session pooler URI (`postgresql://…`, mapped to psycopg 3 automatically) |
+| `TOKEN_HASH_KEY` | Generated by Render (32+ random bytes) |
+| `STORAGE_BACKEND` | `supabase` |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | The project's service-role key (secret) |
+| `SUPABASE_STORAGE_BUCKET` | `paysetu-private` |
+| `STORAGE_DIR` | `/tmp/paysetu` (temporary files only) |
+| `EMAIL_MODE` | `simulated` |
+
+**Vercel (web):** import the repository with **Root Directory** `frontend` and set `API_ORIGIN` to the Render URL (no trailing slash). `API_ORIGIN` is read when the app is **built**, so redeploy after setting or changing it.
+
+To provision a reviewer on the hosted database, run `python -m tools.reviewer create …` from `backend/` with the hosted `DATABASE_URL` and the other required variables set in your shell. To load the demo bank rate, run `python -m seed.demo` the same way.
+
+---
+
+## 16. Testing
+
+| Suite | Count | Last verified result |
 | --- | --- | --- |
-| Unit | pytest | Date arithmetic for the acceptance window and due dates, interest calculation (monthly compounding, rate periods, day-count), hashing, checklist rules |
-| Integration | pytest + FastAPI test client | API flows: create case, record delivery, record objection, export pack |
-| End-to-end | Playwright | Full supplier journey from delivery capture to Sealed Pack export |
-| Integrity | pytest | Tampering with a sealed file or timeline entry must be detected |
-| Rule fixtures | pytest | Worked examples reviewed by counsel, kept as regression fixtures |
+| Backend (pytest) | 639 tests: 293 unit (including 26 counsel-readable legal fixture cases in `tests/fixtures/legal/`) and 346 integration | **639 passed** on 26 Oct 2026 (current code, SQLite), 1 warning (a Starlette deprecation notice). `make test` enforces **100% line and branch coverage** of `backend/app/domain/`, and it was met |
+| PostgreSQL | Opt-in run of the backend tests against PostgreSQL 17 | Deployment smoke subset passed (9 tests: migrations, signup and login, cases, evidence upload and download, integrity, Evidence Pack, certificates, reviewer download). The full suite has not been run on PostgreSQL |
+| Hosted storage | 7 tests against a local fake of the Supabase Storage API | Pass: bytes round-trip unchanged, tampering detected, outages fail safely |
+| Browser (Playwright) | 35 tests × 2 viewports = 70, in 10 spec files, against the real backend (nothing mocked) | 70/70 in three consecutive runs on 26 Oct 2026 (Phase 7D), before the deployment changes |
 
-Testing principles:
-
-- Use exact `Decimal` arithmetic and test boundary dates explicitly: day 15 against day 16, month ends, leap years and changes in the RBI rate.
-- Every legal rule should have at least one worked example that counsel has reviewed before it is treated as correct.
-- Tests that use mocked external services must be labelled as simulated.
-- Test fixtures must never contain real supplier, buyer or personal data.
+Testing principles: exact `Decimal` arithmetic and explicit boundary dates (Day 15 against Day 16, month ends, leap years, rate changes); tamper tests for files and timeline rows; trigger tests proving append-only tables reject UPDATE and DELETE; no real external services and no real personal data in tests.
 
 ---
 
-## 15. Security, Privacy and Evidence Integrity
+## 17. Security, Privacy and Evidence Integrity
 
-**Evidence integrity**
+**Evidence integrity (implemented)**
 
-- A SHA-256 hash is computed for every file when it is uploaded and recorded in the timeline.
-- Timeline events are hash-chained, so a change to any earlier entry can be detected.
-- Exports include a hash manifest, so any recipient can check the files independently.
-- **Limitation:** a hash proves that a file has not changed since it was hashed. It does not prove that the file was genuine when it was uploaded, and it does not by itself make the file admissible. Admissibility depends on a proper BSA s.63 certificate, a chain of custody and the judgement of the forum.
+- A SHA-256 hash is computed on the server over the original bytes of every uploaded file; stored bytes are never modified or re-encoded.
+- Timeline events are hash-chained, so a change to an earlier entry is detected; **Verify integrity** re-hashes files and re-walks the chain.
+- The Evidence Pack includes a hash manifest, so any recipient can check the files independently, and it is refused if verification fails.
+- **Limitation:** a hash proves that a file has not changed since it was hashed. It does not prove that the file was genuine when it was uploaded, and it does not by itself make the file admissible. Admissibility depends on a proper BSA s.63 certificate, a chain of custody and the judgement of the forum. PaySetu generates no s.63 certificate.
 
-**Consent and approval**
+**Access control (implemented)**
 
-- No intimation, demand or Buyer Cost Page reaches a buyer without the supplier's explicit approval.
-- Nothing is sent in the supplier's name without proper authority, such as a Letter of Authority.
-- Advocate access is chosen by the supplier, time-limited, revocable and access-logged.
-- Signatory identity, capacity and authority are recorded for any signed document. Aadhaar eSign signs as an individual, not as a company.
+- Authorisation is enforced on the server: suppliers see only their own records; reviewer routes need an active reviewer grant, checked on every request; reviewers cannot review their own business.
+- CSRF protection on every write, security headers, request body limits and rate limits.
+- Uploads are type-checked by magic bytes and size-limited, never executed or rendered inline, and downloaded only as attachments.
+
+**Consent and approval (design rules)**
+
+- No intimation, demand or Buyer Cost Page may reach a buyer without the supplier's explicit approval. In the current build nothing is sent to buyers at all.
+- Nothing may be sent in the supplier's name without proper authority, such as a Letter of Authority.
+- Advocate access is to be chosen by the supplier, time-limited, revocable and access-logged (not built).
 
 **Data protection**
 
-- Consent, purpose limitation, retention and deletion under the Digital Personal Data Protection (DPDP) Act, 2023 must be built in before any real use.
-- Secrets such as API keys and SMTP credentials go in environment variables and are never committed. A `.env.example` file will list variable names only.
-- Data from mock or sandbox integrations is labelled "simulated" and cannot pass a production readiness check.
+- Consent, purpose limitation, retention and deletion under the Digital Personal Data Protection (DPDP) Act, 2023 must be built in before any real use. The signup consent is an evaluation notice, not counsel-reviewed terms.
+- Secrets (database URL, service-role key, SMTP credentials, token key) live only in environment variables; `.env.example` files list names and placeholders only.
 
 ---
 
-## 16. Important Legal and Compliance Limitations
+## 18. Important Legal and Compliance Limitations
 
 PaySetu is a tool for preparing evidence. Users and contributors should understand the following:
 
-1. **Not legal advice.** Nothing PaySetu produces is legal advice. Calculations, checklists, notices and certificates are drafts for the supplier and qualified counsel to review.
+1. **Not legal advice.** Nothing PaySetu produces is legal advice. Calculations, checklists and exports are drafts for the supplier and qualified counsel to review.
 2. **No guarantee of recovery.** PaySetu does not predict outcomes and does not promise payment or recovery.
 3. **Statutory rules need review.** The wording of s.2(b), s.15, s.16 and s.19 was checked against the Act as enacted, but not against later amendments. Several readings the product relies on are interpretations, not settled law: day counting (Day 15 / Day 16), what counts as "in writing" and the limitation period (generally three years). An advocate must confirm them (see the legal register in [docs/DECISIONS.md](docs/DECISIONS.md) and [docs/PRD.md Section 17](docs/PRD.md#17-open-legal-questions-for-counsel)).
    - Udyam registration dated after the supply may limit a claim.
    - Trading-only registrations may not be covered.
 
    The checklist flags both.
-4. **Interest figures are illustrative.** The ideation document records the RBI Bank Rate as 5.75% from 7 October 2026, which makes 3x equal to 17.25% a year. Real claims must use the official rate notified for each period. The day-count method (days/365 is proposed) must be confirmed by counsel.
-5. **Forum procedures change.** Details of the MSME ODR portal and its required document list have not been verified, because access to the portal was blocked during research. Check the official portal before relying on any export format.
-6. **Tax references need checking.** Income-tax Act 1961 s.43B(h) is referenced. How it is numbered under the Income-tax Act 2025 still needs to be verified.
-7. **Professional conduct.** PaySetu does not rank, refer or take fees from advocates. Revenue, if any, would come only from suppliers or accountants. Whether the advocate-sharing design is compatible with Bar Council of India Rule 36 needs a legal opinion.
-8. **Eligibility.** Only Udyam-registered micro and small enterprises can use the ss.15 to 24 protections. PaySetu should check eligibility and must not assume it.
-9. **Not an official portal.** PaySetu is not affiliated with the Ministry of MSME, the ODR portal or any Facilitation Council.
+4. **Interest figures are illustrative.** The ideation document records the RBI Bank Rate as 5.75% from 7 October 2026, which makes 3x equal to 17.25% a year; PaySetu stores this rate as **unverified**. Real claims must use the official rate notified for each period. The interest mechanics (monthly rests, days/365 for a partial month, rounding, rate selection, payment allocation) are owner-approved provisional defaults D3–D5 that counsel must confirm (LR-12 to LR-14).
+5. **2026 Amendment.** The MSMED (Amendment) Act 2026 (Act 16 of 2026) was reviewed: it does not amend ss.2(b), 15 or 16, so no calculation changed. The enacted text and commencement notification still need Gazette confirmation and advocate review (LR-21, LR-23 to LR-25).
+6. **Forum procedures change.** Details of the MSME ODR portal and its required document list have not been verified, because access to the portal was blocked during research. Check the official portal before relying on any export format.
+7. **Tax references need checking.** Income-tax Act 1961 s.43B(h) is referenced. How it is numbered under the Income-tax Act 2025 still needs to be verified.
+8. **Professional conduct.** PaySetu does not rank, refer or take fees from advocates. Revenue, if any, would come only from suppliers or accountants. Whether the planned advocate-sharing design is compatible with Bar Council of India Rule 36 needs a legal opinion.
+9. **Eligibility.** Only Udyam-registered micro and small enterprises can use the ss.15 to 24 protections. PaySetu should check eligibility and must not assume it. Business details are self-declared, and a PaySetu reviewer's approval is not a government verification.
+10. **Not an official portal.** PaySetu is not affiliated with the Ministry of MSME, the ODR portal, the Udyam portal or any Facilitation Council.
+
+**About earlier work:** The ideation document says that earlier prototype modules were built and passed 68 tests against local simulations (calculation, notice PDFs, signing, evidence hashing, postal parsing and advocate links). **That code is not in this repository** and its results cannot be verified here, so this README does not claim them.
 
 ---
 
-## 17. Future Enhancements
+## 19. Known Demo Limitations
 
-- WhatsApp-based delivery capture (a stretch goal in the ideation document)
-- Live Udyam and GSTIN verification through a provider API
+- **Synthetic data only.** The hosted build is an evaluation build (`APP_ENV=development`) and its legal rules are unreviewed.
+- **Cold starts.** Render's free plan sleeps after about 15 idle minutes; the first request can take about 50 seconds.
+- **Frontend proxy at the time of writing.** On 26 Oct 2026 the Vercel site's `/api/*` answered 404 while the Render API was healthy; sign-in needs `API_ORIGIN` set in Vercel and a rebuild ([Section 15](#15-deployment)).
+- **No real email.** Password-reset emails are written to a temporary outbox on the server and are not delivered.
+- **Interest needs the seeded rate.** The start command does not seed data; unless the demo seed has been run against the hosted database, interest shows "rate data unavailable".
+- **Reviewers.** The review queue is visible only to accounts provisioned with the reviewer CLI; public signup never creates a reviewer.
+- **Upload size through the proxy.** Uploads close to the 15 MB limit have not been tested through Vercel's proxy.
+- **Rate limits by IP** rely on the client address forwarded by Render; requests sent to the Render URL directly can forge it. Limits are kept in memory and reset when the API restarts.
+- **Not built:** buyer communications, payments recording, the Buyer Cost Page, share links, the advocate view and s.63 certificates (checklist items C11 and C13 always show as missing).
+
+---
+
+## 20. Future Enhancements
+
+- Outbound intimations and demands with an explicit approval gate, then the Buyer Cost Page
+- Share links and an advocate read-only view (consent-based, time-limited, revocable, access-logged)
+- Persistent sealed packs and a draft BSA s.63 certificate for review by a qualified person
+- Recording part payments
+- Live Udyam and GSTIN verification through a sanctioned provider API
+- Real email delivery through an SMTP relay, and email notifications of review decisions
 - Live eSign or DSC signing of approved documents
-- RFC 3161 trusted timestamping for evidence
-- DKIM verification and grading of inbound buyer emails
-- Parsing of postal tracking evidence (India Post's real format is not yet known)
+- RFC 3161 trusted timestamping and DKIM grading of inbound buyer emails
+- WhatsApp-based delivery capture (a stretch goal in the ideation document)
 - Multilingual interface for regional-language suppliers
-- Integration with accounting software used by suppliers and CAs
-- A PostgreSQL production deployment with backups and audit retention
 - An export layout matched to the official ODR portal document list, once that list is confirmed
+- Production readiness: counsel-reviewed rules and terms, DPDP-grade consent, account deletion, backups and a shared rate-limit store
 
 ---
 
-## 18. Glossary
+## 21. Glossary
 
 | Term | Plain meaning |
 | --- | --- |
@@ -634,13 +607,12 @@ PaySetu is a tool for preparing evidence. Users and contributors should understa
 
 ---
 
+## 22. Team and Contributions
 
-
-
-Contribution rules (code quality, security, testing, branching and commit conventions) are in [AGENTS.md](AGENTS.md). The repository is not yet initialised with Git (task T0.1 in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)).
+Built for Srujana Tech Fest 2026 (Legal Services track, problem statement LS-03). Contribution rules (code quality, security, testing, branching and commit conventions) are in [AGENTS.md](AGENTS.md); the current state and next tasks are in [docs/HANDOVER.md](docs/HANDOVER.md).
 
 ---
 
-## 20. License
+## 23. License
 
 **Undecided.** No license has been chosen yet, and no `LICENSE` file exists. Until one is added, all rights are reserved by the project authors.
