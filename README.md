@@ -1,5 +1,19 @@
 # PaySetu
 
+## 🚀 Live Demo — PaySetu
+
+Live Application: https://srujana-hackathon2026-pay-setu.vercel.app
+
+Backend API: https://srujana-hackathon2026-paysetu.onrender.com
+
+Backend Health Check: https://srujana-hackathon2026-paysetu.onrender.com/api/v1/health
+
+PaySetu is a LegalTech prototype designed to help Indian Micro and Small Enterprises understand delayed-payment deadlines, organize evidence, estimate statutory interest, and prepare structured evidence packs under the MSMED Act, 2006.
+
+**Deployment Stack:** Vercel (Next.js frontend), Render (FastAPI backend), Supabase (PostgreSQL and private document storage).
+
+*Note: The backend runs on Render's free tier and may take additional time to respond after a period of inactivity. This is a demonstration prototype, not legal advice.*
+
 **Evidence-first delayed-payment protection for Indian micro and small enterprises.**
 
 PaySetu helps a micro or small supplier record and prove the date of acceptance. The MSMED Act's payment protections depend on that date. With it, the supplier can track statutory payment deadlines, preserve tamper-evident evidence and prepare a structured claim pack for legal review or dispute resolution.
