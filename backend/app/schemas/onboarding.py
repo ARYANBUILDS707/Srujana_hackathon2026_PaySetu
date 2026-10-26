@@ -116,8 +116,9 @@ class DraftIn(BaseModel):
 
 
 OnboardingStatus = Literal[
-    "NOT_STARTED", "DRAFT", "PENDING_REVIEW", "NEEDS_INFORMATION", "VERIFIED", "REJECTED"
+    "NOT_STARTED", "DRAFT", "PENDING_REVIEW", "NEEDS_INFORMATION", "APPROVED", "REJECTED"
 ]
+ReviewDecision = Literal["APPROVED", "REJECTED", "NEEDS_INFORMATION"]
 
 
 class CertificateOut(BaseModel):
@@ -128,12 +129,23 @@ class CertificateOut(BaseModel):
     uploaded_at: str
 
 
+class ReviewOutcomeOut(BaseModel):
+    """A reviewer's decision as the supplier sees it: no reviewer identity, no internal note.
+    `reason` is shown only for NEEDS_INFORMATION and REJECTED (None for APPROVED)."""
+
+    decision: ReviewDecision
+    reason: str | None
+    decided_at: str
+
+
 class SubmissionOut(BaseModel):
+    id: str
     revision: int
     submitted_at: str
     snapshot_sha256: str
     certificate_id: str
     claim_contested: bool
+    review: ReviewOutcomeOut | None  # None while the submission awaits review
 
 
 class OnboardingOut(BaseModel):
@@ -160,4 +172,6 @@ class OnboardingOut(BaseModel):
     udyam_claim_conflict: bool
     missing_for_submission: list[str]
     submitted_at: str | None
+    # The decision on the latest submission, if any (Phase 7C).
+    latest_review: ReviewOutcomeOut | None
     submissions: list[SubmissionOut]

@@ -47,10 +47,11 @@ Source requirements: `docs/PRD.md`. Architecture: `docs/ARCHITECTURE.md`. Schema
 | Evidence Pack download | `GET /cases/{id}/evidence-pack` (refused on integrity failure) | `evidence-pack.spec` (ZIP and manifest checked; tamper refused) |
 | `/app/onboarding` | `GET /onboarding`, `PUT /onboarding/draft`, `POST /onboarding/certificate`, `GET /onboarding/certificates/{id}/download`, `POST /onboarding/submit` | `onboarding.spec` |
 | `/app/settings` | `GET /onboarding`, `POST /auth/change-password`, `POST /auth/logout-all` | `passwords.spec` |
+| `/app/review`, `/app/review/{id}` (reviewers) | `GET /review/submissions`, `GET /review/submissions/{id}`, `…/certificate`, `POST …/checks`, `POST …/decision` | `review.spec`, backend `test_review.py` |
 | Sign out | `POST /auth/logout` | `auth.spec` |
 | Cross-user isolation | every case and onboarding route answers 404 for another supplier | `auth.spec`, `onboarding.spec`, backend `test_authorisation.py` |
 
-Not available, and shown honestly: reviewer actions for business verification (status stays Pending review), letters and payments (C11 and C13 always missing), share links and the Buyer Cost Page.
+Not available, and shown honestly: any official Udyam check (reviews are manual and labelled so), letters and payments (C11 and C13 always missing), share links and the Buyer Cost Page.
 
 **Demo walkthrough (about 6 minutes).**
 1. `/`: the headline, the sample product preview and its label, the five steps, "What PaySetu is not".
@@ -79,6 +80,14 @@ Rehearsal tips: run `make migrate && make seed` beforehand. The 300 requests/min
 ## 2c. Light and dark themes (25 Oct 2026)
 
 Frontend-only. Dark mode overrides the existing semantic tokens (DESIGN.md 2.3); light mode is unchanged. Preference light / dark / system is saved per device (`localStorage`) and never sent to the backend; `public/theme-init.js` applies it before first paint. Controls: Sun/Moon toggle in the app top bar and a Theme card in Account settings. Tests: `frontend/tests/e2e/theme.spec.ts` (switching and persistence, system preference, no flash and no hydration warnings, and a 16-page dark sweep that fails on any white background or light-theme text colour).
+
+## 2d. Phase 7C: secure business review (26 Oct 2026)
+
+- **Reviewer role:** append-only `reviewer_grants`, issued and revoked only by the operator CLI (`make reviewer ARGS='create --email … --name "…"'`, also `grant`, `revoke`, `list`). Signup and API payloads can never grant it. Reviewer-only staff accounts have no supplier workspace; a supplier granted the role keeps theirs but cannot review their own business.
+- **Workflow:** `/app/review` queue (pending by default; filters; cursor pagination) → submission detail: frozen snapshot, snapshot and certificate integrity, certificate download (attachment), other claims on the same Udyam number, manual checks (source, what was consulted, date, per-field submitted vs seen vs result), decision (approve, reject or request information, with a reason and an optional internal note), full history. Decisions are final; NEEDS_INFORMATION reopens the supplier's draft and a resubmission is a new, separate snapshot.
+- **Honesty:** three evidence levels (supplier-submitted only, manually reviewed, matched an official record by manual check); no Udyam or government integration exists; "Approved" is a reviewer decision, never a government verification. `VERIFIED` was renamed `APPROVED` (migration `3d7a9c1e5b20`).
+- **Supplier side:** Business profile shows the decision, the reason (for Needs information and Rejected), and the submission history with each outcome. Eligibility, cases and packs are unaffected.
+- Decisions and design: DECISIONS.md Section 13. API: API.md "Business review". Tables: DATABASE.md 3.3c.
 
 ## 3. Completed features
 
@@ -142,9 +151,9 @@ All supplier routes above need a session and are owner-scoped (no email-verifica
 
 ## 6. Database and migrations
 
-- Revisions: `bf48eb38df15` (baseline) → `7f9909eb7e4c` (demo case core) → `099b88746350` (accounts and ownership) → `d71bd50903a9` (password reset tokens, Phase 6.1) → `5c2e8a41f0b7` (email verification) → **`8e1f3c9a2b64` (business onboarding, Phase 7B: four new tables with SQLite triggers; no existing row changed; every existing supplier is NOT_STARTED)**. Email verification (7A) added `users.email_verified_at` added with `ALTER TABLE ADD COLUMN`, plus `email_verification_tokens`; every existing user stays unverified; no session revoked; no row changed)**. Accounts and ownership added `users`, `sessions`, `suppliers.owner_user_id` (nullable, unique; only a demo supplier may be unowned, enforced by triggers on SQLite and a CHECK on PostgreSQL).
+- Revisions: `bf48eb38df15` (baseline) → `7f9909eb7e4c` (demo case core) → `099b88746350` (accounts and ownership) → `d71bd50903a9` (password reset tokens, Phase 6.1) → `5c2e8a41f0b7` (email verification) → `8e1f3c9a2b64` (business onboarding, Phase 7B: four new tables with SQLite triggers; no existing row changed; every existing supplier is NOT_STARTED) → **`3d7a9c1e5b20` (business review, Phase 7C: `reviewer_grants`, `business_checks`, `business_check_items`, `business_reviews` with SQLite triggers; `business_profiles` rebuilt to rename the unused `VERIFIED` status to `APPROVED`; no grant created)**. Email verification (7A) added `users.email_verified_at` added with `ALTER TABLE ADD COLUMN`, plus `email_verification_tokens`; every existing user stays unverified; no session revoked; no row changed)**. Accounts and ownership added `users`, `sessions`, `suppliers.owner_user_id` (nullable, unique; only a demo supplier may be unowned, enforced by triggers on SQLite and a CHECK on PostgreSQL).
 - **Existing data:** the migration assigns no row to anyone. The seeded demo supplier stays unowned and unreachable until `DEMO_ACCOUNT_PASSWORD='…' make demo-account` gives it a login (default email `demo@paysetu.example`; refuses production; claims only an unowned demo supplier; the password is never printed).
-- **Local database migrated (Phases 6, 6.1, 7A, 7B):** backed up before each migration (`paysetu.db.pre-phase6.bak`, `.pre-phase6_1.bak`, `.pre-phase7a.bak`, `.pre-phase7b.bak`; git-ignored). Before and after `8e1f3c9a2b64` the row counts were identical: 2 users (both still unverified), 2 sessions, 2 suppliers (`self_declared`), 1 buyer, 3 cases, 3 evidence items, 16 timeline events, 2 responses, 1 verification token; 0 business profiles.
+- **Local database migrated (Phases 6, 6.1, 7A, 7B, 7C):** backed up before each migration (`paysetu.db.pre-phase6.bak`, `.pre-phase6_1.bak`, `.pre-phase7a.bak`, `.pre-phase7b.bak`, `.pre-phase7c.bak`; git-ignored). Before and after `3d7a9c1e5b20` (26 Oct) the row counts were identical: 3 users, 9 sessions, 3 suppliers, 2 buyers, 5 cases, 5 evidence items, 21 timeline events, 2 responses, 0 business profiles, submissions, certificates and claims; no reviewer grant exists until one is created with `make reviewer`. Before and after `8e1f3c9a2b64` the row counts were identical: 2 users (both still unverified), 2 sessions, 2 suppliers (`self_declared`), 1 buyer, 3 cases, 3 evidence items, 16 timeline events, 2 responses, 1 verification token; 0 business profiles.
 - **How existing accounts complete verification:** sign in → confirmation screen → Send a new link → open the emailed link → Confirm my email. A completed password reset also confirms the email.
 
 ## 7. Test results (run 25 Oct 2026, final code)
@@ -159,6 +168,10 @@ All supplier routes above need a session and are owner-scoped (no email-verifica
 | Playwright e2e (56 tests = 28 × 360×800 and 1280×800; real backend) | **Final code: 56/56 with `--workers=2`, twice in a row** (1.4 and 1.5 min). New `redesign.spec.ts` (4 tests × 2): dashboard next step and figures match `GET /cases/{id}` and the CTA opens the case; DeemedClock glossary; landing labels sample content and has one hero primary action; a 429 on the session check is shown with Try again instead of a sign-out (the only simulated response in the suite) |
 | Earlier runs during the redesign (honest record) | Six full runs before the final two: four were all green; one had a single failure where the Next.js dev proxy dropped the login request (network error, the page correctly said it could not reach the server); one had a single failure in the password-reset test whose cause was not captured before the next run overwrote it. A deliberate stress run (`auth.spec` repeated 3 times against one backend) failed 8 logins with **429**: the 20 logins/hour per-IP limit working as designed. A normal full run makes about 18 logins from 127.0.0.1, so that limit has little headroom as the suite grows (Section 12) |
 
+**Phase 7C run (26 Oct 2026).** `make lint` and `make typecheck` (mypy on 112 files; tsc): pass. `make test`: **620 passed**, 1 warning (Starlette `httpx2` notice); domain coverage 100% line and branch (`business_review.py` 100%). `make build`: pass (`/app/review`, `/app/review/[id]`). Playwright `--workers=2`, 70 tests: `review.spec.ts` 6/6 on its own; full run **66 passed, 4 failed**: one 429 from the login limit above, three 30-second timeouts at a load average near 40. Rerunning those four spec files: 23 passed and 1 failed on a dropped dev-proxy connection (`ECONNRESET`, the known flake); `demo-journey.spec.ts` then passed 6/6.
+
+**Phase 7D run (26 Oct 2026).** `make lint`, `make typecheck` (mypy on 112 files; tsc), `make build`: pass. `make test`: **628 passed** (8 new login-limit tests), 1 warning (Starlette `httpx2` notice); domain coverage 100%. Playwright `--workers=2`, 70 tests, six full runs after the fix: run 1 (login fix only) 69/70 (first-visit compile timeout); run 2 70/70; run 3 69/70 (`ECONNRESET` on `/auth/me`); after the keep-alive fix, runs 4, 5 and 6 **70/70 each**, with 0 proxy resets and 0 rate-limit responses.
+
 ## 8. Commands
 
 ```bash
@@ -171,16 +184,18 @@ make dev                   # API :8000 + web :3000; sign up or sign in at http:/
 make lint | make typecheck | make test | make build | make e2e
 make api-types             # regenerate frontend types after any API change
 make email-outbox          # newest development emails: verification and reset links (refuses production)
+make reviewer ARGS='create --email reviewer@example.com --name "A Reviewer"'   # hidden password prompt
+make reviewer ARGS='list'  # also grant / revoke --email …
 ```
 
 Local email testing (forgot and reset password): README.md, "Local email testing".
 
-`make e2e` starts its own backend on :8100 (fresh database, `AUTH_SIGNUP_LIMIT_PER_HOUR=200`, a demo account with a test-only password) and Next on :3100 (`.next-e2e`). On a busy machine run `cd frontend && npx playwright test --workers=2`.
+`make e2e` starts its own backend on :8100 (fresh database, `APP_ENV=test`, `AUTH_SIGNUP_LIMIT_PER_HOUR=200`, `AUTH_LOGIN_IP_LIMIT_PER_HOUR=200`, a demo account and a reviewer with test-only passwords) and Next on :3100 (`.next-e2e`). On a busy machine run `cd frontend && npx playwright test --workers=2`.
 
 ## 9. Security limitations (do not claim production-ready)
 
 - **Production is not supported yet.** The supplier routes are unmounted in production, the legal rules are unreviewed, and the evidence pack is labelled an evaluation export.
-- **Business onboarding (Phase 7B) is submission only.** No reviewer exists yet, so submissions stay Pending review; there is no official Udyam check, no dispute resolution for contested claims and no malware scanning of uploaded PDFs (they are never opened or rendered by PaySetu, only stored and returned as attachments). PDF checks are structural, not a full parser. The registered address and contact details are personal data in a sole proprietorship; retention rules (PRD D12) still apply.
+- **Business review (Phase 7C) is manual.** There is no official Udyam check; a reviewer records what they looked up by hand. No email tells the supplier about a decision (they see it in the app), there is no two-person approval and no way to reopen a final decision, and certificate downloads by reviewers are not individually logged. Whoever can run `tools/reviewer.py` against the database can grant the role: protect database access accordingly. No malware scanning of uploaded PDFs (they are never opened or rendered by PaySetu, only stored and returned as attachments). PDF checks are structural, not a full parser. The registered address and contact details are personal data in a sole proprietorship; retention rules (PRD D12) still apply.
 - **Email verification proves inbox control only.** It is not business, Udyam or MSMED verification and grants nothing else. There is no email-change feature yet (tokens already stop working if the address changes), no reminder emails and no expiry of never-verified accounts. Verify-email is unauthenticated by design (120/hour per IP); tokens are 256-bit, so guessing is not practical.
 - **Password reset and change are built (Phase 6.1); account deletion is not.** Reset needs working email: with `EMAIL_MODE=simulated` links exist only in the local outbox. Only the current password is checked against reuse (no password history). Forgot-password responses for real and unknown accounts differ by a few milliseconds because only a real account gets a database write; email delivery itself is outside the response.
 - **Rate limits and lockout are in memory and per process.** They reset on restart and do not cover multiple instances. There is no per-account lockout beyond 5 attempts per minute per IP+email.
@@ -206,7 +221,8 @@ Advocate review is required before any non-demo use. Full register: `docs/DECISI
 
 ## 12. Known issues and technical debt
 
-- E2E login headroom: a full run makes about 18 of the 20 logins per hour allowed from one IP. Adding login-heavy tests will start hitting 429; raise the limit for the throwaway e2e backend only (as `AUTH_SIGNUP_LIMIT_PER_HOUR` does) or sign in fewer times per test.
+- **E2E login limit: fixed in Phase 7D** (DECISIONS.md Section 14). The e2e backend runs with `APP_ENV=test` and `AUTH_LOGIN_IP_LIMIT_PER_HOUR=200`; development and production refuse a raised value. A full run makes 21 logins.
+- **E2E infrastructure fixes (Phase 7D):** global setup compiles every route before the tests (first-visit `next dev` compiles had exceeded 5-second assertions under load), and the e2e backend uses `--timeout-keep-alive 75` (uvicorn's 5-second default raced the dev proxy and produced `ECONNRESET`). Heavy host load can still slow runs.
 - E2E runs against the Next.js **dev** server: occasional timing failures and one dropped proxy connection were seen under load. A production-build web server for Playwright would remove that class of flake.
 - E2E timing on a loaded host with 4 workers (Section 7). Options: run e2e against `next build && next start` instead of `next dev`, or default to 2 workers.
 - React development mode runs effects twice, so every page fetch is doubled in dev (not in production builds).
@@ -217,7 +233,7 @@ Advocate review is required before any non-demo use. Full register: `docs/DECISI
 ## 13. Recommended next tasks (priority order)
 
 1. **Owner review and commit** of Phase 7B, starting with the `.gitignore` / `backend/app/storage/` repository fix (Section 2).
-1a. **Phase 7C:** reviewer role and queue, NEEDS_INFORMATION / VERIFIED / REJECTED with reasons, contested-claim resolution, supplier notifications, deciding whether a verified profile updates eligibility; any official Udyam check only through a sanctioned API.
+1a. **After Phase 7C:** supplier email notifications of decisions; decide (with legal review) whether an approved profile may update eligibility; optional two-person approval and certificate-access logging; any official Udyam check only through a sanctioned API.
 2. **Auth completion:** account deletion request, email change (re-verification), record `actor_id` on new timeline events; configure a real SMTP relay before any non-local use.
 3. **Phase 7:** onboarding and supplier profile editing, then Udyam verification.
 4. **E2E stability:** production-build web server for Playwright, or 2 workers by default.

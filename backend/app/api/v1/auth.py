@@ -9,7 +9,7 @@ every other cookie route (Origin + `X-PaySetu-Client: web`).
 from fastapi import APIRouter, BackgroundTasks, Request, Response
 from fastapi.responses import JSONResponse
 
-from app.api.deps import ClockDep, LimiterDep, PrincipalDep, SessionDep, SettingsDep, client_info
+from app.api.deps import AccountDep, ClockDep, LimiterDep, SessionDep, SettingsDep, client_info
 from app.config import Settings
 from app.mail.senders import EmailSender
 from app.schemas import auth as schemas
@@ -88,7 +88,7 @@ def logout(
 
 
 @router.get("/me", response_model=schemas.MeOut)
-def me(principal: PrincipalDep, response: Response, session: SessionDep) -> schemas.MeOut:
+def me(principal: AccountDep, response: Response, session: SessionDep) -> schemas.MeOut:
     _no_store(response)
     return service.me(session, principal)
 
@@ -166,7 +166,7 @@ def reset_password(
 @router.post("/change-password", response_model=schemas.PasswordUpdatedOut)
 def change_password(
     data: schemas.ChangePasswordIn,
-    principal: PrincipalDep,
+    principal: AccountDep,
     request: Request,
     response: Response,
     session: SessionDep,
@@ -187,7 +187,7 @@ def change_password(
 
 @router.post("/logout-all", status_code=204)
 def logout_all(
-    principal: PrincipalDep, session: SessionDep, clock: ClockDep, settings: SettingsDep
+    principal: AccountDep, session: SessionDep, clock: ClockDep, settings: SettingsDep
 ) -> Response:
     """Revoke every session of the current user (all devices) and clear this cookie."""
     service.logout_all(session, clock, principal)

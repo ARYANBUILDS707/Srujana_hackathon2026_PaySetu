@@ -509,6 +509,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/review/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Queue
+         * @description Submissions oldest first: pending by default, `?status=` to filter, `?all=true` for all.
+         */
+        get: operations["queue_api_v1_review_submissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/submissions/{submission_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detail
+         * @description The frozen snapshot, certificate integrity, duplicate claims, checks and history.
+         */
+        get: operations["detail_api_v1_review_submissions__submission_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/submissions/{submission_id}/certificate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Certificate
+         * @description The submission's certificate, as an attachment (never rendered inline).
+         */
+        get: operations["download_certificate_api_v1_review_submissions__submission_id__certificate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/submissions/{submission_id}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Check
+         * @description Record a manual check: source, what was compared, the result and the date.
+         */
+        post: operations["record_check_api_v1_review_submissions__submission_id__checks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/submissions/{submission_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description Approve, reject or request information. Final: 409 once decided.
+         */
+        post: operations["decide_api_v1_review_submissions__submission_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/supplier": {
         parameters: {
             query?: never;
@@ -736,6 +836,81 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /**
+         * CheckIn
+         * @description A manual check: which source, what exactly, when, and what was compared.
+         */
+        CheckIn: {
+            /**
+             * Checked On
+             * Format: date
+             */
+            checked_on: string;
+            /** Items */
+            items: components["schemas"]["CheckItemIn"][];
+            /** Note */
+            note?: string | null;
+            source: components["schemas"]["CheckSource"];
+            /** Source Detail */
+            source_detail: string;
+        };
+        /** CheckItemIn */
+        CheckItemIn: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "udyam_number" | "enterprise_name" | "enterprise_class" | "registration_date" | "address" | "representative_name";
+            /** Observed Value */
+            observed_value?: string | null;
+            result: components["schemas"]["CheckResult"];
+        };
+        /** CheckItemOut */
+        CheckItemOut: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "udyam_number" | "enterprise_name" | "enterprise_class" | "registration_date" | "address" | "representative_name";
+            /** Observed Value */
+            observed_value: string | null;
+            result: components["schemas"]["CheckResult"];
+            /** Submitted Value */
+            submitted_value: string | null;
+        };
+        /** CheckOut */
+        CheckOut: {
+            /**
+             * Checked On
+             * Format: date
+             */
+            checked_on: string;
+            /** Id */
+            id: string;
+            /** Items */
+            items: components["schemas"]["CheckItemOut"][];
+            /** Note */
+            note: string | null;
+            /** Official Source */
+            official_source: boolean;
+            /** Recorded At */
+            recorded_at: string;
+            reviewer: components["schemas"]["PersonOut"];
+            source: components["schemas"]["CheckSource"];
+            /** Source Detail */
+            source_detail: string;
+        };
+        /**
+         * CheckResult
+         * @enum {string}
+         */
+        CheckResult: "match" | "mismatch" | "not_found";
+        /**
+         * CheckSource
+         * @description Where a reviewer looked. Only the first two are official records.
+         * @enum {string}
+         */
+        CheckSource: "udyam_portal" | "other_official_record" | "certificate_only" | "other";
         /** ChecklistItemOut */
         ChecklistItemOut: {
             /** Action */
@@ -810,6 +985,39 @@ export interface components {
          * @enum {string}
          */
         DealType: "verbal" | "written";
+        /** DecisionIn */
+        DecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "REJECTED" | "NEEDS_INFORMATION";
+            /** Internal Note */
+            internal_note?: string | null;
+            /** Reason */
+            reason: string;
+        };
+        /** DecisionOut */
+        DecisionOut: {
+            /** Decided At */
+            decided_at: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "REJECTED" | "NEEDS_INFORMATION";
+            /** Id */
+            id: string;
+            /** Internal Note */
+            internal_note: string | null;
+            /** Reason */
+            reason: string;
+            reviewer: components["schemas"]["PersonOut"];
+            /** Revision */
+            revision: number;
+            /** Submission Id */
+            submission_id: string;
+        };
         /**
          * DraftIn
          * @description A full draft (PUT semantics: an omitted field is cleared). Everything is optional for a
@@ -858,6 +1066,11 @@ export interface components {
          * @enum {string}
          */
         EvidenceKind: "invoice" | "delivery_challan" | "delivery_photo" | "purchase_order" | "written_terms" | "email" | "chat_export" | "tracking_record" | "udyam_certificate" | "buyer_response" | "payment_proof" | "communication_proof" | "other";
+        /**
+         * EvidenceLevel
+         * @enum {string}
+         */
+        EvidenceLevel: "supplier_submitted" | "manually_reviewed" | "official_record_matched";
         /** EvidenceOut */
         EvidenceOut: {
             /** Excluded */
@@ -912,6 +1125,23 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** HistoryItemOut */
+        HistoryItemOut: {
+            decision: components["schemas"]["DecisionOut"] | null;
+            /** Revision */
+            revision: number;
+            /** Snapshot Sha256 */
+            snapshot_sha256: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "NEEDS_INFORMATION";
+            /** Submission Id */
+            submission_id: string;
+            /** Submitted At */
+            submitted_at: string;
         };
         /** IntegrityOut */
         IntegrityOut: {
@@ -1006,7 +1236,9 @@ export interface components {
         MajorActivity: "manufacturing" | "services" | "trading";
         /** MeOut */
         MeOut: {
-            supplier: components["schemas"]["AccountSupplierOut"];
+            /** Roles */
+            roles: ("supplier" | "reviewer")[];
+            supplier: components["schemas"]["AccountSupplierOut"] | null;
             user: components["schemas"]["UserOut"];
         };
         /** MismatchOut */
@@ -1057,6 +1289,7 @@ export interface components {
             enterprise_class: components["schemas"]["EnterpriseClass"] | null;
             /** Enterprise Name */
             enterprise_name: string | null;
+            latest_review: components["schemas"]["ReviewOutcomeOut"] | null;
             /** Missing For Submission */
             missing_for_submission: string[];
             /** Pin Code */
@@ -1072,7 +1305,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "NOT_STARTED" | "DRAFT" | "PENDING_REVIEW" | "NEEDS_INFORMATION" | "VERIFIED" | "REJECTED";
+            status: "NOT_STARTED" | "DRAFT" | "PENDING_REVIEW" | "NEEDS_INFORMATION" | "APPROVED" | "REJECTED";
             /** Submissions */
             submissions: components["schemas"]["SubmissionOut"][];
             /** Submitted At */
@@ -1082,6 +1315,19 @@ export interface components {
             /** Udyam Number */
             udyam_number: string | null;
         };
+        /** OtherClaimOut */
+        OtherClaimOut: {
+            /** Contested */
+            contested: boolean;
+            /** Enterprise Name */
+            enterprise_name: string | null;
+            /** Profile Status */
+            profile_status: string;
+            /** Submission Id */
+            submission_id: string | null;
+            /** Supplier Id */
+            supplier_id: string;
+        };
         /** PasswordUpdatedOut */
         PasswordUpdatedOut: {
             /**
@@ -1089,6 +1335,50 @@ export interface components {
              * @enum {string}
              */
             notification: "sent" | "failed";
+        };
+        /** PersonOut */
+        PersonOut: {
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /** Id */
+            id: string;
+        };
+        /** QueueItemOut */
+        QueueItemOut: {
+            /** Checks Recorded */
+            checks_recorded: number;
+            /** Claim Contested */
+            claim_contested: boolean;
+            /** Enterprise Name */
+            enterprise_name: string | null;
+            /** Other Claimants */
+            other_claimants: number;
+            /** Own Submission */
+            own_submission: boolean;
+            /** Revision */
+            revision: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "NEEDS_INFORMATION";
+            /** Submission Id */
+            submission_id: string;
+            /** Submitted At */
+            submitted_at: string;
+            /** Supplier Id */
+            supplier_id: string;
+            /** Udyam Number */
+            udyam_number: string;
+        };
+        /** QueuePageOut */
+        QueuePageOut: {
+            /** Items */
+            items: components["schemas"]["QueueItemOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * RepresentativeRole
@@ -1152,6 +1442,80 @@ export interface components {
             /** Within Window */
             within_window: boolean;
         };
+        /** ReviewCertificateOut */
+        ReviewCertificateOut: {
+            /** Bytes Intact */
+            bytes_intact: boolean;
+            /** Id */
+            id: string;
+            /** Original Filename */
+            original_filename: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Uploaded At */
+            uploaded_at: string;
+        };
+        /** ReviewDetailOut */
+        ReviewDetailOut: {
+            /** Allowed Decisions */
+            allowed_decisions: ("APPROVED" | "REJECTED" | "NEEDS_INFORMATION")[];
+            /** Approval Blockers */
+            approval_blockers: string[];
+            certificate: components["schemas"]["ReviewCertificateOut"];
+            /** Checks */
+            checks: components["schemas"]["CheckOut"][];
+            /** Claim Contested */
+            claim_contested: boolean;
+            decision: components["schemas"]["DecisionOut"] | null;
+            evidence_level: components["schemas"]["EvidenceLevel"];
+            /** History */
+            history: components["schemas"]["HistoryItemOut"][];
+            /** Notice */
+            notice: string;
+            /** Other Claims */
+            other_claims: components["schemas"]["OtherClaimOut"][];
+            /** Own Submission */
+            own_submission: boolean;
+            profile: components["schemas"]["SubmittedProfileOut"];
+            /** Profile Status */
+            profile_status: string;
+            /** Revision */
+            revision: number;
+            /** Snapshot Intact */
+            snapshot_intact: boolean;
+            /** Snapshot Sha256 */
+            snapshot_sha256: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "NEEDS_INFORMATION";
+            /** Submission Id */
+            submission_id: string;
+            /** Submitted At */
+            submitted_at: string;
+            submitted_by: components["schemas"]["PersonOut"];
+            /** Supplier Id */
+            supplier_id: string;
+        };
+        /**
+         * ReviewOutcomeOut
+         * @description A reviewer's decision as the supplier sees it: no reviewer identity, no internal note.
+         *     `reason` is shown only for NEEDS_INFORMATION and REJECTED (None for APPROVED).
+         */
+        ReviewOutcomeOut: {
+            /** Decided At */
+            decided_at: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "REJECTED" | "NEEDS_INFORMATION";
+            /** Reason */
+            reason: string | null;
+        };
         /** SignupIn */
         SignupIn: {
             /** Accept Terms Version */
@@ -1171,12 +1535,49 @@ export interface components {
             certificate_id: string;
             /** Claim Contested */
             claim_contested: boolean;
+            /** Id */
+            id: string;
+            review: components["schemas"]["ReviewOutcomeOut"] | null;
             /** Revision */
             revision: number;
             /** Snapshot Sha256 */
             snapshot_sha256: string;
             /** Submitted At */
             submitted_at: string;
+        };
+        /**
+         * SubmittedProfileOut
+         * @description The supplier's details exactly as frozen in the submission snapshot.
+         */
+        SubmittedProfileOut: {
+            /** Address Line1 */
+            address_line1: string | null;
+            /** Address Line2 */
+            address_line2: string | null;
+            /** Authorisation Note */
+            authorisation_note: string | null;
+            /** Authority Confirmed */
+            authority_confirmed: boolean;
+            /** City */
+            city: string | null;
+            /** Contact Email */
+            contact_email: string | null;
+            /** Contact Phone */
+            contact_phone: string | null;
+            enterprise_class: components["schemas"]["EnterpriseClass"] | null;
+            /** Enterprise Name */
+            enterprise_name: string | null;
+            /** Pin Code */
+            pin_code: string | null;
+            /** Registration Date */
+            registration_date: string | null;
+            /** Representative Name */
+            representative_name: string | null;
+            representative_role: components["schemas"]["RepresentativeRole"] | null;
+            /** State */
+            state: string | null;
+            /** Udyam Number */
+            udyam_number: string | null;
         };
         /** SupplierOut */
         SupplierOut: {
@@ -2160,6 +2561,172 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+        };
+    };
+    queue_api_v1_review_submissions_get: {
+        parameters: {
+            query?: {
+                status?: ("PENDING_REVIEW" | "APPROVED" | "REJECTED" | "NEEDS_INFORMATION") | null;
+                all?: boolean;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuePageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_api_v1_review_submissions__submission_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_certificate_api_v1_review_submissions__submission_id__certificate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_check_api_v1_review_submissions__submission_id__checks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_api_v1_review_submissions__submission_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

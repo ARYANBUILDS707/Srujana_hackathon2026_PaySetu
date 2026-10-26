@@ -326,6 +326,7 @@ PaySetu/
 - *Password reset (Phase 6.1):* single-use 15-minute tokens, stored only as HMAC under `TOKEN_HASH_KEY`, consumed by one conditional UPDATE in the same transaction as the password change. The emailed link carries the token in the URL fragment (`/reset-password#token=…`). Forgot-password always answers 202 with the same body and sends the email after the response.
 - *Email verification (Phase 7A):* built, then **removed as an access requirement** at the owner's request (DECISIONS.md Section 12). Workspace and onboarding routes need only a session (`PrincipalDep`) plus the unchanged ownership scoping. The token table and `users.email_verified_at` are kept; restore from commit `578c865`.
 - *Business onboarding (Phase 7B):* `app/services/onboarding.py` (draft, upload, submit; conditional-UPDATE state machine), `app/storage/business_store.py` (private PDF store under `STORAGE_DIR/business/`, separate from the Evidence Vault), `app/api/v1/onboarding.py` (email-verified, owner-scoped). Submissions are immutable snapshots; duplicate Udyam numbers become contested claims for review. Business status never feeds the legal engine and is never set to VERIFIED by supplier APIs. Details: DECISIONS.md Section 11.
+- *Business review (Phase 7C):* `app/domain/business_review.py` (pure transition table and evidence levels), `app/services/review.py` (queue, checks, decisions; guarded UPDATE plus one `business_reviews` row per submission), `app/services/reviewers.py` and `tools/reviewer.py` (the only way to grant or revoke the role), `app/api/v1/review.py` (`ReviewerDep`). Roles are derived on every request from ownership and `reviewer_grants`; nothing is stored on the session. Reviewer-only staff accounts own no supplier. Details: DECISIONS.md Section 13.
 - *Email (Phase 6.1):* `app/mail/senders.py` behind an `EmailSender` interface: a file outbox for `EMAIL_MODE=simulated` (`STORAGE_DIR/outbox/*.eml`, read with `make email-outbox`, body withheld in production) and SMTP for `EMAIL_MODE=smtp`. Delivery outcomes are logged without addresses, links or tokens.
 - Login and signup errors are generic. There is no user enumeration.
 
@@ -348,8 +349,10 @@ PaySetu/
 | Principal | Allowed |
 | --- | --- |
 | `SupplierPrincipal(user_id, supplier_id)` | Only rows where `supplier_id` matches. Enforced in repositories; a missing match returns **404** (not 403) to avoid revealing existence |
+| `AccountPrincipal(user_id, supplier_id?, is_reviewer)` (Phase 7C) | Account routes only: `/auth/me`, change password, sign out everywhere. Any signed-in user who owns a supplier or holds an active reviewer grant |
+| `ReviewerPrincipal(user_id)` (Phase 7C) | The `/review/*` routes. Requires an active `reviewer_grants` row, re-read on every request (403 `reviewer_required` otherwise). May read every submission and certificate; may not check or decide a submission for a supplier it owns or submitted (403 `self_review_forbidden`). A reviewer-only account gets 403 `supplier_account_required` on supplier routes |
 | `SharePrincipal(link_id, purpose, case_id, pack_id?)` | Only the projection for that purpose and case |
-| Operator | No HTTP access. Rate table and rule changes go through migrations or CLI scripts that record source and reviewer |
+| Operator | No HTTP access. Rate table and rule changes go through migrations or CLI scripts that record source and reviewer. Reviewer grants are issued and revoked only with `tools/reviewer.py` (operator label recorded) |
 
 ### 8.5 Rate limiting (in-process, single instance)
 
@@ -357,12 +360,13 @@ A simple in-memory sliding-window limiter, keyed by IP and/or user. It is accept
 
 | Scope | Limit |
 | --- | --- |
-| `POST /auth/login` | 5 / minute per IP+email; 20 / hour per IP |
+| `POST /auth/login` | 5 / minute per IP+email; 20 / hour per IP (`AUTH_LOGIN_IP_LIMIT_PER_HOUR` may raise the hourly limit only with `APP_ENV=test`) |
 | `POST /auth/signup` | 5 / hour per IP |
 | Public share endpoints | 60 / minute per IP; 10 failed token lookups / minute per IP |
 | Evidence upload | 30 / minute per user |
 | Communication send | 10 / hour per user |
 | Pack generation | 5 / hour per case |
+| Review checks and decisions (Phase 7C) | 120 / hour per reviewer |
 
 ---
 
@@ -417,6 +421,8 @@ Configuration comes only from environment variables (loaded by `pydantic-setting
 | `TOKEN_HASH_KEY` | backend | yes | 32+ random bytes for share-token HMAC |
 | `SESSION_IDLE_HOURS` / `SESSION_ABSOLUTE_DAYS` | backend | no | Defaults 168 / 30 |
 | `MAX_UPLOAD_MB` / `MAX_CASE_STORAGE_MB` | backend | no | Defaults 15 / 200 [PRD D11] |
+| `AUTH_SIGNUP_LIMIT_PER_HOUR` | backend | no | Default 5 signups/hour per IP; production refuses a higher value |
+| `AUTH_LOGIN_IP_LIMIT_PER_HOUR` | backend | no | Default 20 logins/hour per IP. A higher value is accepted only with `APP_ENV=test` (startup error otherwise), and the app enforces at most 20 outside `test` even for unvalidated settings. Lower values are allowed everywhere. The 5/min per IP + email limit is not configurable |
 | `EMAIL_MODE` | backend | yes | `smtp` or `simulated` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_STARTTLS`, `EMAIL_FROM` | backend | when `smtp` | Sending |
 | `VERIFICATION_MODE` | backend | no | `off` (default), `simulated` or `sandbox` |
@@ -469,6 +475,7 @@ flowchart LR
 | Uploaded files | Type allowlist + magic-byte check; size limits; stored outside any web root under content-addressed names (user-supplied filenames never appear in paths); served only via authorised download with `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`; never rendered inline from the app origin; never executed or unpacked (no ZIP uploads) |
 | `.eml` / chat text | Treated as bytes or plain text; HTML parts are never rendered in the app |
 | Share tokens | Hashed at rest, scoped, expiring, revocable, rate-limited, logged |
+| Reviewer role (Phase 7C) | Granted only by the operator CLI with database access; never by signup or any payload. Checked server-side on every request; self-review refused; decisions and checks append-only (triggers). Reviewer decisions record a person's manual check and are never presented as government verification |
 | Secrets | Env vars only; never logged; never sent to the client |
 | PDFs | Generated from escaped text (ReportLab paragraphs with escaped markup); no user-supplied HTML |
 | Headers | Strict CSP (self only, no inline scripts beyond Next.js requirements via nonces), HSTS, `frame-ancestors 'none'`, `Referrer-Policy: strict-origin-when-cross-origin` (`no-referrer` on share pages) |

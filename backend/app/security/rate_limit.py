@@ -35,6 +35,7 @@ class RateLimitCategory(StrEnum):
     PASSWORD_RESET = "password_reset"  # POST /auth/reset-password, key IP
     PASSWORD_CHANGE = "password_change"  # POST /auth/change-password, key user
     CERTIFICATE_UPLOAD = "certificate_upload"  # POST /onboarding/certificate, key user
+    REVIEW_WRITE = "review_write"  # POST /review/submissions/{id}/checks|decision, key user
     PUBLIC_SHARE = "public_share"  # /public/share/*, key IP
     PUBLIC_SHARE_INVALID_TOKEN = "public_share_invalid_token"  # failed lookups, key IP
     EVIDENCE_UPLOAD = "evidence_upload"  # key user
@@ -60,6 +61,7 @@ RATE_LIMITS: dict[RateLimitCategory, RateLimitRule] = {
     RateLimitCategory.PASSWORD_RESET: RateLimitRule(10, 3600),
     RateLimitCategory.PASSWORD_CHANGE: RateLimitRule(5, 900),
     RateLimitCategory.CERTIFICATE_UPLOAD: RateLimitRule(20, 3600),
+    RateLimitCategory.REVIEW_WRITE: RateLimitRule(120, 3600),
     RateLimitCategory.PUBLIC_SHARE: RateLimitRule(60, 60),
     RateLimitCategory.PUBLIC_SHARE_INVALID_TOKEN: RateLimitRule(10, 60),
     RateLimitCategory.EVIDENCE_UPLOAD: RateLimitRule(30, 60),

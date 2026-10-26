@@ -263,6 +263,39 @@ def test_signup_limit_defaults_to_the_api_contract(isolated_env: None) -> None:
     assert _load(auth_signup_limit_per_hour=50).auth_signup_limit_per_hour == 50  # test runs
 
 
+def test_login_ip_limit_defaults_to_the_api_contract(isolated_env: None) -> None:
+    assert _load().auth_login_ip_limit_per_hour == 20
+    assert _load().login_ip_limit_per_hour == 20
+    assert _load(app_env="development").login_ip_limit_per_hour == 20
+
+
+def test_only_automated_test_runs_may_raise_the_login_ip_limit(isolated_env: None) -> None:
+    relaxed = _load(app_env="test", auth_login_ip_limit_per_hour=200)
+    assert relaxed.login_ip_limit_per_hour == 200
+    assert "AUTH_LOGIN_IP_LIMIT_PER_HOUR" in _error(
+        app_env="development", auth_login_ip_limit_per_hour=21
+    )
+
+
+def test_production_refuses_a_relaxed_login_ip_limit(isolated_env: None) -> None:
+    assert _load(**PRODUCTION_LIVE, auth_login_ip_limit_per_hour=20).login_ip_limit_per_hour == 20
+    message = _error(**PRODUCTION_LIVE, auth_login_ip_limit_per_hour=21)
+    assert "AUTH_LOGIN_IP_LIMIT_PER_HOUR" in message and "APP_ENV=test" in message
+
+
+def test_production_can_still_tighten_the_login_ip_limit(isolated_env: None) -> None:
+    assert _load(**PRODUCTION_LIVE, auth_login_ip_limit_per_hour=10).login_ip_limit_per_hour == 10
+
+
+def test_unvalidated_settings_cannot_raise_the_login_ip_limit_outside_test(
+    isolated_env: None,
+) -> None:
+    # Settings copied without validation (model_copy) still never relax the enforced limit.
+    for env in (AppEnv.PRODUCTION, AppEnv.DEVELOPMENT):
+        forged = _load().model_copy(update={"app_env": env, "auth_login_ip_limit_per_hour": 999})
+        assert forged.login_ip_limit_per_hour == 20
+
+
 def test_production_refuses_a_relaxed_signup_limit(isolated_env: None) -> None:
     assert _load(**PRODUCTION_LIVE, auth_signup_limit_per_hour=5).app_env is AppEnv.PRODUCTION
     message = _error(**PRODUCTION_LIVE, auth_signup_limit_per_hour=6)

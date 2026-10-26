@@ -80,9 +80,16 @@ class AccountSupplierOut(BaseModel):
     demo_mode: bool
 
 
+AccountRole = Literal["supplier", "reviewer"]
+
+
 class MeOut(BaseModel):
     user: UserOut
-    supplier: AccountSupplierOut
+    # None only for a reviewer-only staff account (Phase 7C), which has no supplier workspace.
+    supplier: AccountSupplierOut | None
+    # Derived on every request: "supplier" when the user owns a supplier, "reviewer" while an
+    # operator-issued reviewer grant is active. Never accepted from a client.
+    roles: list[AccountRole]
 
 
 class _NewPassword(_In):

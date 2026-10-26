@@ -21,6 +21,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 MIN_TOKEN_HASH_KEY_BYTES = 32
 DEFAULT_SIGNUP_LIMIT_PER_HOUR = 5
+DEFAULT_LOGIN_IP_LIMIT_PER_HOUR = 20  # API.md Section 5: POST /auth/login, 20/hour per IP
 _EXAMPLE_TOKEN_HASH_KEY = "replace-with-32-plus-random-bytes"
 _DATABASE_SCHEMES = ("sqlite://", "postgresql://", "postgresql+")
 
@@ -64,6 +65,12 @@ class Settings(BaseSettings):
     # Phase 7B: largest accepted Udyam certificate PDF.
     business_certificate_max_mb: int = Field(default=5, ge=1, le=15)
     auth_signup_limit_per_hour: int = Field(default=DEFAULT_SIGNUP_LIMIT_PER_HOUR, ge=1, le=1000)
+    # Logins per hour per IP (Phase 7D). A higher value is accepted only with APP_ENV=test
+    # (automated runs that sign in many accounts from 127.0.0.1); development and production
+    # refuse it at startup. The per-account limit (5/min per IP + email) is not configurable.
+    auth_login_ip_limit_per_hour: int = Field(
+        default=DEFAULT_LOGIN_IP_LIMIT_PER_HOUR, ge=1, le=1000
+    )
     max_upload_mb: int = Field(default=15, ge=1, le=100)
     max_case_storage_mb: int = Field(default=200, ge=1, le=10_000)
 
@@ -142,6 +149,14 @@ class Settings(BaseSettings):
                 "VERIFICATION_MODE=sandbox requires CASHFREE_CLIENT_ID, "
                 "CASHFREE_CLIENT_SECRET and CASHFREE_BASE_URL"
             )
+        if (
+            self.auth_login_ip_limit_per_hour > DEFAULT_LOGIN_IP_LIMIT_PER_HOUR
+            and self.app_env is not AppEnv.TEST
+        ):
+            problems.append(
+                f"AUTH_LOGIN_IP_LIMIT_PER_HOUR may exceed {DEFAULT_LOGIN_IP_LIMIT_PER_HOUR} "
+                "only with APP_ENV=test"
+            )
         if self.app_env is AppEnv.PRODUCTION:
             problems.extend(self._production_problems())
         if problems:
@@ -175,6 +190,14 @@ class Settings(BaseSettings):
         if self.verification_mode in (VerificationMode.SIMULATED, VerificationMode.SANDBOX):
             adapters.append(f"verification={self.verification_mode.value}")
         return tuple(adapters)
+
+    @property
+    def login_ip_limit_per_hour(self) -> int:
+        """The login limit to enforce. Defence in depth for settings built without validation
+        (e.g. `model_copy`): outside APP_ENV=test a raised value falls back to the default."""
+        if self.app_env is AppEnv.TEST:
+            return self.auth_login_ip_limit_per_hour
+        return min(self.auth_login_ip_limit_per_hour, DEFAULT_LOGIN_IP_LIMIT_PER_HOUR)
 
     @property
     def show_simulated_banner(self) -> bool:

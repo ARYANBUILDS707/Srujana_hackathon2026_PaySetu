@@ -1,15 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { LoadingBlock } from "@/components/ui/Notice";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Wordmark } from "@/components/ui/Wordmark";
 import { appCopy } from "@/content/app";
+import type { Me } from "@/lib/api/types";
 import { useSession } from "@/lib/session/SessionContext";
 
 type NavItem = { href: string; label: string; match: string; icon: IconName };
+
+/** Navigation for the signed-in roles (UX only: the API authorises every request). */
+function navFor(me: Me): NavItem[] {
+  const reviewer = me.roles.includes("reviewer");
+  if (!me.supplier) return [appCopy.reviewNav, appCopy.nav[appCopy.nav.length - 1]];
+  if (!reviewer) return appCopy.nav;
+  return [...appCopy.nav.slice(0, -1), appCopy.reviewNav, appCopy.nav[appCopy.nav.length - 1]];
+}
+
+/** Pages a reviewer-only staff account (no supplier workspace) can use. */
+function staffPage(pathname: string): boolean {
+  return pathname.startsWith("/app/review") || pathname === "/app/settings";
+}
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.match === "exact") return pathname === item.href;
@@ -50,8 +65,8 @@ function Account() {
       <p className="truncate text-small font-medium text-ink" title={me.user.email}>
         {me.user.full_name}
       </p>
-      <p className="truncate text-caption text-ink-muted" title={me.supplier.legal_name}>
-        {me.supplier.legal_name}
+      <p className="truncate text-caption text-ink-muted">
+        {me.supplier?.legal_name ?? appCopy.reviewerAccountLabel}
       </p>
       <button
         type="button"
@@ -69,17 +84,20 @@ function Account() {
 }
 
 function SidebarBody({ pathname }: { pathname: string }) {
+  const { me } = useSession();
   return (
     <>
-      <Link
-        href={appCopy.primaryAction.href}
-        className="flex h-10 items-center justify-center gap-2 rounded-md border border-rule-strong bg-surface px-4 text-body font-medium text-ink transition-colors duration-150 hover:border-ink hover:bg-surface-subtle"
-      >
-        <Icon name="plus" className="size-4" />
-        {appCopy.primaryAction.label}
-      </Link>
-      <nav aria-label="Main" className="mt-6 flex flex-col gap-1">
-        {appCopy.nav.map((item) => (
+      {me.supplier ? (
+        <Link
+          href={appCopy.primaryAction.href}
+          className="flex h-10 items-center justify-center gap-2 rounded-md border border-rule-strong bg-surface px-4 text-body font-medium text-ink transition-colors duration-150 hover:border-ink hover:bg-surface-subtle"
+        >
+          <Icon name="plus" className="size-4" />
+          {appCopy.primaryAction.label}
+        </Link>
+      ) : null}
+      <nav aria-label="Main" className={`${me.supplier ? "mt-6 " : ""}flex flex-col gap-1`}>
+        {navFor(me).map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
       </nav>
@@ -91,13 +109,20 @@ function AccountName() {
   const { me } = useSession();
   return (
     <span className="max-w-xs truncate text-small text-ink-muted" title={me.user.email}>
-      {me.supplier.legal_name}
+      {me.supplier?.legal_name ?? appCopy.reviewerAccountLabel}
     </span>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { me } = useSession();
+  // A reviewer-only staff account has no supplier workspace (the API answers it 403).
+  const misplaced = !me.supplier && !staffPage(pathname);
+  useEffect(() => {
+    if (misplaced) router.replace(appCopy.reviewNav.href);
+  }, [misplaced, router]);
   const [menu, setMenu] = useState({ open: false, path: pathname });
   const open = menu.open && menu.path === pathname; // navigating closes the menu
 
@@ -165,7 +190,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="min-w-0 px-4 py-6 lg:px-8 lg:py-8">
-        <div className="mx-auto w-full max-w-7xl">{children}</div>
+        <div className="mx-auto w-full max-w-7xl">
+          {misplaced ? <LoadingBlock label="Opening the review queue" /> : children}
+        </div>
         {isDashboard ? (
           <p className="mx-auto mt-12 max-w-7xl text-caption text-ink-muted">
             {appCopy.shortDisclaimer}

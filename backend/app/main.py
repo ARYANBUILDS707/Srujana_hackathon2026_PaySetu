@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.v1 import api_router, demo_cases, onboarding
+from app.api.v1 import api_router, demo_cases, onboarding, review
 from app.clock import Clock, SystemClock
 from app.config import AppEnv, Settings, get_settings
 from app.db import Database
@@ -63,6 +63,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         {
             **RATE_LIMITS,
             RateLimitCategory.SIGNUP: RateLimitRule(resolved.auth_signup_limit_per_hour, 3600),
+            RateLimitCategory.LOGIN_IP: RateLimitRule(resolved.login_ip_limit_per_hour, 3600),
         },
     )
     app.state.evidence_store = EvidenceStore(resolved.storage_dir)
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     if resolved.app_env is not AppEnv.PRODUCTION:
         app.include_router(demo_cases.router, prefix=API_PREFIX)
         app.include_router(onboarding.router, prefix=API_PREFIX)
+        app.include_router(review.router, prefix=API_PREFIX)
     register_error_handlers(app)
     # Starlette runs the last-added middleware first. Request order (T1.3, T1.5):
     # request context -> security headers -> body size limit -> CSRF -> share rate limit -> app.

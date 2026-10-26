@@ -10,7 +10,7 @@ WEB_PORT ?= 3000
 
 .DEFAULT_GOAL := help
 .PHONY: help api-types setup setup-backend setup-frontend dev dev-api dev-web lint format typecheck \
-	test e2e build migrate migrate-status seed demo-account email-outbox
+	test e2e build migrate migrate-status seed demo-account email-outbox reviewer
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -66,6 +66,9 @@ seed: ## Load SYNTHETIC demo data (refuses production; run after make migrate)
 
 demo-account: ## Give the demo supplier a login (needs DEMO_ACCOUNT_PASSWORD; refuses production)
 	cd backend && .venv/bin/python -m seed.demo_account
+
+reviewer: ## Provision reviewers: make reviewer ARGS='create --email x@example.com --name "Name"' (also grant, revoke, list)
+	cd backend && .venv/bin/python -m tools.reviewer $(ARGS)
 
 email-outbox: ## Show the newest development emails (EMAIL_MODE=simulated; refuses production)
 	cd backend && .venv/bin/python -m tools.outbox

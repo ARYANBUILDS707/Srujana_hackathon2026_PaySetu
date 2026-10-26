@@ -15,7 +15,7 @@ import {
   onboardingStatusTone,
 } from "@/content/onboarding";
 import { api, apiUpload, asApiError, type ApiError } from "@/lib/api/client";
-import type { Onboarding, OnboardingDraft } from "@/lib/api/types";
+import type { Onboarding, OnboardingDraft, ReviewOutcome } from "@/lib/api/types";
 import { formatBytes, formatDate, formatTimestamp } from "@/lib/format";
 import { useApiGet } from "@/lib/hooks/useApiGet";
 
@@ -84,7 +84,13 @@ export default function OnboardingPage() {
         }
       />
       {current.editable ? (
-        <Editor key={current.submissions.length} data={current} onChange={setLatest} />
+        <>
+          {current.status === "NEEDS_INFORMATION" && current.latest_review ? (
+            <Outcome review={current.latest_review} />
+          ) : null}
+          <Editor key={current.submissions.length} data={current} onChange={setLatest} />
+          <History data={current} />
+        </>
       ) : (
         <Submitted data={current} />
       )}
@@ -572,47 +578,88 @@ function Summary({ data }: { data: Onboarding }) {
   );
 }
 
+/** The reviewer's decision as the supplier may see it (no reviewer identity or internal note). */
+function Outcome({ review }: { review: ReviewOutcome }) {
+  const outcome = copy.outcome[review.decision];
+  const tone =
+    review.decision === "APPROVED"
+      ? "success"
+      : review.decision === "REJECTED"
+        ? "danger"
+        : "warning";
+  return (
+    <div data-testid="review-outcome">
+      <Notice tone={tone} title={outcome.title}>
+        <p>{outcome.body}</p>
+        {review.reason ? (
+          <p className="mt-2">
+            <span className="font-semibold">{copy.reasonLabel}:</span> {review.reason}
+          </p>
+        ) : null}
+        <p className="mt-2 text-ink-muted">{copy.decidedOn(formatTimestamp(review.decided_at))}</p>
+      </Notice>
+    </div>
+  );
+}
+
 function Submitted({ data }: { data: Onboarding }) {
   return (
     <>
-      <Card>
-        <div data-testid="onboarding-submitted" className="flex flex-col gap-4">
-          <h2 className="text-h2 text-ink">{copy.submittedTitle}</h2>
-          <Notice tone="success">{copy.submittedBody}</Notice>
-          <p className="text-small text-ink-muted">{copy.reviewNotAvailable}</p>
-          {data.submitted_at ? (
-            <p className="text-small text-ink-muted">
-              Submitted {formatTimestamp(data.submitted_at)}
-            </p>
-          ) : null}
-        </div>
-      </Card>
+      {data.status === "PENDING_REVIEW" ? (
+        <Card>
+          <div data-testid="onboarding-submitted" className="flex flex-col gap-4">
+            <h2 className="text-h2 text-ink">{copy.submittedTitle}</h2>
+            <Notice tone="success">{copy.submittedBody}</Notice>
+            <p className="text-small text-ink-muted">{copy.reviewPending}</p>
+            {data.submitted_at ? (
+              <p className="text-small text-ink-muted">
+                Submitted {formatTimestamp(data.submitted_at)}
+              </p>
+            ) : null}
+          </div>
+        </Card>
+      ) : data.latest_review ? (
+        <Outcome review={data.latest_review} />
+      ) : null}
       <Card title={copy.reviewTitle}>
         <Summary data={data} />
       </Card>
-      {data.submissions.length > 0 ? (
-        <Card title={copy.history}>
-          <ul className="divide-y divide-rule">
-            {data.submissions.map((s) => (
-              <li key={s.revision} className="flex flex-col gap-2 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-body font-medium text-ink">
-                    {copy.revision(s.revision)}
-                  </span>
-                  <span className="text-small text-ink-muted">
-                    {formatTimestamp(s.submitted_at)}
-                  </span>
-                  {s.claim_contested ? <Badge tone="warning">{copy.contested}</Badge> : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-small text-ink-muted">{copy.fingerprint}:</span>
-                  <HashChip hash={s.snapshot_sha256} label="Snapshot" />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+      <History data={data} />
     </>
+  );
+}
+
+function History({ data }: { data: Onboarding }) {
+  if (data.submissions.length === 0) return null;
+  return (
+    <Card title={copy.history}>
+      <ul className="divide-y divide-rule" data-testid="submission-history">
+        {data.submissions.map((s) => (
+          <li key={s.revision} className="flex flex-col gap-2 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-body font-medium text-ink">{copy.revision(s.revision)}</span>
+              <span className="text-small text-ink-muted">{formatTimestamp(s.submitted_at)}</span>
+              {s.review ? (
+                <Badge tone={onboardingStatusTone[s.review.decision]}>
+                  {onboardingStatusLabel[s.review.decision]}
+                </Badge>
+              ) : (
+                <Badge tone="primary">{copy.awaitingReview}</Badge>
+              )}
+              {s.claim_contested ? <Badge tone="warning">{copy.contested}</Badge> : null}
+            </div>
+            {s.review?.reason ? (
+              <p className="text-small text-ink">
+                <span className="text-ink-muted">{copy.reasonLabel}:</span> {s.review.reason}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-small text-ink-muted">{copy.fingerprint}:</span>
+              <HashChip hash={s.snapshot_sha256} label="Snapshot" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

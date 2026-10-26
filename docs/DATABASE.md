@@ -123,10 +123,21 @@ erDiagram
 
 | Table | Purpose and key constraints |
 | --- | --- |
-| `business_profiles` | One per supplier (`supplier_id` UNIQUE): status (CHECK: DRAFT, PENDING_REVIEW, NEEDS_INFORMATION, VERIFIED, REJECTED; no row = NOT_STARTED), the draft fields, `certificate_id` (FK), `revision`, `submitted_at`, timestamps. Writes guarded by conditional UPDATE on the editable statuses |
+| `business_profiles` | One per supplier (`supplier_id` UNIQUE): status (CHECK: DRAFT, PENDING_REVIEW, NEEDS_INFORMATION, APPROVED, REJECTED; no row = NOT_STARTED; `APPROVED` replaced the never-used `VERIFIED` in migration `3d7a9c1e5b20`), the draft fields, `certificate_id` (FK), `revision`, `submitted_at`, timestamps. Writes guarded by conditional UPDATE on the editable statuses |
 | `business_certificates` | Udyam certificate metadata: supplier, display filename, size, SHA-256, storage key, uploader, time. Append-only (SQLite triggers forbid UPDATE and DELETE); bytes in `STORAGE_DIR/business/` |
 | `business_submissions` | Immutable snapshot per submission: `(supplier_id, revision)` UNIQUE, Udyam number, certificate, `claim_contested`, canonical-JSON snapshot and its SHA-256, submitter, time. Triggers forbid UPDATE and DELETE |
-| `udyam_claims` | One row per (supplier, number) submitted; `contested`. Partial UNIQUE index on `udyam_number WHERE contested = 0`: one uncontested claim per number; later claimants are contested, not rejected. No DELETE; only `contested` may change (for review) |
+| `udyam_claims` | One row per (supplier, number) submitted; `contested`. Partial UNIQUE index on `udyam_number WHERE contested = 0`: one uncontested claim per number; later claimants are contested, not rejected. No DELETE; only `contested` may change: a reviewer's approval marks every other claim on the number contested, then the approved supplier's claim uncontested |
+
+### 3.3c Business review tables (Phase 7C, as built; migration `3d7a9c1e5b20`)
+
+| Table | Purpose and key constraints |
+| --- | --- |
+| `reviewer_grants` | The reviewer role: `user_id` (FK users), `granted_at`, `granted_by` (operator label), `revoked_at`, `revoked_by`. Partial UNIQUE index `uq_reviewer_grants_active_user` on `user_id WHERE revoked_at IS NULL`: one active grant per user. Created only by the operator CLI (`tools/reviewer.py`); no API writes it. Triggers: no DELETE; only `revoked_at`/`revoked_by` may change, and only once |
+| `business_checks` | A manual check of one submission: `submission_id` (FK, indexed), `supplier_id`, `reviewer_user_id` (FK users, from the session), `source` (CHECK: `udyam_portal`, `other_official_record`, `certificate_only`, `other`), `source_detail` (what exactly was consulted), `checked_on` (date of the check, not in the future), optional reviewer-only `note`, `recorded_at`. Triggers forbid UPDATE and DELETE; a correction is a new check |
+| `business_check_items` | One compared field per check: `field` (CHECK: `udyam_number`, `enterprise_name`, `enterprise_class`, `registration_date`, `address`, `representative_name`), `submitted_value` (copied by the server from the frozen snapshot), `observed_value`, `result` (CHECK: `match`, `mismatch`, `not_found`). `(check_id, field)` UNIQUE. Triggers forbid UPDATE and DELETE |
+| `business_reviews` | The decision on one submission: `submission_id` UNIQUE (one decision per submission), `supplier_id` (indexed), `reviewer_user_id`, `decision` (CHECK: APPROVED, REJECTED, NEEDS_INFORMATION), `reason` (shown to the supplier for NEEDS_INFORMATION and REJECTED), optional reviewer-only `internal_note`, `decided_at`. Triggers forbid UPDATE and DELETE |
+
+A submission's review status is derived: its `business_reviews.decision`, or `PENDING_REVIEW` when it has none. The migration created no grant and changed no existing row except mapping any `VERIFIED` profile to `APPROVED` (none existed; no code path wrote it). Nothing in these tables feeds `suppliers.udyam_*`, eligibility or the legal engine.
 
 ### 3.4 `suppliers`
 
@@ -449,6 +460,10 @@ Created in migrations. The SQLite form is shown; PostgreSQL uses equivalent `BEF
 | `buyer_responses` | `BEFORE UPDATE` → abort if any column other than the removal fields changes, or if they were already set |
 | `share_links` | `BEFORE UPDATE` → only `revoked_at` may change, and only from NULL |
 | All of the above + `cases`, `payments` | `BEFORE DELETE` → abort (cases are closed; payments are voided) |
+| `business_submissions`, `business_reviews`, `business_checks`, `business_check_items` (as built, Phases 7B/7C) | `BEFORE UPDATE` and `BEFORE DELETE` → abort |
+| `business_certificates` (as built) | `BEFORE UPDATE` and `BEFORE DELETE` → abort |
+| `udyam_claims` (as built) | `BEFORE DELETE` → abort; `BEFORE UPDATE OF` any column other than `contested` → abort |
+| `reviewer_grants` (as built, Phase 7C) | `BEFORE DELETE` → abort; `BEFORE UPDATE` → abort if already revoked or if any column other than `revoked_at`/`revoked_by` changes |
 
 Account deletion (P1, D12) runs as an operator procedure that disables the triggers inside a controlled maintenance transaction, logs the action in an operator log file and removes the supplier's rows and files. It never runs through the normal API path.
 

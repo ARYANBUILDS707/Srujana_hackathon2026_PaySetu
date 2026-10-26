@@ -8,6 +8,14 @@ export const DEMO_PASSWORD = "e2e-only-demo-passphrase";
 export const TEST_PASSWORD = "e2e-only-test-passphrase";
 export const SAMPLE_BUYER = "Apex Auto Components Pvt Ltd (SAMPLE)";
 export const TERMS_VERSION = "evaluation-2026-10";
+// Phase 7C: the reviewer provisioned by the e2e backend (playwright.config.ts) and the saved
+// session from global-setup.ts, inside the throwaway, git-ignored e2e storage folder.
+export const REVIEWER_EMAIL = "reviewer@paysetu.example";
+export const REVIEWER_PASSWORD = "e2e-only-reviewer-passphrase";
+export const REVIEWER_STATE = path.resolve(
+  process.cwd(),
+  "../backend/storage/e2e/reviewer-session.json",
+);
 
 /** `YYYY-MM-DD` for `days` ago, in India time (the date the backend treats as "today"). */
 export function isoDaysAgo(days: number): string {

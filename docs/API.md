@@ -503,7 +503,7 @@ Future inbound webhooks (inbound email parsing, eSign callbacks) must:
 
 ### Business onboarding (Phase 7B, as built)
 
-All routes need a session (401 otherwise), act only on the caller's own supplier, and are mounted with the other supplier routes (not in production). Statuses: `NOT_STARTED`, `DRAFT`, `PENDING_REVIEW`, `NEEDS_INFORMATION`, `VERIFIED`, `REJECTED`; suppliers can only reach `DRAFT` and `PENDING_REVIEW`.
+All routes need a supplier session (401 otherwise; 403 `supplier_account_required` for a reviewer-only account), act only on the caller's own supplier, and are mounted with the other supplier routes (not in production). Statuses: `NOT_STARTED`, `DRAFT`, `PENDING_REVIEW`, `NEEDS_INFORMATION`, `APPROVED`, `REJECTED`; suppliers can only reach `DRAFT` and `PENDING_REVIEW`. Phase 7C adds `latest_review` to `GET /onboarding` and `id` and `review` to each `submissions[]` entry: `{decision, reason, decided_at}`, where `reason` is present only for `NEEDS_INFORMATION` and `REJECTED`; reviewer identity and internal notes are never returned to suppliers. While `NEEDS_INFORMATION`, the draft is editable again and `POST /onboarding/submit` creates a new revision; earlier snapshots never change. `APPROVED` and `REJECTED` are final (409 `onboarding_locked` on edit or submit).
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -512,7 +512,19 @@ All routes need a session (401 otherwise), act only on the caller's own supplier
 | POST | `/onboarding/certificate` | Multipart `file`: the Udyam certificate PDF (≤ `BUSINESS_CERTIFICATE_MAX_MB`, default 5 MB). 201 with the profile. 413 `file_too_large`; 415 `not_a_pdf`, `damaged_pdf`, `pdf_active_content`; 409 `onboarding_locked`; 20/hour per user. Replacing keeps the earlier file |
 | GET | `/onboarding/certificates/{id}/download` | Original bytes as an attachment (`application/pdf`, `nosniff`, `private, no-store`, `CSP: sandbox`, `X-PaySetu-SHA256`). 404 unless the caller owns it |
 | POST | `/onboarding/submit` | Validates required fields and the certificate (422 lists the missing ones), re-hashes the stored certificate (409 `integrity_failed` if changed), records the Udyam claim (contested if another supplier holds it), stores an immutable snapshot and sets `PENDING_REVIEW`. 409 `onboarding_locked` if already submitted |
-| GET | `/onboarding/submissions` | Submission history, newest first: revision, time, snapshot SHA-256, certificate ID, `claim_contested` |
+| GET | `/onboarding/submissions` | Submission history, newest first: id, revision, time, snapshot SHA-256, certificate ID, `claim_contested`, `review` |
+
+### Business review (Phase 7C, as built)
+
+Reviewer-only. Every route needs a session whose user holds an active reviewer grant: 401 signed out, 403 `reviewer_required` for anyone else (including every supplier). Grants are issued only by the operator CLI (`make reviewer`); no route, signup field or payload can create one. The reviewer is always the session's user. Inputs forbid unknown fields (422), so a payload cannot name a reviewer, supplier, status or submitted value. Mounted with the onboarding routes (not in production). `GET /auth/me` (and login) now return `roles` (`supplier`, `reviewer`) and `supplier: null` for a reviewer-only staff account; `/auth/me`, change password and sign out everywhere accept any signed-in user.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/review/submissions?status=&all=&limit=&cursor=` | The queue, oldest first, cursor-paginated (`{items, next_cursor}`, `limit` ≤ 100). Default `status=PENDING_REVIEW`; `APPROVED`, `REJECTED`, `NEEDS_INFORMATION`, or `all=true`. Each item: submission id, supplier id, revision, enterprise name and Udyam number from the snapshot, time, status, `claim_contested`, `other_claimants` (other suppliers that submitted the number), `checks_recorded`, `own_submission`. 400 `invalid_cursor` |
+| GET | `/review/submissions/{id}` | The frozen snapshot (`profile`, `notice`, `snapshot_sha256`, `snapshot_intact`), submitter, certificate metadata with `bytes_intact` (re-hashed now; integrity only, not authenticity), `other_claims`, `checks[]` (reviewer, source, `official_source`, detail, `checked_on`, `recorded_at`, note, items), `evidence_level` (`supplier_submitted`, `manually_reviewed`, `official_record_matched`), `decision`, `own_submission`, `allowed_decisions`, `approval_blockers`, and the supplier's full `history` with decisions. 404 if unknown |
+| GET | `/review/submissions/{id}/certificate` | That submission's certificate bytes as an attachment (`application/pdf`, `nosniff`, `private, no-store`, `CSP: sandbox`, `X-PaySetu-SHA256`) |
+| POST | `/review/submissions/{id}/checks` | 201. Record a manual check: `source` (`udyam_portal`, `other_official_record`, `certificate_only`, `other`), `source_detail` (3–300 chars), `checked_on` (not in the future, IST), `items[]` (1–6, unique `field`; `result` `match`/`mismatch` needs `observed_value`; `not_found` may omit it), optional `note`. Submitted values are copied from the snapshot by the server. 403 `self_review_forbidden`; 409 `invalid_transition` once decided |
+| POST | `/review/submissions/{id}/decision` | `decision` (`APPROVED`, `REJECTED`, `NEEDS_INFORMATION`), `reason` (10–2000 chars, shown to the supplier except for approvals), optional `internal_note`. Allowed only from `PENDING_REVIEW` for that revision; exactly one decision per submission (409 `invalid_transition` otherwise). `APPROVED` needs at least one recorded check and no other supplier already approved with the same number (409 `approval_blocked`), and settles the duplicate claim. 403 `self_review_forbidden` when the reviewer owns the supplier or submitted it |
 
 ---
 
@@ -520,12 +532,13 @@ All routes need a session (401 otherwise), act only on the caller's own supplier
 
 | Scope | Limit | Key |
 | --- | --- | --- |
-| `POST /auth/login` | 5/min and 20/hour | IP + email; IP |
+| `POST /auth/login` | 5/min and 20/hour (the hourly limit is `AUTH_LOGIN_IP_LIMIT_PER_HOUR`; above 20 only with `APP_ENV=test`, refused at startup otherwise) | IP + email; IP |
 | `POST /auth/signup` | 5/hour (`AUTH_SIGNUP_LIMIT_PER_HOUR`; production refuses a higher value) | IP |
 | `POST /auth/forgot-password` | 3/hour; 10/hour | IP + email; IP |
 | `POST /auth/reset-password` | 10/hour | IP |
 | `POST /auth/change-password` | 5 per 15 min | user |
 | `POST /onboarding/certificate` | 20/hour | user |
+| `POST /review/submissions/{id}/checks` and `/decision` | 120/hour combined | user |
 | `/public/share/*` | 60/min; 10 invalid tokens/min | IP |
 | `POST /cases/{id}/evidence` | 30/min | user |
 | `POST /communications/{id}/send` | 10/hour | user |

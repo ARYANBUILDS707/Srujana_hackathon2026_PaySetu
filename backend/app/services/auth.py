@@ -7,6 +7,10 @@
   SESSION_ABSOLUTE_DAYS after login, and are revoked by logout.
 - Phase 6.1: password reset by emailed single-use token, password change and sign-out
   everywhere. Every password change (either way) revokes all of the user's sessions.
+- Phase 7C: roles are derived on every request, never stored on the session or taken from a
+  request. A user is a supplier while they own a supplier and a reviewer while an
+  operator-issued `reviewer_grants` row is active (`tools/reviewer.py`). Signup never creates
+  a grant. A reviewer-only staff account owns no supplier: supplier routes answer it 403.
 """
 
 import uuid
@@ -21,12 +25,20 @@ from sqlalchemy.orm import Session
 from app.clock import Clock, format_utc_timestamp
 from app.config import Settings
 from app.db import Database
-from app.errors import BadRequest, Conflict, FieldError, Unauthenticated, ValidationFailed
+from app.errors import (
+    BadRequest,
+    Conflict,
+    FieldError,
+    Forbidden,
+    Unauthenticated,
+    ValidationFailed,
+)
 from app.mail import templates
 from app.mail.senders import EmailSender, deliver
 from app.models import (
     EmailVerificationToken,
     PasswordResetToken,
+    ReviewerGrant,
     Supplier,
     User,
     UserSession,
@@ -37,6 +49,10 @@ from app.security import sessions as tokens
 
 GENERIC_LOGIN_ERROR = "Email or password is incorrect."
 GENERIC_SIGNUP_CONFLICT = "Could not create an account with these details."
+SUPPLIER_ACCOUNT_REQUIRED = (
+    "This is a reviewer account. It has no supplier workspace; open the review queue instead."
+)
+REVIEWER_REQUIRED = "Only PaySetu reviewers can do this."
 
 
 @dataclass(frozen=True)
@@ -45,6 +61,24 @@ class SupplierPrincipal:
 
     user_id: str
     supplier_id: str
+    session_id: str
+
+
+@dataclass(frozen=True)
+class AccountPrincipal:
+    """Any signed-in user (supplier, reviewer or both), for account-level routes."""
+
+    user_id: str
+    session_id: str
+    supplier_id: str | None
+    is_reviewer: bool
+
+
+@dataclass(frozen=True)
+class ReviewerPrincipal:
+    """A signed-in user with an active reviewer grant (checked on every request)."""
+
+    user_id: str
     session_id: str
 
 
@@ -68,7 +102,12 @@ def _parse(timestamp: str) -> datetime:
     return datetime.fromisoformat(timestamp)
 
 
-def _me(user: User, supplier: Supplier) -> schemas.MeOut:
+def _me(user: User, supplier: Supplier | None, is_reviewer: bool) -> schemas.MeOut:
+    roles: list[schemas.AccountRole] = []
+    if supplier is not None:
+        roles.append("supplier")
+    if is_reviewer:
+        roles.append("reviewer")
     return schemas.MeOut(
         user=schemas.UserOut(
             id=user.id,
@@ -76,10 +115,25 @@ def _me(user: User, supplier: Supplier) -> schemas.MeOut:
             full_name=user.full_name,
             email_verified=user.email_verified_at is not None,
         ),
-        supplier=schemas.AccountSupplierOut(
-            id=supplier.id, legal_name=supplier.legal_name, demo_mode=supplier.is_demo
+        supplier=(
+            schemas.AccountSupplierOut(
+                id=supplier.id, legal_name=supplier.legal_name, demo_mode=supplier.is_demo
+            )
+            if supplier is not None
+            else None
         ),
+        roles=roles,
     )
+
+
+def is_reviewer(session: Session, user_id: str) -> bool:
+    """Whether `user_id` holds an active (unrevoked) reviewer grant."""
+    grant = session.scalars(
+        select(ReviewerGrant.id).where(
+            ReviewerGrant.user_id == user_id, ReviewerGrant.revoked_at.is_(None)
+        )
+    ).first()
+    return grant is not None
 
 
 def _owned_supplier(session: Session, user_id: str) -> Supplier | None:
@@ -153,7 +207,7 @@ def signup(
             )
             session.add(supplier)
             token = _start_session(session, clock, settings, user, client)
-            return SessionGrant(_me(user, supplier), token)
+            return SessionGrant(_me(user, supplier, False), token)
     except IntegrityError:  # a concurrent signup with the same email
         raise Conflict(GENERIC_SIGNUP_CONFLICT) from None
 
@@ -173,7 +227,8 @@ def login(
         if user is None or not valid or not user.is_active:
             raise Unauthenticated(GENERIC_LOGIN_ERROR, code="invalid_credentials")
         supplier = _owned_supplier(session, user.id)
-        if supplier is None:
+        reviewer = is_reviewer(session, user.id)
+        if supplier is None and not reviewer:
             raise Unauthenticated(GENERIC_LOGIN_ERROR, code="invalid_credentials")
         if passwords.needs_rehash(user.password_hash):
             user.password_hash = passwords.hash_password(data.password)
@@ -183,7 +238,7 @@ def login(
         if previous_token:  # no session fixation: a login always starts a fresh session
             _revoke(session, previous_token, now)
         token = _start_session(session, clock, settings, user, client)
-        return SessionGrant(_me(user, supplier), token)
+        return SessionGrant(_me(user, supplier, reviewer), token)
 
 
 def _revoke(session: Session, token: str, now: str) -> None:
@@ -204,10 +259,14 @@ def logout(session: Session, clock: Clock, token: str | None) -> None:
         _revoke(session, token, _now(clock))
 
 
-def resolve(
+def resolve_account(
     session: Session, clock: Clock, settings: Settings, token: str | None
-) -> SupplierPrincipal:
-    """The principal for a session cookie, or `Unauthenticated` (401)."""
+) -> AccountPrincipal:
+    """The signed-in user behind a session cookie, or `Unauthenticated` (401).
+
+    A user who owns no supplier and holds no active reviewer grant (for example a staff
+    account whose grant was revoked) has nothing to act on and is treated as signed out.
+    """
     clear = {"Set-Cookie": tokens.clear_cookie_header(settings)}
     if not token or len(token) > tokens.MAX_TOKEN_LENGTH:
         raise Unauthenticated("Sign in to continue.", headers=clear if token else None)
@@ -224,21 +283,53 @@ def resolve(
                 "Your session has expired. Sign in again.", code="session_expired", headers=clear
             )
         user = session.get(User, row.user_id)
+        if user is None or not user.is_active:
+            raise Unauthenticated("Sign in to continue.", headers=clear)
         supplier = _owned_supplier(session, row.user_id)
-        if user is None or not user.is_active or supplier is None:
+        reviewer = is_reviewer(session, row.user_id)
+        if supplier is None and not reviewer:
             raise Unauthenticated("Sign in to continue.", headers=clear)
         if (now - _parse(row.last_seen_at)).total_seconds() >= tokens.SLIDE_INTERVAL_SECONDS:
             row.last_seen_at = format_utc_timestamp(now)
-        return SupplierPrincipal(user_id=user.id, supplier_id=supplier.id, session_id=row.id)
+        return AccountPrincipal(
+            user_id=user.id,
+            session_id=row.id,
+            supplier_id=supplier.id if supplier is not None else None,
+            is_reviewer=reviewer,
+        )
 
 
-def me(session: Session, principal: SupplierPrincipal) -> schemas.MeOut:
+def resolve(
+    session: Session, clock: Clock, settings: Settings, token: str | None
+) -> SupplierPrincipal:
+    """The supplier principal for a session cookie: 401 when signed out, 403
+    `supplier_account_required` for a reviewer-only account (its session stays valid)."""
+    account = resolve_account(session, clock, settings, token)
+    if account.supplier_id is None:
+        raise Forbidden(SUPPLIER_ACCOUNT_REQUIRED, code="supplier_account_required")
+    return SupplierPrincipal(
+        user_id=account.user_id, supplier_id=account.supplier_id, session_id=account.session_id
+    )
+
+
+def resolve_reviewer(
+    session: Session, clock: Clock, settings: Settings, token: str | None
+) -> ReviewerPrincipal:
+    """The reviewer principal: 401 when signed out, 403 `reviewer_required` for anyone without
+    an active grant. The grant is re-read on every request, so a revocation applies at once."""
+    account = resolve_account(session, clock, settings, token)
+    if not account.is_reviewer:
+        raise Forbidden(REVIEWER_REQUIRED, code="reviewer_required")
+    return ReviewerPrincipal(user_id=account.user_id, session_id=account.session_id)
+
+
+def me(session: Session, principal: AccountPrincipal) -> schemas.MeOut:
     with session.begin():
         user = session.get(User, principal.user_id)
-        supplier = session.get(Supplier, principal.supplier_id)
-        if user is None or supplier is None:  # pragma: no cover - resolve() checked both
+        if user is None:  # pragma: no cover - resolve_account() checked it
             raise Unauthenticated("Sign in to continue.")
-        return _me(user, supplier)
+        supplier = session.get(Supplier, principal.supplier_id) if principal.supplier_id else None
+        return _me(user, supplier, principal.is_reviewer)
 
 
 def create_demo_account(session: Session, clock: Clock, email: str, password: str) -> str:
@@ -437,7 +528,7 @@ def change_password(
     session: Session,
     clock: Clock,
     settings: Settings,
-    principal: SupplierPrincipal,
+    principal: AccountPrincipal,
     data: schemas.ChangePasswordIn,
     client: ClientInfo,
 ) -> tuple[PasswordUpdate, str]:
@@ -489,7 +580,7 @@ def notify_password_changed(
     return deliver(sender, message, update_.user_id)
 
 
-def logout_all(session: Session, clock: Clock, principal: SupplierPrincipal) -> None:
+def logout_all(session: Session, clock: Clock, principal: AccountPrincipal) -> None:
     """Revoke every session of the current user, on every device."""
     with session.begin():
         _revoke_all_sessions(session, principal.user_id, _now(clock))

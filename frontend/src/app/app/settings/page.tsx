@@ -8,6 +8,7 @@ import { controlClass, Field } from "@/components/ui/Fields";
 import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { authCopy } from "@/content/auth";
+import { appCopy } from "@/content/app";
 import { onboardingCopy, onboardingStatusLabel, onboardingStatusTone } from "@/content/onboarding";
 import { api, asApiError, type ApiError } from "@/lib/api/client";
 import type { Onboarding, PasswordUpdated } from "@/lib/api/types";
@@ -247,11 +248,21 @@ export default function SettingsPage() {
           <dd className="break-words text-ink">{me.user.full_name}</dd>
           <dt className="text-small text-ink-muted">Email</dt>
           <dd className="break-all text-ink">{me.user.email}</dd>
-          <dt className="text-small text-ink-muted">Business</dt>
-          <dd className="break-words text-ink">{me.supplier.legal_name}</dd>
+          {me.supplier ? (
+            <>
+              <dt className="text-small text-ink-muted">Business</dt>
+              <dd className="break-words text-ink">{me.supplier.legal_name}</dd>
+            </>
+          ) : null}
+          {me.roles.includes("reviewer") ? (
+            <>
+              <dt className="text-small text-ink-muted">Role</dt>
+              <dd className="text-ink">{appCopy.reviewerAccountLabel}</dd>
+            </>
+          ) : null}
         </dl>
       </Card>
-      <BusinessStatus />
+      {me.supplier ? <BusinessStatus /> : null}
       <ThemeSetting />
       <ChangePassword email={me.user.email} />
       <SignOutEverywhere />

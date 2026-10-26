@@ -1,9 +1,10 @@
 """Business onboarding (Phase 7B): profile drafts, certificates, submissions, Udyam claims.
 
 Kept apart from the supplier's eligibility fields (`suppliers.udyam_*`), which the legal
-engine reads: nothing a supplier submits here changes eligibility, cases or packs. Status
-values are written by the server only; VERIFIED, REJECTED and NEEDS_INFORMATION are reserved
-for reviewers (Phase 7C) and no supplier-facing code path sets them.
+engine reads: nothing a supplier submits here, and no review decision (Phase 7C), changes
+eligibility, cases or packs. Status values are written by the server only; APPROVED, REJECTED
+and NEEDS_INFORMATION are set only by reviewer decisions (`app/services/review.py`).
+Migration 3d7a9c1e5b20 renamed the never-used VERIFIED status to APPROVED.
 """
 
 from datetime import date
@@ -25,7 +26,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 from app.models.entities import HASH, ID, TS
 
-STATUSES = ("DRAFT", "PENDING_REVIEW", "NEEDS_INFORMATION", "VERIFIED", "REJECTED")
+STATUSES = ("DRAFT", "PENDING_REVIEW", "NEEDS_INFORMATION", "APPROVED", "REJECTED")
 _STATUS_SQL = ", ".join(f"'{s}'" for s in STATUSES)
 
 
@@ -107,7 +108,8 @@ class UdyamClaim(Base):
 
     At most one UNCONTESTED claim per number (partial unique index). A second supplier who
     submits the same number gets a CONTESTED claim: the submission still goes to review, where
-    the dispute is resolved (Phase 7C); it is never silently rejected or merged.
+    the dispute is resolved (Phase 7C: approving one supplier's claim marks every other claim
+    on the number contested); it is never silently rejected or merged.
     """
 
     __tablename__ = "udyam_claims"

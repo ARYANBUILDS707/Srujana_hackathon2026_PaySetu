@@ -4,12 +4,14 @@ State machine (server-side only):
 
     NOT_STARTED (no row) --save draft / upload--> DRAFT --submit--> PENDING_REVIEW
     NEEDS_INFORMATION --edit, submit--> PENDING_REVIEW        (NEEDS_INFORMATION: reviewer only)
-    VERIFIED, REJECTED                                         (reviewer only, Phase 7C)
+    APPROVED, REJECTED                                         (reviewer only, final)
 
-Suppliers can write only while the status is DRAFT or NEEDS_INFORMATION. Every write starts
-with a conditional UPDATE guarded by that status, so a draft edit racing a submission cannot
-change submitted data, and two simultaneous submissions produce exactly one revision. No code
-path here sets VERIFIED, REJECTED or NEEDS_INFORMATION.
+The supplier transitions come from `app.domain.business_review.TRANSITIONS`. Suppliers can
+write only while the status is DRAFT or NEEDS_INFORMATION. Every write starts with a
+conditional UPDATE guarded by that status, so a draft edit racing a submission cannot change
+submitted data, and two simultaneous submissions produce exactly one revision. No code path
+here sets APPROVED, REJECTED or NEEDS_INFORMATION (`services/review.py` does). Answering
+NEEDS_INFORMATION creates a new submission; earlier snapshots are never changed.
 
 Nothing here changes the supplier's eligibility fields, cases or evidence packs.
 """
@@ -25,18 +27,22 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.clock import Clock, format_utc_timestamp
+from app.domain.business_review import Actor, ReviewStatus, sources_for
 from app.domain.integrity import canonical_json
 from app.errors import Conflict, FieldError, IntegrityFailed, NotFound, ValidationFailed
 from app.models import (
     BusinessCertificate,
     BusinessProfile,
+    BusinessReview,
     BusinessSubmission,
     UdyamClaim,
 )
 from app.schemas import onboarding as schemas
 from app.storage.business_store import BusinessDocumentStore
 
-EDITABLE = ("DRAFT", "NEEDS_INFORMATION")
+EDITABLE = tuple(sorted(s.value for s in sources_for(Actor.SUPPLIER, ReviewStatus.PENDING_REVIEW)))
+# Reasons the supplier may read; an approval's reason and every internal note stay with reviewers.
+REASON_VISIBLE = ("NEEDS_INFORMATION", "REJECTED")
 SNAPSHOT_SCHEMA = "paysetu.business-submission.v1"
 SELF_DECLARED_NOTICE = (
     "Self-declared by the supplier. PaySetu has not verified the Udyam registration, the "
@@ -135,15 +141,33 @@ def _certificate_out(row: BusinessCertificate | None) -> schemas.CertificateOut 
     )
 
 
+def _outcome(review: BusinessReview | None) -> schemas.ReviewOutcomeOut | None:
+    if review is None:
+        return None
+    return schemas.ReviewOutcomeOut(
+        decision=cast(schemas.ReviewDecision, review.decision),
+        reason=review.reason if review.decision in REASON_VISIBLE else None,
+        decided_at=review.decided_at,
+    )
+
+
 def _out(session: Session, supplier_id: str) -> schemas.OnboardingOut:
     profile = _profile(session, supplier_id)
+    reviews = {
+        r.submission_id: r
+        for r in session.scalars(
+            select(BusinessReview).where(BusinessReview.supplier_id == supplier_id)
+        )
+    }
     history = [
         schemas.SubmissionOut(
+            id=s.id,
             revision=s.revision,
             submitted_at=s.submitted_at,
             snapshot_sha256=s.snapshot_sha256,
             certificate_id=s.certificate_id,
             claim_contested=s.claim_contested,
+            review=_outcome(reviews.get(s.id)),
         )
         for s in session.scalars(
             select(BusinessSubmission)
@@ -151,6 +175,7 @@ def _out(session: Session, supplier_id: str) -> schemas.OnboardingOut:
             .order_by(BusinessSubmission.revision.desc())
         )
     ]
+    latest_review = history[0].review if history else None
     if profile is None:
         empty: dict[str, Any] = {field: None for field in DRAFT_FIELDS}
         empty["authority_confirmed"] = False
@@ -161,6 +186,7 @@ def _out(session: Session, supplier_id: str) -> schemas.OnboardingOut:
             udyam_claim_conflict=False,
             missing_for_submission=list(REQUIRED_FOR_SUBMISSION),
             submitted_at=None,
+            latest_review=latest_review,
             submissions=history,
             **empty,
         )
@@ -174,6 +200,7 @@ def _out(session: Session, supplier_id: str) -> schemas.OnboardingOut:
         udyam_claim_conflict=_claim_conflict(session, supplier_id, profile.udyam_number),
         missing_for_submission=_missing(profile),
         submitted_at=profile.submitted_at,
+        latest_review=latest_review,
         submissions=history,
         **{field: getattr(profile, field) for field in DRAFT_FIELDS},
     )

@@ -19,6 +19,14 @@ export const appCopy = {
     },
     { href: "/app/settings", label: "Settings", match: "exact", icon: "settings" as const },
   ],
+  // Phase 7C: shown to accounts with the reviewer role (granted only by the operator CLI).
+  reviewNav: {
+    href: "/app/review",
+    label: "Review queue",
+    match: "prefix",
+    icon: "review" as const,
+  },
+  reviewerAccountLabel: "PaySetu reviewer",
   primaryAction: { href: "/app/cases/new", label: "Record delivery" },
   caseTabs: [
     { slug: "", label: "Overview" },

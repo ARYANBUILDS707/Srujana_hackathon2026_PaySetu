@@ -14,7 +14,7 @@ from pydantic import SecretStr
 from sqlalchemy import select
 
 from app.clock import FrozenClock, format_utc_timestamp
-from app.config import Settings
+from app.config import AppEnv, Settings
 from app.db import Database
 from app.logging import LOGGER_NAME, JsonFormatter
 from app.main import create_app
@@ -192,6 +192,31 @@ def test_login_per_ip_hourly_limit(client: TestClient) -> None:
         login(client, f"user{n}@example.com", "wrong-passphrase-00").status_code for n in range(21)
     ]
     assert codes == [401] * 20 + [429]
+
+
+def _login_codes(settings: Settings, clock: FrozenClock, attempts: int) -> list[int]:
+    with TestClient(create_app(settings, clock=clock)) as client:
+        return [
+            login(client, f"user{n}@example.com", "wrong-passphrase-00").status_code
+            for n in range(attempts)
+        ]
+
+
+def test_login_ip_limit_is_configurable_for_test_runs(
+    auth_settings: Settings, frozen_clock: FrozenClock
+) -> None:
+    assert auth_settings.app_env is AppEnv.TEST
+    relaxed = auth_settings.model_copy(update={"auth_login_ip_limit_per_hour": 22})
+    assert _login_codes(relaxed, frozen_clock, 23) == [401] * 22 + [429]
+
+
+@pytest.mark.parametrize("env", [AppEnv.DEVELOPMENT, AppEnv.PRODUCTION])
+def test_a_raised_login_ip_limit_is_not_enforced_outside_test_runs(
+    auth_settings: Settings, frozen_clock: FrozenClock, env: AppEnv
+) -> None:
+    # Built without validation on purpose: the app itself still enforces 20/hour.
+    forged = auth_settings.model_copy(update={"app_env": env, "auth_login_ip_limit_per_hour": 500})
+    assert _login_codes(forged, frozen_clock, 21) == [401] * 20 + [429]
 
 
 def test_login_replaces_an_existing_session(client: TestClient) -> None:

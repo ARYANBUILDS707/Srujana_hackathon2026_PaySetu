@@ -84,7 +84,7 @@ test("a supplier saves a draft, uploads the certificate and submits for review",
   await page.getByRole("button", { name: "Submit for review" }).click();
   await expect(page.getByTestId("onboarding-submitted")).toContainText("Submitted for review");
   await expect(page.getByText("Pending review").first()).toBeVisible();
-  await expect(page.getByText("never changes to Verified automatically")).toBeVisible();
+  await expect(page.getByText("never changes to Approved automatically")).toBeVisible();
 
   // Locked: the API refuses edits, and no route can verify.
   const edit = await page.request.put("/api/v1/onboarding/draft", {

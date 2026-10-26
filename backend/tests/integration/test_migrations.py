@@ -20,7 +20,8 @@ DEMO_CORE = "7f9909eb7e4c"  # demo case core (vertical slice)
 ACCOUNTS = "099b88746350"  # accounts and ownership (Phase 6)
 RESET_TOKENS = "d71bd50903a9"  # password reset tokens (Phase 6.1)
 EMAIL_VERIFICATION = "5c2e8a41f0b7"  # email verification (Phase 7A)
-HEAD = "8e1f3c9a2b64"  # business onboarding (Phase 7B)
+ONBOARDING = "8e1f3c9a2b64"  # business onboarding (Phase 7B)
+HEAD = "3d7a9c1e5b20"  # business review (Phase 7C)
 DEMO_TABLES = {
     "alembic_version",
     "users",
@@ -31,6 +32,10 @@ DEMO_TABLES = {
     "business_profiles",
     "business_submissions",
     "udyam_claims",
+    "reviewer_grants",
+    "business_checks",
+    "business_check_items",
+    "business_reviews",
     "suppliers",
     "buyers",
     "cases",
@@ -67,6 +72,7 @@ def test_single_linear_history_starting_at_the_baseline() -> None:
     assert script.get_base() == BASELINE
     assert [r.revision for r in script.walk_revisions()] == [
         HEAD,
+        ONBOARDING,
         EMAIL_VERIFICATION,
         RESET_TOKENS,
         ACCOUNTS,
@@ -121,6 +127,14 @@ def test_append_only_triggers_exist(migrated_database_url: str) -> None:
         "business_certificates_no_delete",
         "udyam_claims_no_delete",
         "udyam_claims_contested_only",
+        "business_reviews_no_update",
+        "business_reviews_no_delete",
+        "business_checks_no_update",
+        "business_checks_no_delete",
+        "business_check_items_no_update",
+        "business_check_items_no_delete",
+        "reviewer_grants_no_delete",
+        "reviewer_grants_revoke_only",
     }
 
 
@@ -238,3 +252,46 @@ def test_only_a_demo_supplier_may_be_unowned(migrated_database_url: str) -> None
             connection.execute(text("UPDATE suppliers SET is_demo = 0 WHERE id = 's-demo'"))
     finally:
         engine.dispose()
+
+
+# ------------------------------------------------------------ Phase 7C: business review
+
+_PROFILE_INSERT = text(
+    "INSERT INTO business_profiles (id, supplier_id, status, enterprise_name, "
+    "authority_confirmed, revision, status_changed_at, created_at, updated_at) "
+    "VALUES (:id, :supplier, :status, 'Sample Enterprise (TEST)', 1, 1, 't', 't', 't')"
+)
+
+
+def test_review_migration_keeps_profiles_and_renames_verified(migrated_database_url: str) -> None:
+    config = alembic_config(migrated_database_url)
+    command.downgrade(config, ONBOARDING)
+    engine = create_engine(migrated_database_url)
+    try:
+        with engine.begin() as connection:
+            for n, status in enumerate(("PENDING_REVIEW", "VERIFIED", "DRAFT")):
+                connection.execute(_SUPPLIER_INSERT, {"id": f"s-{n}", "is_demo": True})
+                connection.execute(
+                    _PROFILE_INSERT, {"id": f"p-{n}", "supplier": f"s-{n}", "status": status}
+                )
+        command.upgrade(config, HEAD)
+        query = text(
+            "SELECT id, status, enterprise_name, revision FROM business_profiles ORDER BY id"
+        )
+        with engine.connect() as connection:
+            upgraded = [tuple(row) for row in connection.execute(query)]
+            grants = connection.execute(text("SELECT count(*) FROM reviewer_grants")).scalar_one()
+        with pytest.raises(DatabaseError), engine.begin() as connection:
+            connection.execute(text("UPDATE business_profiles SET status = 'VERIFIED'"))
+        command.downgrade(config, ONBOARDING)
+        with engine.connect() as connection:
+            downgraded = [row[1] for row in connection.execute(query)]
+    finally:
+        engine.dispose()
+    assert upgraded == [
+        ("p-0", "PENDING_REVIEW", "Sample Enterprise (TEST)", 1),
+        ("p-1", "APPROVED", "Sample Enterprise (TEST)", 1),
+        ("p-2", "DRAFT", "Sample Enterprise (TEST)", 1),
+    ]
+    assert grants == 0  # nobody becomes a reviewer by migration
+    assert downgraded == ["PENDING_REVIEW", "VERIFIED", "DRAFT"]

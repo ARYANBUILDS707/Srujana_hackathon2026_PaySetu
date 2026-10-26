@@ -1,6 +1,7 @@
-// UI copy for business onboarding (Phase 7B). Self-declared data; no verification claimed.
+// UI copy for business onboarding (Phase 7B) and its review outcomes (Phase 7C). Self-declared
+// data; an approval is a reviewer's manual decision, never a government verification.
 
-import type { OnboardingStatus } from "@/lib/api/types";
+import type { OnboardingStatus, ReviewOutcome } from "@/lib/api/types";
 
 export const onboardingCopy = {
   title: "Business profile",
@@ -78,8 +79,25 @@ export const onboardingCopy = {
   submittedTitle: "Submitted for review",
   submittedBody:
     "Your business details and certificate have been submitted. They are locked while the review is pending.",
-  reviewNotAvailable:
-    "Reviews are not carried out in this evaluation build yet, so the status stays Pending review. It never changes to Verified automatically.",
+  reviewPending:
+    "A PaySetu reviewer checks these details by hand. The status never changes to Approved automatically, and an approval is a reviewer's decision, not a government verification.",
+  outcome: {
+    APPROVED: {
+      title: "Approved by a PaySetu reviewer",
+      body: "A reviewer checked your submitted details by hand and approved them. This is PaySetu's review decision, not a government verification. Your cases and their legal calculations are unaffected.",
+    },
+    REJECTED: {
+      title: "Not approved",
+      body: "A reviewer could not approve these details. The submission is closed; contact PaySetu support if you think this is wrong.",
+    },
+    NEEDS_INFORMATION: {
+      title: "The reviewer needs more information",
+      body: "Correct your details below and submit again. Your earlier submission is kept unchanged in the history.",
+    },
+  } satisfies Record<ReviewOutcome["decision"], { title: string; body: string }>,
+  reasonLabel: "Reviewer's reason",
+  decidedOn: (when: string) => `Decided ${when}`,
+  awaitingReview: "Awaiting review",
   history: "Submission history",
   revision: (n: number) => `Submission ${n}`,
   contested: "Number also claimed by another account",
@@ -93,7 +111,7 @@ export const onboardingStatusLabel: Record<OnboardingStatus, string> = {
   DRAFT: "Draft",
   PENDING_REVIEW: "Pending review",
   NEEDS_INFORMATION: "Needs information",
-  VERIFIED: "Verified",
+  APPROVED: "Approved",
   REJECTED: "Rejected",
 };
 
@@ -102,6 +120,6 @@ export const onboardingStatusTone = {
   DRAFT: "neutral",
   PENDING_REVIEW: "primary",
   NEEDS_INFORMATION: "warning",
-  VERIFIED: "success",
+  APPROVED: "success",
   REJECTED: "danger",
 } as const;
