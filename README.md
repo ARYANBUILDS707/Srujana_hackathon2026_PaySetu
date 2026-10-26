@@ -606,12 +606,8 @@ PaySetu is a tool for preparing evidence. Users and contributors should understa
 
 ---
 
-## 19. Team and Contributions
 
-| Name | Role | Contact |
-| --- | --- | --- |
-| Sai Ganore | Author of the ideation document | *To be added* |
-| *To be added* | *To be added* | *To be added* |
+
 
 Contribution rules (code quality, security, testing, branching and commit conventions) are in [AGENTS.md](AGENTS.md). The repository is not yet initialised with Git (task T0.1 in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)).
 
